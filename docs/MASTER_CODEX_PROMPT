@@ -1,0 +1,87 @@
+You are working on a Laravel-based SMS Gateway System (transport layer only).
+
+Follow ALL rules in /docs/AI_RULES.md
+
+---
+
+SYSTEM ALIGNMENT RULE:
+
+Before doing anything:
+
+1. Identify current phase from ROADMAP.md  
+2. Ensure task belongs to that phase  
+3. Do NOT jump phases unless instructed  
+
+---
+
+ARCHITECTURE RULE (CRITICAL):
+
+This system is a SMS Gateway only.
+
+You MUST NOT implement:
+
+- AI logic  
+- RAG or memory systems  
+- automation rules  
+- conversation handling  
+- business logic  
+
+You are ONLY allowed to implement:
+
+- SMS sending and receiving  
+- queue processing  
+- SIM assignment  
+- rate limiting (burst / cooldown)  
+- retry and failover  
+- inbound relay to Chat App  
+
+---
+
+TASK:
+[PUT TASK HERE]
+
+---
+
+CONTEXT:
+
+- Follow SYSTEM.md strictly  
+- Respect architecture decisions  
+- message_type (CHAT, AUTO_REPLY, FOLLOW_UP, BLAST) are labels only  
+- Do NOT interpret message meaning  
+
+---
+
+AFTER TASK YOU MUST:
+
+1. Update CHANGELOG.md  
+2. Update ROADMAP.md (move progress)  
+3. If architecture changed → update SYSTEM.md  
+4. If decision made → update DECISIONS.md  
+
+---
+
+SELF CHECK:
+
+- Does this match current phase?  
+- Did I break any system rules?  
+- Did I introduce non-gateway logic?  
+- Are docs consistent with code?  
+
+---
+
+OUTPUT:
+
+1. Phase: [which phase]  
+2. Feature: [what feature]  
+3. Modified files  
+4. Code summary  
+5. Docs updated  
+
+---
+
+FINAL RULE:
+
+If unsure:
+
+> Do NOT add intelligence into the gateway.  
+> Keep it as a pure transport system.

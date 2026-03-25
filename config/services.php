@@ -1,0 +1,50 @@
+<?php
+
+return [
+
+    /*
+    |--------------------------------------------------------------------------
+    | Third Party Services
+    |--------------------------------------------------------------------------
+    |
+    | This file is for storing the credentials for third party services such
+    | as Mailgun, Postmark, AWS and more. This file provides the de facto
+    | location for this type of information, allowing packages to have
+    | a conventional file to locate the various service credentials.
+    |
+    */
+
+    'mailgun' => [
+        'domain' => env('MAILGUN_DOMAIN'),
+        'secret' => env('MAILGUN_SECRET'),
+        'endpoint' => env('MAILGUN_ENDPOINT', 'api.mailgun.net'),
+    ],
+
+    'postmark' => [
+        'token' => env('POSTMARK_TOKEN'),
+    ],
+
+    'ses' => [
+        'key' => env('AWS_ACCESS_KEY_ID'),
+        'secret' => env('AWS_SECRET_ACCESS_KEY'),
+        'region' => env('AWS_DEFAULT_REGION', 'us-east-1'),
+    ],
+
+    'chat_app' => [
+        'inbound_url' => env('CHAT_APP_INBOUND_URL'),
+        'timeout' => env('CHAT_APP_TIMEOUT', 10),
+    ],
+
+    'gateway' => [
+        'outbound_retry_max_attempts' => env('GATEWAY_OUTBOUND_RETRY_MAX_ATTEMPTS', 3),
+        'outbound_retry_base_delay_seconds' => env('GATEWAY_OUTBOUND_RETRY_BASE_DELAY_SECONDS', 30),
+        'outbound_retry_max_delay_seconds' => env('GATEWAY_OUTBOUND_RETRY_MAX_DELAY_SECONDS', 300),
+        'outbound_stale_lock_seconds' => env('GATEWAY_OUTBOUND_STALE_LOCK_SECONDS', 300),
+
+        'inbound_relay_retry_max_attempts' => env('GATEWAY_INBOUND_RELAY_RETRY_MAX_ATTEMPTS', 3),
+        'inbound_relay_retry_base_delay_seconds' => env('GATEWAY_INBOUND_RELAY_RETRY_BASE_DELAY_SECONDS', 30),
+        'inbound_relay_retry_max_delay_seconds' => env('GATEWAY_INBOUND_RELAY_RETRY_MAX_DELAY_SECONDS', 300),
+        'inbound_relay_lock_seconds' => env('GATEWAY_INBOUND_RELAY_LOCK_SECONDS', 120),
+    ],
+
+];
