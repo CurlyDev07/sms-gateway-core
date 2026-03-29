@@ -1,245 +1,600 @@
-# TASK TRACKER
+# TASKS
+
+Last Updated: 2026-03-29
 
 ---
 
-## TASK 001 – Queue System
-
+## TASK 001 — DATABASE + MODELS
 Status: DONE
 
-Goal:
-- Implement outbound message queue system
+Implemented:
+- companies
+- modems
+- sims
+- outbound_messages
+- inbound_messages
+- customer_sim_assignments
+- api_clients
+- sim_daily_stats
+- sim_health_logs
 
-Scope:
-- Single queue (outbound_messages table)
-- Priority-based processing (CHAT, AUTO_REPLY, FOLLOW_UP, BLAST)
-- Scheduled messages support
-- Status flow (pending → queued → sending → sent/failed)
-
-Result:
-- Completed
-- SMS send flow now uses `SmsSenderInterface` abstraction with driver-based transport adapters
-- Sender path hardened with full trace metadata and provider-response validation
-- Structured sender observability logs added for attempt/success/failure/exception
+Locked:
+- MySQL is source of truth
+- SIM is the core operational unit
+- tenant-aware schema is in place
 
 ---
 
-## TASK 002 – SIM Assignment System
-
+## TASK 002 — STICKY CUSTOMER → SIM ASSIGNMENT
 Status: DONE
 
-Goal:
-- Implement sticky customer-to-SIM assignment
+Implemented:
+- customer sticks to SIM once assigned / has message history
+- reuse existing SIM if available
+- assignment row support
+- no invisible customer reassignment
 
-Scope:
-- Assign SIM per customer
-- Reuse same SIM for outbound messages
-- Respect company isolation
-- Support safe migration logic
-
-Result:
-- Completed
+Locked:
+- sticky assignment remains core behavior
+- no auto cross-SIM rescue
+- migration must be manual
 
 ---
 
-## TASK 003 – SIM Worker (Single SIM)
+## TASK 003 — SINGLE SIM WORKER LOOP
+Status: DONE (BASELINE)
+Status Note: will be updated, not replaced
 
+Implemented baseline:
+- claim message
+- send via transport layer
+- update delivery status
+- update stats
+- sleep rules / burst timing
+
+To be updated:
+- claim source changes from DB query to per-SIM Redis queues
+- worker becomes 3-queue aware
+- worker respects operator status
+- worker respects rebuild lock
+
+---
+
+## TASK 004 — SIM STATE ENGINE
+Status: DONE (BASELINE)
+Status Note: preserved and extended
+
+Implemented baseline:
+- cooldown logic
+- availability checks
+- daily limit checks
+- centralized timing helpers
+
+To be extended:
+- cooperate with operator status model
+- cooperate with health-based assignment disable rules
+- cooperate with per-SIM queue architecture
+
+---
+
+## TASK 005 — INBOUND MESSAGE HANDLING + RELAY
 Status: DONE
 
-Goal:
-- Implement worker loop for processing messages per SIM
+Implemented:
+- inbound capture
+- inbound dedupe protections
+- relay to Chat App webhook
+- async relay behavior
 
-Scope:
-- Fetch eligible messages
-- Send SMS via transport layer (SmsSenderInterface)
-- Update message status
-- Update SIM last_sent_at
-
-Result:
-- Completed
+Locked:
+- inbound remains unchanged by Redis / per-SIM queue redesign
+- gateway still remains transport-only
 
 ---
 
-## TASK 004 – Rate Limiting (Burst + Cooldown)
+## TASK 006 — RETRY + RECOVERY FOUNDATION
+Status: DONE (BASELINE)
+Status Note: logic must be updated
 
+Implemented baseline:
+- retry scheduling
+- stale lock recovery
+- recovery commands
+- reliability foundation
+
+Required update:
+- retry policy becomes:
+  - every 5 minutes
+  - forever
+- no automatic stop
+- no exponential backoff
+- no automatic cross-SIM failover
+- stuck visibility belongs in monitoring
+
+Recovery remains important for:
+- stale `sending`
+- rebuild safety
+- migration safety
+- Python / worker crash scenarios
+
+---
+
+## TASK 007 — FAILOVER / REASSIGNMENT MODEL
+Status: REPLACED
+
+Old direction:
+- automatic failover
+- SIM reassignment / replacement logic
+
+Final direction:
+- remove automatic failover as a primary architecture behavior
+- keep reusable internals only if useful
+- replace with manual migration only
+
+This task is superseded by:
+- TASK 012B
+- TASK 012C
+
+---
+
+## TASK 008 — OPERATIONAL HARDENING
+Status: DONE (BASELINE)
+Status Note: continues as implementation hardening umbrella
+
+Includes:
+- row locking
+- stale lock recovery
+- sender hardening
+- transport observability
+- concurrency protections
+
+Will continue to apply to:
+- Redis queue claim path
+- DB-first migration path
+- paused→active queue rebuild
+- worker-visible rebuild lock
+
+---
+
+## TASK 009 — MULTI-SIM SUPPORT
 Status: DONE
 
-Goal:
-- Implement SIM sending rules
+Implemented:
+- company can have multiple SIMs
+- selection service baseline
+- availability checks
+- SIM-aware routing flow
 
-Scope:
-- Burst mode (2–3 sec interval)
-- Normal mode (5–8 sec interval)
-- Burst limit tracking
-- Cooldown logic (60–120 sec)
-- Daily send limit enforcement
-
-Result:
-- Completed
+Final locked interpretation:
+- system is SIM-centric
+- one SIM must not block another SIM
+- queueing / workers / monitoring are per-SIM
 
 ---
 
-## TASK 005 – Inbound Message Handling
-
+## TASK 010 — INBOUND HARDENING
 Status: DONE
 
-Goal:
-- Receive and store inbound SMS
+Implemented:
+- dedupe protections
+- relay retry hardening
+- async relay safety
 
-Scope:
-- Save inbound_messages record
-- Update customer_sim_assignments (has_replied)
-- Trigger relay job
-
-Result:
-- Completed
-- Hardened with duplicate inbound guard (short recent-window dedupe)
+No major changes required from final aligned outbound redesign.
 
 ---
 
-## TASK 006 – Inbound Relay to Chat App
-
+## TASK 011 — MULTI-TENANT SECURITY
 Status: DONE
 
-Goal:
-- Forward inbound messages to Chat App
+Implemented:
+- API client auth
+- tenant resolution middleware
+- tenant container context
+- tenant-isolated route protection
+- hashed API secret hardening
 
-Scope:
-- HTTP webhook call
-- Retry on failure
-- Track relay status
+Final lock:
+- tenant identity must always come from auth context
+- never trust `company_id` in request body
 
-Result:
-- Webhook relay + relay status tracking completed
-- Relay dispatch moved to async queue job for non-blocking inbound ACK
-- Retry-on-failure completed with backoff scheduling, capped attempts, and final-failed handling
-- Retry dedupe hardened: single command-driven due-dispatch path with claim protection to avoid duplicate retry execution
-
----
-
-## TASK 007 – Reliability & Failover System
-
-Status: DONE
-
-Goal:
-- Handle failed outbound messages
-
-Scope:
-- Retry logic with limits
-- Reassign SIM if needed
-- Failure tracking
-
-Result:
-- Outbound retry/backoff scheduling implemented with capped attempts and final-failed handling
-- Stale outbound lock recovery implemented (`gateway:recover-outbound`)
-- Failover reassignment implemented via `SimFailoverService`
-- Commands added: `gateway:failover-sim` and `gateway:scan-failover`
-- Failover safety hardened with row-level message reassignment locks and status-preserving assignment updates
-- Outbound success path hardened to clear stale retry scheduling residue (`scheduled_at`)
+This rule must now also be reflected in outbound API intake implementation.
 
 ---
 
-## TASK 008 – SIM Health Monitoring
+# PHASE 2 CONTINUATION — FINAL ALIGNED TASKS
 
-Status: TODO
+## TASK 012A — PYTHON SMS EXECUTION LAYER STABILIZATION
+Status: NEXT
 
 Goal:
-- Monitor SIM and modem status
+- finalize Python as stable execution layer
 
-Scope:
-- Signal strength logging
-- Error tracking
-- Online/offline detection
+Includes:
+- FastAPI service
+- `/send`
+- `/modems/discover`
+- `/modems/health`
+- modem discovery / registry
+- SIM-centric identity resolution
+- stable modem routing
+- structured send result
+- no full scan during send path
+- hardware-level error normalization
+
+Locked:
+- Python is execution-only
+- no business logic ownership
+- no tenant policy ownership
+- no retry policy ownership
 
 ---
 
-## TASK 009 – Multi-SIM Support
-
-Status: DONE (Core Implementation)
+## TASK 012B — OPERATOR STATUS MODEL
+Status: NEXT
 
 Goal:
-- Support multiple SIMs per company
+Implement operator-controlled SIM intake/delivery states.
 
-Scope:
-- SIM selection logic
-- Load distribution
-- Respect rate limits per SIM
+Add:
+- `operator_status`
+  - `active`
+  - `paused`
+  - `blocked`
 
-Result:
-- Core implementation completed:
-- Company-isolated SIM selection with load-aware ordering
-- Availability-aware selection (active, cooldown, daily limit checks)
-- Worker and failover flows integrated with multi-SIM-safe selection/reassignment behavior
+Final behavior:
+
+### active
+- save to DB
+- enqueue to Redis
+- worker sends
+
+### paused
+- save to DB
+- do not enqueue
+- worker skips
+- API returns 202 accepted warning
+- auto-requeue on resume
+
+### blocked
+- reject new intake
+- no DB save for new request
+- no new enqueue
+- worker may continue draining old already-existing queued work
+
+Required code areas:
+- SIM model
+- message intake controller
+- worker logic
+- operator command(s)
+- event/listener for paused→active resume
 
 ---
 
-## TASK 010 – Admin APIs
-
-Status: TODO
+## TASK 012C — HEALTH / ASSIGNMENT FLAGS
+Status: NEXT
 
 Goal:
-- Provide operational control endpoints
+Implement final SIM assignment and health flags.
 
-Scope:
-- SIM status
-- Assignment lookup
-- Rebalance customers
-- Message status tracking
+Add:
+- `accept_new_assignments`
+- `disabled_for_new_assignments`
+- `last_success_at`
+
+Rules:
+- new future SIMs default to `accept_new_assignments = false`
+- existing active SIMs should not be broken during rollout
+- if no success in 30 minutes and company has >1 SIM:
+  - disable SIM from new assignments only
+- health checks run every 5 minutes
+- health basis = `last_success_at`
+
+Also surface:
+- stuck_6h
+- stuck_24h
+- stuck_3d
 
 ---
 
-## TASK 011 – Multi-Tenant Security Layer
-
-Status: DONE
+## TASK 012D — MANUAL MIGRATION ONLY
+Status: NEXT
 
 Goal:
-- Secure tenant isolation and authentication
+Replace auto-failover direction with manual migration architecture.
 
-Scope:
-- API key authentication using api_clients
-- Resolve company_id from API key (NOT request input)
-- Middleware-based tenant resolution
-- Prevent cross-tenant access
-- Request validation + isolation
+Must support:
+- one-by-one migration
+- bulk migration
 
-Result:
-- API client authentication middleware implemented (`X-API-KEY`, `X-API-SECRET`) with active-status enforcement
-- Tenant resolution middleware implemented (`tenant_company_id` from authenticated api_client)
-- Tenant mismatch blocking implemented for request-supplied `company_id`
-- Tenant-authenticated API route group protected with middleware
-- Internal inbound modem route trust path documented separately
-- API secret handling hardened (`Hash::make` on persist, `Hash::check` on auth)
-- Tenant context now available globally via container bindings (`tenant.company_id`, `tenant.api_client`)
+Bulk migration moves:
+- sticky assignments
+- pending messages
+- future traffic via updated assignment
+
+Rules:
+- no automatic cross-SIM failover
+- migration is operator-controlled only
+- keep reusable failover internals only if helpful
+- remove automatic failover commands/orchestration
 
 ---
 
-## TASK 012 – Python SMS Execution Layer  ← ✅ ADDED
-
-Status: TODO
+## TASK 012E — DB-FIRST QUEUE REBUILD
+Status: NEXT
 
 Goal:
-- Connect SMS Gateway to real USB modems via Python execution layer
+Implement safe queue rebuild behavior.
 
-Scope:
-- Python API server with `/send` endpoint
-- Map `sim_id` → modem port (`ttyUSB`)
-- Send SMS via AT commands (`AT+CMGS`)
-- Support multiple USB modems (USB hub)
-- Handle modem errors (timeout, SIM failure, signal issues)
-- Return standardized response to Laravel
+Rules:
+- MySQL is truth
+- Redis is transport only
+- rebuild = clear Redis + rebuild from DB truth
+- rebuild scope = `pending` only
+- do not requeue `sending` directly
+- `sending` recovery handled separately
 
-Result:
-- Pending
+Use cases:
+- paused → active resume
+- manual migration
+- queue repair / recovery
+
+Must include:
+- worker-visible rebuild lock
+- lock set before rebuild
+- worker checks rebuild lock before any LPOP
+- always clear lock in `finally`
 
 ---
 
-## NOTE
+## TASK 012F — RETRY POLICY UPDATE
+Status: NEXT
 
-This task list is for SMS Gateway only.
+Goal:
+Replace older retry model with final aligned retry behavior.
 
-Do NOT add:
-- AI logic
-- RAG systems
-- automation flows
-- conversation management
+Final retry:
+- every 5 minutes
+- forever
+- no automatic stop
+- no auto-abandon
+- no automatic migration
 
-All intelligence is handled by the Chat App.
+Messages remain on same SIM until:
+- success
+- or operator manually migrates
+
+This task updates:
+- OutboundRetryService
+- retry docs
+- operator monitoring expectations
+
+---
+
+# PHASE 3 — REDIS PER-SIM QUEUE ARCHITECTURE
+
+## TASK 013 — REDIS PER-SIM 3-QUEUE MODEL
+Status: NEXT
+
+Goal:
+Move from DB-claim queueing to Redis per-SIM queue transport.
+
+Per SIM queues:
+- `sms:queue:sim:{sim_id}:chat`
+- `sms:queue:sim:{sim_id}:followup`
+- `sms:queue:sim:{sim_id}:blasting`
+
+Priority order:
+1. chat
+2. followup
+3. blasting
+
+Mapping:
+- CHAT → chat
+- AUTO_REPLY → chat
+- FOLLOW_UP → followup
+- BLAST → blasting
+
+Worker behavior:
+- check queues in priority order
+- claim only after rebuild lock check
+- DB remains truth
+
+This task updates:
+- message intake
+- worker claim logic
+- queue rebuild services
+- migration rebuild path
+
+---
+
+## TASK 014 — MESSAGE INTAKE → REDIS ROUTING
+Status: NEXT
+
+Goal:
+Make outbound intake route directly into per-SIM Redis queue when SIM is active.
+
+Flow:
+- resolve tenant from auth context
+- assign sticky SIM / lowest-load SIM
+- enforce operator status
+- create DB record if allowed
+- enqueue into Redis if active
+
+Final intake semantics:
+- active → save + queue
+- paused → save only, 202 warning
+- blocked → reject, no DB save
+
+---
+
+## TASK 015 — PAUSED→ACTIVE AUTO-REQUEUE
+Status: NEXT
+
+Goal:
+When SIM resumes from paused to active:
+- rebuild that SIM’s Redis queues from DB truth
+- no manual requeue command required
+
+Requirements:
+- event/listener or equivalent orchestration
+- worker-visible rebuild lock
+- no duplicate queue entries
+- no message loss
+
+---
+
+## TASK 016 — BLOCKED INTAKE GATE
+Status: NEXT
+
+Goal:
+Ensure blocked SIM rejects new intake while allowing old queued work to drain.
+
+Rules:
+- no new DB save
+- no new queue push
+- worker does not skip already-existing old queued work solely because of blocked status
+
+This must be explicit in:
+- intake controller
+- worker semantics
+- docs
+- tests
+
+---
+
+# PHASE 4 — MONITORING + OPERATOR TOOLS
+
+## TASK 017 — HEALTH CHECK COMMAND + SCHEDULER
+Status: NEXT
+
+Goal:
+- scheduled check every 5 minutes
+- set `disabled_for_new_assignments` where appropriate
+- drive operator visibility
+
+---
+
+## TASK 018 — STUCK-AGE MONITORING
+Status: NEXT
+
+Goal:
+Surface:
+- 30-minute no-success alert
+- 6h stuck
+- 24h stuck
+- 3d stuck
+
+Use:
+- `last_success_at`
+
+Do not stop retries automatically.
+
+---
+
+## TASK 019 — MANUAL MIGRATION TOOLING
+Status: NEXT
+
+Goal:
+Operator tooling for:
+- bulk SIM migration
+- single-customer migration
+- queue rebuild support
+- safe recovery flow
+
+Migration flow must be documented and testable.
+
+---
+
+## TASK 020 — DASHBOARD SURFACES
+Status: FUTURE-NEXT
+
+Dashboard needs per SIM:
+- queued count
+- messages by tier
+- operator_status
+- assignment flags
+- last_success_at
+- active customer count
+- failed/retrying visibility
+- signal / modem health where available
+- cross-tenant operator monitoring where allowed
+
+---
+
+# PHASE 5 — SCALE PATH
+
+## TASK 021 — WORKER SCALE-OUT
+Status: FUTURE
+
+Goal:
+- scale per-SIM workers
+- scale Redis transport
+- scale Laravel control plane
+- preserve SIM isolation
+
+---
+
+## TASK 022 — PYTHON EXECUTION SCALE-OUT
+Status: FUTURE
+
+Goal:
+- scale Python nodes as needed
+- keep Laravel/Python boundary intact
+- maintain SIM-centric routing
+
+---
+
+## TASK 023 — LOAD TESTING
+Status: FUTURE
+
+Targets:
+- 100k/day
+- 500k/day
+- 1M/day
+
+Validate:
+- queue behavior
+- SIM isolation
+- rebuild safety
+- retry pressure
+- operator controls
+- migration safety
+
+---
+
+# IMPLEMENTATION ORDER (LOCKED)
+
+1. TASK 012A — Python stabilization
+2. TASK 012B — operator status model
+3. TASK 012C — health / assignment flags
+4. TASK 012D — manual migration model
+5. TASK 012E — DB-first rebuild
+6. TASK 012F — retry policy update
+7. TASK 013 — Redis per-SIM 3-queue model
+8. TASK 014 — message intake → Redis routing
+9. TASK 015 — paused→active auto-requeue
+10. TASK 016 — blocked intake gate
+11. TASK 017 — health check command + scheduler
+12. TASK 018 — stuck-age monitoring
+13. TASK 019 — migration tooling
+14. TASK 020 — dashboard surfaces
+15. TASK 021+ — scale-out and load testing
+
+---
+
+# FINAL LOCK
+
+This task system is now aligned to:
+
+- transport-only gateway
+- Laravel control layer
+- Python execution layer
+- MySQL truth
+- Redis transport
+- SIM-centric workers
+- sticky customer assignment
+- manual migration only
+- no automatic failover
+- 5-minute forever retry
+- operator-controlled SIM delivery states

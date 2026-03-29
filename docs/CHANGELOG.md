@@ -1,109 +1,194 @@
 # CHANGELOG
 
+Last Updated: 2026-03-29
+
 ---
 
-## [2026-03-25]
+## [2026-03-29] Architecture Lock — SIM-Centric Redis + Worker Model Finalized
+
+### Summary
+Locked the final SIM-centric queueing and operational architecture for the SMS Gateway Core before implementation.
+
+This is a major architecture clarification and documentation update.  
+It does not represent the final code implementation yet, but it is now the authoritative design baseline for the next implementation phase.
+
+---
 
 ### Added
-- Initial documentation system
-- Core architecture defined
-- Task 001 completed: core gateway transport schema (9 tables) and Eloquent models
-- UUID support added across all gateway transport tables
-- Gateway indexes added for queue/lookup performance (`company_id`, `sim_id`, `status`, `priority`, `scheduled_at`, `customer_phone`)
-- Message type enum enforced (`CHAT`, `AUTO_REPLY`, `FOLLOW_UP`, `BLAST`)
-- Outbound status flow enum added (`pending`, `queued`, `sending`, `sent`, `failed`, `cancelled`)
-- Task 002 completed: sticky customer-to-SIM assignment services
-- `SimSelectionService` added for lowest-load SIM selection with strict + fallback selection
-- `CustomerSimAssignmentService` added with `assignSim`, `reassignSim`, and `markReplied`
-- Basic assignment/reassignment logging added
-- Task 003 completed: per-SIM worker command and queue processing service
-- `gateway:process-sim {simId}` console command added
-- `SimQueueWorkerService` added with transaction-safe claim, send result updates, burst/cooldown timing, and daily stats increments
-- `ModemCommandService` stub added with transport send contract and logging
-- Task 004 completed: formal SIM state engine (`SimStateService`) for mode transitions and rate-limit decisions
-- Centralized SIM timing helpers for idle/cooldown/inactive/daily-limit sleeps
-- SIM model helpers added/refined: `isActive()`, `isCoolingDown()`, `currentMode()`
-- Task 005 completed: inbound message handling endpoint and Chat App relay flow
-- `GatewayInboundController@store` added for modem inbound webhook ingestion
-- `InboundRelayService` added for Chat App webhook relay with success/failure persistence and logging
-- Chat App relay config keys added: `services.chat_app.inbound_url`, `services.chat_app.timeout`
-- `RelayInboundMessageJob` added for non-blocking async inbound relay execution
-- Retry + recovery reliability services added:
-- `OutboundRetryService` (outbound retry scheduling and final-failed transitions)
-- `InboundRelayRetryService` (relay retry scheduling and final-failed transitions)
-- `StaleLockRecoveryService` (stale outbound lock recovery)
-- Recovery/retry commands added:
-- `gateway:recover-outbound`
-- `gateway:retry-inbound-relays`
-- `RetryInboundRelayJob` added for delayed inbound relay retries
-- Inbound relay retry metadata columns added to `inbound_messages`:
-- `relay_retry_count`, `relay_next_attempt_at`, `relay_failed_at`, `relay_locked_at`
-- Gateway retry/recovery configuration keys added under `services.gateway`
-- Task 007 completed: failover + SIM reassignment service and operator commands
-- `SimFailoverService` added for unavailable SIM detection, replacement selection, pending message failover, and sticky assignment failover
-- Commands added:
-- `gateway:failover-sim {simId}`
-- `gateway:scan-failover`
-- Task 011 completed: multi-tenant API security layer
-- Middleware added:
-- `AuthenticateApiClient` (api_clients credential auth + active client enforcement)
-- `ResolveTenant` (tenant/company context resolution from authenticated api_client)
-- `TenantContext` helper added for request-scoped tenant/client access
-- Tenant-authenticated API route group added for messages/sims/assignments/admin endpoints
-- SMS sender abstraction layer added:
-- `SmsSenderInterface` strict contract
-- `SmsSendResult` immutable-style DTO
-- Driver implementations:
-- `PythonApiSmsSender` (HTTP timeout/retry/connect-timeout/error normalization)
-- `QueueSmsSender` (Redis queue bridge)
-- `sms` config added for driver switching (`SMS_DRIVER`, `SMS_PYTHON_API_URL`)
+
+#### SIM-centric queue architecture
+- Locked the system as **SIM-centric**, not modem-centric
+- Confirmed:
+  - 1 company can have multiple SIMs
+  - 1 modem = 1 SIM only
+  - each SIM has its own isolated queue / worker / retry / monitoring state
+
+#### Redis per-SIM queue model
+- Added final Redis queue design:
+  - `sms:queue:sim:{sim_id}:chat`
+  - `sms:queue:sim:{sim_id}:followup`
+  - `sms:queue:sim:{sim_id}:blasting`
+- Added final message-type mapping:
+  - CHAT → chat
+  - AUTO_REPLY → chat
+  - FOLLOW_UP → followup
+  - BLAST → blasting
+
+#### Operator delivery controls
+- Added final `operator_status` model:
+  - `active`
+  - `paused`
+  - `blocked`
+
+#### Assignment / health flags
+- Added final state/assignment flags:
+  - `accept_new_assignments`
+  - `disabled_for_new_assignments`
+  - `last_success_at`
+
+#### Manual migration model
+- Added manual migration-only design
+- Added DB-first migration / queue rebuild principle
+- Added pending-only safe rebuild scope
+- Added paused→active auto-requeue requirement
+- Added worker-visible rebuild lock requirement
+
+#### Monitoring rules
+- Added:
+  - no-success-in-30-minutes rule
+  - stuck-age warning model
+  - 5-minute health check schedule
+  - operator monitoring expectations
+
+---
 
 ### Changed
-- Roadmap updated to reflect Database + Models completion under Phase 1
-- UUID handling hardened: auto-generation on create via model trait for all gateway models
-- Outbound queue schema improved with `locked_at` column/index for worker locking and distributed safety
-- Model helpers added: `Sim::isAvailable()`, `CustomerSimAssignment::isActive()`, `CustomerSimAssignment::canMigrate()`
-- Roadmap and task tracker updated for SIM worker completion
-- Worker state/rate logic moved from `SimQueueWorkerService` into `SimStateService` (cooldown, daily limit, burst transitions, sleep interval selection)
-- API routes updated with `POST /api/gateway/inbound`
-- Inbound controller now dispatches relay job immediately and returns fast ACK without waiting on external webhook
-- SIM worker failure path now delegates retry policy to `OutboundRetryService`
-- Relay job now delegates to `InboundRelayRetryService` for retry-aware processing
-- Roadmap current phase advanced to Phase 2 (Multi-SIM + Stability)
-- Documentation alignment pass completed:
-- `ROADMAP.md` now reflects implemented queue/worker/retry/failover/multi-SIM core items under DONE
-- `TASKS.md` statuses aligned to implementation (`TASK 006` DONE, `TASK 007` DONE, `TASK 009` DONE (Core Implementation))
-- Added `TASK 011 – Multi-Tenant Security Layer` as TODO
-- `TASK 011 – Multi-Tenant Security Layer` moved from TODO to DONE
-- Task 011 security hardening completed:
-- API client secret verification now uses `Hash::check`
-- API client secret persistence now hashes with `Hash::make`
-- Tenant context now bound globally in container (`tenant.company_id`, `tenant.api_client`) in addition to request attributes
-- SMS send path in worker now uses `SmsSenderInterface` (no direct modem sender dependency)
-- SMS sender trace metadata hardened (`message_id`, `sim_id`, resolved `company_id`, `message_type`) for outbound transport calls
 
-### Fixed
-- Race-condition hardening in `CustomerSimAssignmentService::assignSim` using explicit DB transaction + `SELECT ... FOR UPDATE` flow with post-lock re-check
-- Concurrency safety update in `assignSim`: switched to `DB::transaction(...)`, kept row locking on `(company_id, customer_phone)`, and added duplicate-insert recovery via safe re-fetch
-- SIM load calculation now counts only same-company outbound messages in `pending|queued|sending` states
-- `Sim::isAvailable()` now enforces daily-limit availability using today’s `sim_daily_stats.sent_count`
-- Worker claim safety implemented with row-level lock before setting `sending` + `locked_at`
-- SIM worker claim hardening: DB-driver-aware `SKIP LOCKED` row lock (with fallback), stale-lock cutoff scaffold, and explicit short claim transaction separated from modem send call
-- Added explicit state transition logging for BURST entry, COOLDOWN entry, COOLDOWN exit normalization, and send blocking (cooldown/daily limit)
-- Inbound relay result handling now persists explicit success/failed relay status fields (`relayed_to_chat_app`, `relay_status`, `relayed_at`, `relay_error`)
-- Inbound duplicate protection added (same `sim_id`, `customer_phone`, `message` within a short 10-second window)
-- Inbound duplicate detection window refined to use `received_at` (not `created_at`) for strict modem event-time dedupe
-- Outbound failures now use exponential-backoff rescheduling and capped final-failed state
-- Inbound relay failures now use exponential-backoff retries with capped final-failed state
-- Stale locked outbound `sending` rows are now recoverable through dedicated recovery command/service
-- Inbound relay retry hardening: command-driven due dispatch is now the single retry path; failed-attempt handler only updates retry metadata (no duplicate delayed self-dispatch)
-- Inbound due-retry claim now uses row-level claim marker clearing to prevent duplicate dispatch for the same due attempt
-- Outbound success cleanup now clears retry scheduling residue (`scheduled_at`) along with failure fields and lock
-- Failover flow now enforces same-company replacement SIM selection and migration lock safeguards for customer assignment reassignment
-- Failover hardening: pending outbound reassignment now uses transaction + row locks + `locked_at IS NULL` guard to avoid worker/failover conflicts
-- Failover assignment hardening: reassignment preserves meaningful active/disabled states and only uses `migrated` status when appropriate
-- Tenant isolation hardening: company identity now resolved from authenticated API client context, with mismatch attempts blocked
-- API credential handling hardened to avoid plaintext secret comparisons at runtime
-- SMS transport adapter hardening: normalized sender errors (`NETWORK_ERROR`, `HTTP_ERROR`, `PROVIDER_REJECTED`, `UNKNOWN_ERROR`) without throwing
-- Python API sender hardening: success now requires HTTP success plus provider `status=success`; non-success provider responses are treated as `PROVIDER_REJECTED`
-- SMS transport observability hardening: structured attempt/success/failure/exception logs added in Python sender
+#### Queue model
+- Changed from older single-queue assumptions to final **per-SIM 3-queue Redis architecture**
+
+#### Retry model
+- Changed retry direction to:
+  - fixed 5-minute interval
+  - forever
+  - no automatic stop
+  - no automatic cross-SIM failover
+
+#### Failover model
+- Changed direction from automatic failover toward:
+  - manual migration only
+  - keep reusable failover internals where practical
+  - remove automatic failover orchestration as a primary architecture behavior
+
+#### Health semantics
+- Changed health basis from ambiguous send timing to:
+  - `last_success_at`
+  - true successful send only
+
+#### Intake semantics
+- Finalized:
+  - active = save + queue
+  - paused = save only, return 202 warning
+  - blocked = reject new intake, no DB save, no queue
+- Clarified:
+  - blocked still allows old queued work to drain
+  - paused skips worker processing until resumed
+
+#### Tenant identity rule
+- Finalized that tenant/company identity must always come from authenticated context
+- Request body `company_id` must not be trusted
+
+---
+
+### Removed / Replaced
+
+#### Automatic failover direction
+- Replaced older architecture direction that assumed automatic failover / reassignment
+- Manual migration is now the authoritative behavior
+
+#### Static modem mapping as primary design
+- Replaced old assumption that static SIM → ttyUSB config mapping is the main strategy
+- Python modem registry / discovery is now the authoritative execution-layer direction
+
+---
+
+### Locked Decisions
+
+The following are now explicitly locked:
+
+- Gateway remains transport-only
+- Laravel remains control layer
+- Python remains execution layer
+- MySQL remains source of truth
+- Redis remains queue/coordination layer only
+- queueing is per SIM
+- workers are per SIM
+- sticky assignment is required
+- migration is manual only
+- no automatic cross-SIM rescue
+- retries remain on the same SIM
+- no message should be lost
+- new SIMs require manual enablement for new assignments
+- paused→active must safely auto-requeue from DB truth
+- blocked stops new intake only
+- rebuild must use worker-visible lock
+- rebuild must be DB-first and pending-only
+
+---
+
+### Documentation Updated
+The following docs were brought into alignment with the final architecture lock:
+
+- `SYSTEM.md`
+- `DECISIONS.md`
+- `ROADMAP.md`
+- `TASKS.md`
+- `CHANGELOG.md`
+
+---
+
+### Implementation Impact
+This changelog entry establishes the design baseline for upcoming implementation work:
+
+- Python execution stabilization
+- operator status model
+- assignment/health flags
+- manual migration
+- DB-first rebuild
+- retry policy update
+- Redis per-SIM queue architecture
+- intake routing changes
+- paused→active auto-requeue
+- blocked intake gate
+- health command + scheduler
+- dashboard / monitoring
+
+---
+
+## [2026-03-25] SMS Gateway Core v3.1 Baseline Established
+
+### Added
+- Laravel control-layer baseline for multi-tenant SMS transport
+- SmsSenderInterface abstraction
+- Python external execution layer direction
+- sticky SIM assignment baseline
+- retry/recovery baseline
+- inbound relay baseline
+- multi-tenant security hardening baseline
+
+### Notes
+This was the baseline architecture prior to the final SIM-centric Redis + operator-control lock completed on 2026-03-29.
+
+---
+
+## [Historical Entries]
+Keep all older changelog entries below this line exactly as they already exist in your file, unless they directly conflict with the 2026-03-29 architecture lock.
+
+If an older entry mentions:
+- automatic failover as current direction
+- single outbound queue as final direction
+- static sim_map.json as final direction
+
+those older entries should either:
+- remain as historical context only
+- or be marked as superseded by 2026-03-29
