@@ -7,8 +7,10 @@ use Illuminate\Support\Facades\Log;
 
 class OutboundRetryService
 {
+    private const RETRY_DELAY_MINUTES = 5;
+
     /**
-     * Handle outbound send failure by scheduling retry or marking final failed.
+     * Handle outbound send failure by scheduling fixed-interval retry.
      *
      * @param \App\Models\OutboundMessage $message
      * @param string|null $error
@@ -17,54 +19,27 @@ class OutboundRetryService
      */
     public function handleSendFailure(OutboundMessage $message, ?string $error = null, string $source = 'send'): void
     {
-        $maxAttempts = (int) config('services.gateway.outbound_retry_max_attempts', 3);
-
         $nextRetryCount = (int) $message->retry_count + 1;
         $reason = $error ?: 'Outbound send failed';
-
-        if ($nextRetryCount < $maxAttempts) {
-            $delaySeconds = $this->retryDelaySeconds($nextRetryCount);
-            $nextAttemptAt = now()->addSeconds($delaySeconds);
-
-            $message->update([
-                'status' => 'pending',
-                'retry_count' => $nextRetryCount,
-                'failure_reason' => $reason,
-                'failed_at' => now(),
-                'scheduled_at' => $nextAttemptAt,
-                'locked_at' => null,
-            ]);
-
-            Log::warning('Outbound retry scheduled', [
-                'message_id' => $message->id,
-                'company_id' => $message->company_id,
-                'sim_id' => $message->sim_id,
-                'retry_count' => $nextRetryCount,
-                'next_attempt_at' => $nextAttemptAt->toDateTimeString(),
-                'source' => $source,
-            ]);
-
-            return;
-        }
-
-        $finalReason = sprintf('Final failed after %d attempts: %s', $nextRetryCount, $reason);
+        $nextAttemptAt = now()->addMinutes(self::RETRY_DELAY_MINUTES);
 
         $message->update([
-            'status' => 'failed',
+            'status' => 'pending',
             'retry_count' => $nextRetryCount,
             'failed_at' => now(),
-            'failure_reason' => $finalReason,
-            'scheduled_at' => null,
+            'failure_reason' => $reason,
+            'scheduled_at' => $nextAttemptAt,
             'locked_at' => null,
         ]);
 
-        Log::error('Outbound final failed', [
+        Log::warning('Outbound retry scheduled', [
             'message_id' => $message->id,
             'company_id' => $message->company_id,
             'sim_id' => $message->sim_id,
             'retry_count' => $nextRetryCount,
+            'next_attempt_at' => $nextAttemptAt->toDateTimeString(),
             'source' => $source,
-            'failure_reason' => $finalReason,
+            'failure_reason' => $reason,
         ]);
     }
 
@@ -76,25 +51,6 @@ class OutboundRetryService
      */
     public function canRetry(OutboundMessage $message): bool
     {
-        $maxAttempts = (int) config('services.gateway.outbound_retry_max_attempts', 3);
-
-        return ((int) $message->retry_count + 1) < $maxAttempts;
-    }
-
-    /**
-     * Calculate exponential backoff delay with cap.
-     *
-     * @param int $attempt
-     * @return int
-     */
-    protected function retryDelaySeconds(int $attempt): int
-    {
-        $baseDelay = (int) config('services.gateway.outbound_retry_base_delay_seconds', 30);
-        $maxDelay = (int) config('services.gateway.outbound_retry_max_delay_seconds', 300);
-
-        $safeAttempt = max(1, $attempt);
-        $delay = $baseDelay * (2 ** ($safeAttempt - 1));
-
-        return min($delay, $maxDelay);
+        return true;
     }
 }

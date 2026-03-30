@@ -25,6 +25,9 @@ class Sim extends Model
         'sim_label',
         'status',
         'mode',
+        'operator_status',
+        'accept_new_assignments',
+        'disabled_for_new_assignments',
         'daily_limit',
         'recommended_limit',
         'burst_limit',
@@ -36,6 +39,7 @@ class Sim extends Model
         'cooldown_max_seconds',
         'burst_count',
         'cooldown_until',
+        'last_success_at',
         'last_sent_at',
         'last_received_at',
         'last_error_at',
@@ -48,6 +52,10 @@ class Sim extends Model
      * @var array<string, string>
      */
     protected $casts = [
+        'operator_status' => 'string',
+        'accept_new_assignments' => 'boolean',
+        'disabled_for_new_assignments' => 'boolean',
+        'last_success_at' => 'datetime',
         'cooldown_until' => 'datetime',
         'last_sent_at' => 'datetime',
         'last_received_at' => 'datetime',
@@ -141,6 +149,72 @@ class Sim extends Model
     public function isActive(): bool
     {
         return $this->status === 'active';
+    }
+
+    /**
+     * Determine if operator status is active.
+     *
+     * @return bool
+     */
+    public function isOperatorActive(): bool
+    {
+        return $this->operator_status === 'active';
+    }
+
+    /**
+     * Determine if operator status is paused.
+     *
+     * @return bool
+     */
+    public function isOperatorPaused(): bool
+    {
+        return $this->operator_status === 'paused';
+    }
+
+    /**
+     * Determine if operator status is blocked.
+     *
+     * @return bool
+     */
+    public function isOperatorBlocked(): bool
+    {
+        return $this->operator_status === 'blocked';
+    }
+
+    /**
+     * Determine if SIM can accept new customer assignments.
+     *
+     * @return bool
+     */
+    public function acceptsNewAssignments(): bool
+    {
+        return $this->accept_new_assignments && !$this->disabled_for_new_assignments;
+    }
+
+    /**
+     * Mark SIM as having a successful send now.
+     *
+     * @return void
+     */
+    public function markSuccessful(): void
+    {
+        $this->update([
+            'last_success_at' => now(),
+        ]);
+    }
+
+    /**
+     * Get minutes since last successful send.
+     *
+     * @return int|null
+     */
+    public function minutesSinceLastSuccess(): ?int
+    {
+        if ($this->last_success_at === null) {
+            return null;
+        }
+
+        return now()->diffInMinutes($this->last_success_at);
     }
 
     /**

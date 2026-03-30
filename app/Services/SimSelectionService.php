@@ -32,11 +32,19 @@ class SimSelectionService
             })
             ->where('sims.company_id', $companyId)
             ->where('sims.status', 'active')
+            ->where('sims.operator_status', '!=', 'blocked')
             ->where(function ($q) {
                 $q->whereNull('sims.cooldown_until')
                     ->orWhere('sims.cooldown_until', '<=', now());
             })
             ->whereRaw('COALESCE(sim_daily_stats.sent_count, 0) < sims.daily_limit');
+
+        // excludeSimId === null means new customer assignment (not reassignment/failover).
+        // Reassignment paths pass the current SIM's ID and are exempt from new-assignment filters.
+        if ($excludeSimId === null) {
+            $query->where('sims.accept_new_assignments', true)
+                ->where('sims.disabled_for_new_assignments', false);
+        }
 
         if ($excludeSimId !== null) {
             $query->where('sims.id', '!=', $excludeSimId);
@@ -67,10 +75,18 @@ class SimSelectionService
             ])
             ->where('company_id', $companyId)
             ->where('status', 'active')
+            ->where('operator_status', '!=', 'blocked')
             ->where(function ($q) {
                 $q->whereNull('cooldown_until')
                     ->orWhere('cooldown_until', '<=', now());
             });
+
+        // excludeSimId === null means new customer assignment (not reassignment/failover).
+        // Reassignment paths pass the current SIM's ID and are exempt from new-assignment filters.
+        if ($excludeSimId === null) {
+            $query->where('accept_new_assignments', true)
+                ->where('disabled_for_new_assignments', false);
+        }
 
         if ($excludeSimId !== null) {
             $query->where('id', '!=', $excludeSimId);
