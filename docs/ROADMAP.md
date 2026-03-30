@@ -3,7 +3,11 @@
 ---
 
 ## CURRENT PHASE
-Phase 2 – Multi-SIM + Stability
+Phase 0 Closeout – COMPLETE (Locked)
+
+### Phase Status
+- Phase 0: COMPLETE (Locked)
+- Phase 1: NOT STARTED
 
 ---
 
@@ -36,8 +40,8 @@ Phase 2 – Multi-SIM + Stability
 - sticky assignment is final
 - tenant identity always comes from auth context
 
-Phase 1 Status:
-- Complete
+Legacy baseline status:
+- Complete (Tasks 001–011 baseline)
 
 ---
 
@@ -46,7 +50,6 @@ Phase 1 Status:
 - Python execution layer stabilization
 - Python modem discovery hardening
 - SIM-centric queue / worker design alignment
-- Final documentation alignment for Redis + per-SIM queue architecture
 
 ---
 

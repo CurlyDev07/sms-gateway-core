@@ -1,6 +1,26 @@
 # CHANGELOG
 
-Last Updated: 2026-03-29
+Last Updated: 2026-03-31
+
+---
+
+## [2026-03-31] Phase 0 Complete and Locked
+
+### Summary
+Phase 0 implementation is complete and locked.
+
+### Completed
+- SIM operator controls completed
+- health checks completed
+- retry policy updated to fixed 5-minute forever retry
+- operator commands completed
+- outbound intake guardrails completed
+
+### Validation
+- Phase 0 tests passed: 39/39
+
+### Status
+- Phase 1 not started
 
 ---
 
