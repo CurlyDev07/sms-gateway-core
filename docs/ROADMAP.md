@@ -11,8 +11,8 @@ Phase 2 – IN PROGRESS
 - Phase 2: IN PROGRESS
 - Phase 3: NOT STARTED
 - Phase 1 lock result: manual migration baseline + failover/reassign hardening complete
-- Phase 2 slice checkpoint: Redis transport + rebuild + retry + worker/controller/event wiring implemented
-- Phase 2 checkpoint validation: full suite green (96 passed)
+- Phase 2 slice checkpoint: Redis transport + rebuild + retry + worker/controller/event wiring implemented (+ worker Redis-path test coverage)
+- Phase 2 checkpoint validation: full suite green (103 passed)
 
 ---
 
@@ -61,8 +61,8 @@ Legacy baseline status:
   - Redis worker rewrite with DB-truth recheck + rebuild-lock awareness
   - paused→active auto-requeue event/listener wiring
   - retry scheduler wiring in Kernel
-  - focused Phase 2 infrastructure tests added
-  - full suite green (96 passed)
+  - focused Phase 2 infrastructure + worker Redis-path tests added
+  - full suite green (103 passed)
 
 ---
 

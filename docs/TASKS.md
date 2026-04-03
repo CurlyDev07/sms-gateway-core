@@ -211,7 +211,7 @@ This rule must now also be reflected in outbound API intake implementation.
 # PHASE 2 — FINAL ALIGNED TASKS
 
 Phase 2 Status: IN PROGRESS (substantial slice implemented; phase not complete)
-Phase 2 Checkpoint Validation: full suite green (96 passed)
+Phase 2 Checkpoint Validation: full suite green (103 passed)
 
 ## TASK 012A — PYTHON SMS EXECUTION LAYER STABILIZATION
 Status: NEXT
@@ -461,6 +461,7 @@ Completed in current Phase 2 slice:
 - worker moved to Redis pop with priority order + DB-truth recheck
 - rebuild services/commands integrated with per-SIM Redis queues
 - focused test added: `RedisQueueServiceTest`
+- focused worker Redis-path test added: `SimQueueWorkerServiceRedisTest`
 
 ---
 

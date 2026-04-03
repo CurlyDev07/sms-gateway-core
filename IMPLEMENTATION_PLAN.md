@@ -599,8 +599,9 @@ UPDATE outbound_messages SET sim_id = {original_sim} WHERE ...
   - `RetrySchedulerCommandTest`
   - `NormalizePausedQueuedToPendingCommandTest`
   - `InitializeQueueMigrationCommandTest`
+  - `SimQueueWorkerServiceRedisTest`
 - supporting tests/helper updates added
-- full suite currently green: 96 passed
+- full suite currently green: 103 passed
 - Phase 2 is not complete; Phase 3 has not started
 
 ### 6.1 Phase 2 Scope

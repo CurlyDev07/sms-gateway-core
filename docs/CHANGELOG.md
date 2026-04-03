@@ -28,10 +28,11 @@ Recorded the current Phase 2 implementation slice without marking Phase 2 comple
   - `RetrySchedulerCommandTest`
   - `NormalizePausedQueuedToPendingCommandTest`
   - `InitializeQueueMigrationCommandTest`
+  - `SimQueueWorkerServiceRedisTest`
 - supporting test/helper updates added
 
 ### Validation
-- full suite currently green: 96 passed
+- full suite currently green: 103 passed
 
 ### Status
 - Phase 2 IN PROGRESS
