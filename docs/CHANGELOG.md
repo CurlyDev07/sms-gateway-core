@@ -21,10 +21,17 @@ Recorded the current Phase 2 implementation slice without marking Phase 2 comple
 - worker rewritten to Redis pop + rebuild-lock check + DB-truth recheck (`SimQueueWorkerService`)
 - paused→active auto-requeue event/listener wiring implemented
 - retry scheduler wired in Kernel
+- focused Phase 2 infrastructure tests added:
+  - `RedisQueueServiceTest`
+  - `QueueRebuildServiceTest`
+  - `RebuildSimQueueCommandTest`
+  - `RetrySchedulerCommandTest`
+  - `NormalizePausedQueuedToPendingCommandTest`
+  - `InitializeQueueMigrationCommandTest`
 - supporting test/helper updates added
 
 ### Validation
-- full suite currently green: 66 passed
+- full suite currently green: 96 passed
 
 ### Status
 - Phase 2 IN PROGRESS

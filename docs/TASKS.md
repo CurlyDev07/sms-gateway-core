@@ -210,7 +210,8 @@ This rule must now also be reflected in outbound API intake implementation.
 
 # PHASE 2 — FINAL ALIGNED TASKS
 
-Phase 2 Status: IN PROGRESS (slice checkpoint implemented; phase not complete)
+Phase 2 Status: IN PROGRESS (substantial slice implemented; phase not complete)
+Phase 2 Checkpoint Validation: full suite green (96 passed)
 
 ## TASK 012A — PYTHON SMS EXECUTION LAYER STABILIZATION
 Status: NEXT
@@ -383,6 +384,11 @@ Completed in current Phase 2 slice:
 - `RebuildSimQueueCommand` implemented
 - `InitializeQueueMigrationCommand` implemented
 - `NormalizePausedQueuedToPendingCommand` implemented
+- focused tests added:
+  - `QueueRebuildServiceTest`
+  - `RebuildSimQueueCommandTest`
+  - `InitializeQueueMigrationCommandTest`
+  - `NormalizePausedQueuedToPendingCommandTest`
 
 ---
 
@@ -411,10 +417,11 @@ This task updates:
 Completed in current Phase 2 slice:
 - `RetrySchedulerCommand` implemented for due retry re-enqueue
 - scheduler wiring added in `Kernel.php` (every five minutes)
+- focused test added: `RetrySchedulerCommandTest`
 
 ---
 
-# PHASE 3 — REDIS PER-SIM QUEUE ARCHITECTURE
+# PHASE 2 CONTINUATION — REDIS PER-SIM QUEUE ARCHITECTURE
 
 ## TASK 013 — REDIS PER-SIM 3-QUEUE MODEL
 Status: IN PROGRESS (Slice checkpoint)
@@ -453,6 +460,7 @@ Completed in current Phase 2 slice:
 - `RedisQueueService` implemented (chat/followup/blasting tiers)
 - worker moved to Redis pop with priority order + DB-truth recheck
 - rebuild services/commands integrated with per-SIM Redis queues
+- focused test added: `RedisQueueServiceTest`
 
 ---
 

@@ -12,6 +12,7 @@ Phase 2 – IN PROGRESS
 - Phase 3: NOT STARTED
 - Phase 1 lock result: manual migration baseline + failover/reassign hardening complete
 - Phase 2 slice checkpoint: Redis transport + rebuild + retry + worker/controller/event wiring implemented
+- Phase 2 checkpoint validation: full suite green (96 passed)
 
 ---
 
@@ -60,7 +61,8 @@ Legacy baseline status:
   - Redis worker rewrite with DB-truth recheck + rebuild-lock awareness
   - paused→active auto-requeue event/listener wiring
   - retry scheduler wiring in Kernel
-  - full suite green (66 passed)
+  - focused Phase 2 infrastructure tests added
+  - full suite green (96 passed)
 
 ---
 
@@ -77,7 +79,8 @@ Legacy baseline status:
 - No full scan during send path
 - Execution-layer correctness and observability
 
-### Phase 2B — Operator Control + Health Rules
+### Phase 2B — Operator Control + Health Rules (Already Implemented/Locked)
+Status: Completed and locked in Phase 0 baseline. Retained for traceability; not active NEXT scope.
 - SIM operator status model:
   - `active`
   - `paused`
@@ -93,7 +96,8 @@ Legacy baseline status:
 - operator enable/disable controls for new assignment
 - operator pause/block controls for delivery behavior
 
-### Phase 2C — Manual Migration Model
+### Phase 2C — Manual Migration Model (Already Implemented/Locked)
+Status: Completed and locked in Phase 1 baseline. Retained for traceability; not active NEXT scope.
 - remove automatic failover as primary architecture
 - manual migration only
 - reuse failover internals where helpful
@@ -106,7 +110,8 @@ Legacy baseline status:
 - safe rebuild locks
 - stale-send recovery path remains separate
 
-### Phase 2D — Retry Model Alignment
+### Phase 2D — Retry Model Alignment (Already Implemented/Locked)
+Status: Completed in baseline hardening. Retained for traceability; not active NEXT scope.
 - replace older retry model with fixed retry policy:
   - every 5 minutes
   - forever
