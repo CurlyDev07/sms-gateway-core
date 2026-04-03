@@ -35,6 +35,18 @@ class SimMigrationServiceTest extends TestCase
     }
 
     /** @test */
+    public function it_rejects_same_source_and_destination_sim_for_bulk_migration(): void
+    {
+        $company = $this->createCompany();
+        $sim = $this->createSim($company);
+
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('Source and destination SIM must be different.');
+
+        $this->service->migrateBulk($company->id, $sim->id, $sim->id);
+    }
+
+    /** @test */
     public function it_rejects_source_sim_from_another_company(): void
     {
         $companyA = $this->createCompany(['code' => 'CMPA']);
@@ -167,4 +179,3 @@ class SimMigrationServiceTest extends TestCase
         ]);
     }
 }
-
