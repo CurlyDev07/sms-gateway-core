@@ -1,6 +1,6 @@
 # TASKS
 
-Last Updated: 2026-03-31
+Last Updated: 2026-04-03
 
 ---
 
@@ -304,7 +304,7 @@ Also surface:
 ---
 
 ## TASK 012D — MANUAL MIGRATION ONLY
-Status: NEXT
+Status: IN PROGRESS (SLICE 1 COMPLETE)
 
 Goal:
 Replace auto-failover direction with manual migration architecture.
@@ -323,6 +323,17 @@ Rules:
 - migration is operator-controlled only
 - keep reusable failover internals only if helpful
 - remove automatic failover commands/orchestration
+
+Completed in current slice:
+- automatic failover command entry points hard-disabled (`gateway:failover-sim`, `gateway:scan-failover`)
+- `SimMigrationService` implemented (DB-first manual migration baseline)
+- `MigrateSingleCustomerCommand` implemented
+- `MigrateSimCustomersCommand` implemented
+- stale recovery aligned for DB-first migration safety / same-SIM retry behavior
+- Phase 1 migration baseline tests added for service and commands
+
+Remaining in this task:
+- continue Phase 1 migration hardening and full checklist completion before Phase 1 lock
 
 ---
 

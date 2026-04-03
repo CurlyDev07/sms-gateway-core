@@ -1,7 +1,7 @@
 # SMS Gateway Core – Implementation Plan (Revised)
 
-**Last Updated:** 2026-03-31 (Phase 0 Closeout)
-**Status:** Phase 0 Complete (Locked)
+**Last Updated:** 2026-04-03 (Phase 1 Slice Checkpoint)
+**Status:** Phase 1 In Progress (Manual Migration Baseline Slice 1)
 **Alignment:** Validated against all 9 locked docs with phase-boundary corrections
 
 ---
@@ -90,7 +90,7 @@ Each phase is **self-contained** and does NOT depend on future phases.
 **Goal:** Add operator control fields, health tracking, and correct retry policy. Implement intake guardrails for operator status.
 
 **Status:** Complete (Locked)
-**Lock Result:** 39/39 tests passed; Phase 1 not started
+**Lock Result:** 39/39 tests passed; Phase 1 started (slice-based rollout in progress)
 **Duration:** 2-3 days
 **Risk Level:** Low (additive schema, no worker changes, no Redis yet)
 **What's Locked:** All architecture, all rules
@@ -317,11 +317,21 @@ php artisan queue:restart
 
 **Goal:** Implement operator-triggered manual migration (bulk + single customer) with DB-first semantics. Establish migration pattern before introducing Redis.
 
-**Status:** Follows Phase 0
+**Status:** In Progress (Slice 1 checkpoint complete)
 **Duration:** 3-4 days
 **Risk Level:** Medium (complex data movement, critical operator tool)
 **What's Locked:** All rules, no Redis yet
 **What's New:** Migration services + commands using DB-first pattern (no rebuild lock needed yet)
+
+### 5.0 Current Checkpoint (Slice 1 Complete)
+
+- automatic failover CLI entry points are hard-disabled (`gateway:failover-sim`, `gateway:scan-failover`)
+- `SimMigrationService` is implemented for DB-first manual migration baseline
+- single-customer migration command is implemented (`gateway:migrate-single-customer`)
+- bulk migration command is implemented (`gateway:migrate-sim-customers`)
+- stale recovery remains DB-first and aligned to same-SIM retry safety
+- Phase 1 slice tests were added for migration service/commands, failover-disabled behavior, and recovery command behavior
+- Phase 1 remains in progress (not complete)
 
 ### 5.1 Phase 1 Scope
 

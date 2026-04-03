@@ -1,6 +1,26 @@
 # CHANGELOG
 
-Last Updated: 2026-03-31
+Last Updated: 2026-04-03
+
+---
+
+## [2026-04-03] Phase 1 Slice Checkpoint — Manual Migration Baseline (In Progress)
+
+### Summary
+Locked the current Phase 1 slice checkpoint without starting the next Phase 1 item.
+
+### Completed In This Slice
+- automatic failover CLI entry points hard-disabled (`gateway:failover-sim`, `gateway:scan-failover`)
+- `SimMigrationService` added for DB-first manual migration baseline
+- single-customer migration command added (`gateway:migrate-single-customer`)
+- bulk migration command added (`gateway:migrate-sim-customers`)
+- stale recovery aligned for DB-first migration safety and same-SIM retry behavior
+- Phase 1 slice tests added for migration service/commands, failover-disabled commands, and recovery command behavior
+
+### Status
+- Phase 1 is IN PROGRESS
+- Phase 1 is not complete
+- Phase 2 has not started
 
 ---
 
