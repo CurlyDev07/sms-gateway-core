@@ -1,7 +1,7 @@
 # SMS Gateway Core – Implementation Plan (Revised)
 
 **Last Updated:** 2026-04-03 (Phase 1 Slice Checkpoint)
-**Status:** Phase 1 In Progress (Manual Migration Baseline Slice 1)
+**Status:** Phase 1 In Progress (Manual Migration Baseline Slice 2)
 **Alignment:** Validated against all 9 locked docs with phase-boundary corrections
 
 ---
@@ -317,13 +317,13 @@ php artisan queue:restart
 
 **Goal:** Implement operator-triggered manual migration (bulk + single customer) with DB-first semantics. Establish migration pattern before introducing Redis.
 
-**Status:** In Progress (Slice 1 checkpoint complete)
+**Status:** In Progress (Slice 2 checkpoint ready)
 **Duration:** 3-4 days
 **Risk Level:** Medium (complex data movement, critical operator tool)
 **What's Locked:** All rules, no Redis yet
 **What's New:** Migration services + commands using DB-first pattern (no rebuild lock needed yet)
 
-### 5.0 Current Checkpoint (Slice 1 Complete)
+### 5.0 Current Checkpoint (Slice 2 Ready)
 
 - automatic failover CLI entry points are hard-disabled (`gateway:failover-sim`, `gateway:scan-failover`)
 - `SimMigrationService` is implemented for DB-first manual migration baseline
@@ -331,6 +331,9 @@ php artisan queue:restart
 - bulk migration command is implemented (`gateway:migrate-sim-customers`)
 - stale recovery remains DB-first and aligned to same-SIM retry safety
 - Phase 1 slice tests were added for migration service/commands, failover-disabled behavior, and recovery command behavior
+- `CustomerSimAssignmentService::reassignSim()` automatic reassignment path is disabled (manual migration only)
+- focused unit test added for disabled reassignment behavior
+- full suite currently green: 61 passed
 - Phase 1 remains in progress (not complete)
 
 ### 5.1 Phase 1 Scope

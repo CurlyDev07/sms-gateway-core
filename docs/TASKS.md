@@ -304,7 +304,7 @@ Also surface:
 ---
 
 ## TASK 012D — MANUAL MIGRATION ONLY
-Status: IN PROGRESS (SLICE 1 COMPLETE)
+Status: IN PROGRESS (SLICE 2 CHECKPOINT READY)
 
 Goal:
 Replace auto-failover direction with manual migration architecture.
@@ -331,6 +331,9 @@ Completed in current slice:
 - `MigrateSimCustomersCommand` implemented
 - stale recovery aligned for DB-first migration safety / same-SIM retry behavior
 - Phase 1 migration baseline tests added for service and commands
+- `CustomerSimAssignmentService::reassignSim()` automatic reassignment path disabled (manual migration only)
+- focused unit test added for disabled `reassignSim` behavior
+- current full suite green: 61 passed
 
 Remaining in this task:
 - continue Phase 1 migration hardening and full checklist completion before Phase 1 lock

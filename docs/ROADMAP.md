@@ -8,7 +8,7 @@ Phase 1 – Manual Migration Baseline (IN PROGRESS)
 ### Phase Status
 - Phase 0: COMPLETE (Locked)
 - Phase 1: IN PROGRESS
-- Current completed slice: manual migration baseline + stale recovery alignment
+- Current completed slice: manual migration baseline + stale recovery alignment + reassignSim manual-migration-only hardening
 
 ---
 
@@ -33,6 +33,7 @@ Phase 1 – Manual Migration Baseline (IN PROGRESS)
 - Inbound pipeline hardening
   (duplicate guard, async relay dispatch, `received_at` dedupe)
 - Phase 1 slice checkpoint: manual migration baseline + failover command entry-point disable + stale recovery DB-first alignment + slice test coverage
+- Phase 1 hardening checkpoint: automatic reassignment path disabled (`CustomerSimAssignmentService::reassignSim`) + focused unit test + full suite green (61 passed)
 
 ### Also locked as final architecture decisions
 - Laravel remains the control layer

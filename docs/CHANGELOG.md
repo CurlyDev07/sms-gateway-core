@@ -4,6 +4,23 @@ Last Updated: 2026-04-03
 
 ---
 
+## [2026-04-03] Phase 1 Slice Checkpoint — Manual Reassignment Path Disabled (In Progress)
+
+### Summary
+Locked an additional Phase 1 safety checkpoint without starting new Phase 1 feature scope.
+
+### Completed In This Slice
+- `CustomerSimAssignmentService::reassignSim()` automatic reassignment path disabled for manual-migration-only compliance
+- focused unit test added for disabled `reassignSim` behavior
+- full test suite currently green: 61 passed
+
+### Status
+- Phase 1 is IN PROGRESS
+- Phase 1 is not complete
+- Phase 2 has not started
+
+---
+
 ## [2026-04-03] Phase 1 Slice Checkpoint — Manual Migration Baseline (In Progress)
 
 ### Summary
