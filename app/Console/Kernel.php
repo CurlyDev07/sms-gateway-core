@@ -16,6 +16,7 @@ class Kernel extends ConsoleKernel
     protected function schedule(Schedule $schedule)
     {
         $schedule->command('gateway:check-sim-health')->everyFiveMinutes();
+        $schedule->command('gateway:retry-scheduler')->everyFiveMinutes();
     }
 
     /**

@@ -6,6 +6,7 @@ use App\Models\ApiClient;
 use App\Models\Company;
 use App\Models\CustomerSimAssignment;
 use App\Models\Sim;
+use Illuminate\Support\Str;
 
 trait CreatesGatewayEntities
 {
@@ -14,6 +15,7 @@ trait CreatesGatewayEntities
         static $companySequence = 1;
 
         return Company::query()->create(array_merge([
+            'uuid' => (string) Str::uuid(),
             'name' => 'Company '.$companySequence,
             'code' => 'CMP'.str_pad((string) $companySequence, 4, '0', STR_PAD_LEFT),
             'status' => 'active',
@@ -27,6 +29,7 @@ trait CreatesGatewayEntities
         $phoneSequence++;
 
         return Sim::query()->create(array_merge([
+            'uuid' => (string) Str::uuid(),
             'company_id' => $company->id,
             'phone_number' => '09'.$phoneSequence,
             'status' => 'active',
@@ -58,6 +61,7 @@ trait CreatesGatewayEntities
         unset($overrides['plain_secret']);
 
         $client = ApiClient::query()->create(array_merge([
+            'uuid' => (string) Str::uuid(),
             'company_id' => $company->id,
             'name' => 'Client '.$keySequence,
             'api_key' => 'key-'.$keySequence.'-'.uniqid('', false),
@@ -73,6 +77,7 @@ trait CreatesGatewayEntities
     protected function createAssignment(Company $company, Sim $sim, string $customerPhone, array $overrides = []): CustomerSimAssignment
     {
         return CustomerSimAssignment::query()->create(array_merge([
+            'uuid' => (string) Str::uuid(),
             'company_id' => $company->id,
             'customer_phone' => $customerPhone,
             'sim_id' => $sim->id,

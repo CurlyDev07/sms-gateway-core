@@ -4,22 +4,29 @@ namespace App\Http\Controllers;
 
 use App\Models\OutboundMessage;
 use App\Services\CustomerSimAssignmentService;
+use App\Services\RedisQueueService;
 use App\Support\TenantContext;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
+use Throwable;
 
 class GatewayOutboundController extends Controller
 {
     /**
-     * Store outbound SMS request with Phase 0 operator-status guardrails.
+     * Store outbound SMS request with Phase 2 intake + Redis queue semantics.
      *
      * @param \Illuminate\Http\Request $request
      * @param \App\Services\CustomerSimAssignmentService $assignmentService
+     * @param \App\Services\RedisQueueService $redisQueueService
      * @return \Illuminate\Http\JsonResponse
      */
-    public function store(Request $request, CustomerSimAssignmentService $assignmentService): JsonResponse
+    public function store(
+        Request $request,
+        CustomerSimAssignmentService $assignmentService,
+        RedisQueueService $redisQueueService
+    ): JsonResponse
     {
         $companyId = TenantContext::companyId($request);
 
@@ -80,25 +87,28 @@ class GatewayOutboundController extends Controller
         }
 
         $isPaused = $operatorStatus === 'paused';
-
-        $outboundMessage = OutboundMessage::create([
+        $messageData = [
             'company_id' => $companyId,
             'sim_id' => $sim->id,
             'customer_phone' => $customerPhone,
             'message' => (string) $validated['message'],
             'message_type' => (string) $validated['message_type'],
             'priority' => $this->priorityForType((string) $validated['message_type']),
-            'status' => $isPaused ? 'queued' : 'pending',
             'scheduled_at' => $validated['scheduled_at'] ?? null,
             'client_message_id' => $validated['client_message_id'] ?? null,
             'metadata' => $validated['metadata'] ?? null,
-        ]);
+        ];
 
         if ($isPaused) {
+            $outboundMessage = OutboundMessage::create(array_merge($messageData, [
+                'status' => 'pending',
+            ]));
+
             Log::info('Outbound intake accepted: SIM paused, saved without queue dispatch', [
                 'outbound_message_id' => $outboundMessage->id,
                 'company_id' => $companyId,
                 'sim_id' => $sim->id,
+                'status' => $outboundMessage->status,
             ]);
 
             return response()->json([
@@ -111,11 +121,45 @@ class GatewayOutboundController extends Controller
             ], 202);
         }
 
+        $outboundMessage = OutboundMessage::create(array_merge($messageData, [
+            'status' => 'pending',
+        ]));
+
+        try {
+            $redisQueueService->enqueue(
+                (int) $sim->id,
+                (int) $outboundMessage->id,
+                (string) $outboundMessage->message_type
+            );
+
+            $outboundMessage->update([
+                'status' => 'queued',
+                'queued_at' => now(),
+            ]);
+        } catch (Throwable $e) {
+            Log::error('Outbound intake enqueue failed: message saved as pending', [
+                'outbound_message_id' => $outboundMessage->id,
+                'company_id' => $companyId,
+                'sim_id' => $sim->id,
+                'error' => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'ok' => false,
+                'error' => 'queue_enqueue_failed',
+                'saved' => true,
+                'queued' => false,
+                'status' => 'pending',
+                'outbound_message_uuid' => $outboundMessage->uuid,
+                'sim_id' => $sim->id,
+            ], 503);
+        }
+
         Log::info('Outbound intake accepted', [
             'outbound_message_id' => $outboundMessage->id,
             'company_id' => $companyId,
             'sim_id' => $sim->id,
-            'status' => $outboundMessage->status,
+            'status' => 'queued',
         ]);
 
         return response()->json([
@@ -150,4 +194,3 @@ class GatewayOutboundController extends Controller
         return 10;
     }
 }
-

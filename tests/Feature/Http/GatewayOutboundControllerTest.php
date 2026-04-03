@@ -3,7 +3,9 @@
 namespace Tests\Feature\Http;
 
 use App\Models\OutboundMessage;
+use App\Services\RedisQueueService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Mockery;
 use Tests\Support\CreatesGatewayEntities;
 use Tests\TestCase;
 
@@ -20,6 +22,15 @@ class GatewayOutboundControllerTest extends TestCase
             'operator_status' => 'active',
             'status' => 'active',
         ]);
+
+        $redisQueueService = $this->mock(RedisQueueService::class);
+        $redisQueueService->shouldReceive('enqueue')
+            ->once()
+            ->with(
+                (int) $sim->id,
+                Mockery::on(fn ($messageId) => is_int($messageId) && $messageId > 0),
+                'CHAT'
+            );
 
         [$apiClient, $plainSecret] = $this->createApiClient($company);
 
@@ -44,7 +55,7 @@ class GatewayOutboundControllerTest extends TestCase
             'company_id' => $company->id,
             'sim_id' => $sim->id,
             'customer_phone' => '09171234567',
-            'status' => 'pending',
+            'status' => 'queued',
             'message_type' => 'CHAT',
         ]);
     }
@@ -57,6 +68,9 @@ class GatewayOutboundControllerTest extends TestCase
             'operator_status' => 'paused',
             'status' => 'active',
         ]);
+
+        $redisQueueService = $this->mock(RedisQueueService::class);
+        $redisQueueService->shouldReceive('enqueue')->never();
 
         [$apiClient, $plainSecret] = $this->createApiClient($company);
 
@@ -81,7 +95,7 @@ class GatewayOutboundControllerTest extends TestCase
             'company_id' => $company->id,
             'sim_id' => $sim->id,
             'customer_phone' => '09171234568',
-            'status' => 'queued',
+            'status' => 'pending',
             'message_type' => 'AUTO_REPLY',
         ]);
     }

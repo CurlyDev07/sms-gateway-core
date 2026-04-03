@@ -66,4 +66,22 @@ class Phase0SmokeTest extends TestCase
 
         $this->assertTrue($matched, 'gateway:check-sim-health was not scheduled every five minutes.');
     }
+
+    /** @test */
+    public function scheduler_contains_retry_scheduler_every_five_minutes(): void
+    {
+        $kernel = $this->app->make(AppConsoleKernel::class);
+        $schedule = new Schedule($this->app);
+
+        $method = new ReflectionMethod($kernel, 'schedule');
+        $method->setAccessible(true);
+        $method->invoke($kernel, $schedule);
+
+        $matched = collect($schedule->events())->contains(function ($event) {
+            return str_contains($event->command, 'gateway:retry-scheduler')
+                && $event->expression === '*/5 * * * *';
+        });
+
+        $this->assertTrue($matched, 'gateway:retry-scheduler was not scheduled every five minutes.');
+    }
 }

@@ -6,7 +6,6 @@ use App\Contracts\SmsSenderInterface;
 use App\Models\OutboundMessage;
 use App\Models\Sim;
 use App\Models\SimDailyStat;
-use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
@@ -24,6 +23,14 @@ class SimQueueWorkerService
      * @var \App\Services\OutboundRetryService
      */
     protected $outboundRetryService;
+    /**
+     * @var \App\Services\RedisQueueService
+     */
+    protected $redisQueueService;
+    /**
+     * @var \App\Services\QueueRebuildService
+     */
+    protected $queueRebuildService;
 
     /**
      * @param \App\Contracts\SmsSenderInterface $smsSender
@@ -31,12 +38,16 @@ class SimQueueWorkerService
     public function __construct(
         SmsSenderInterface $smsSender,
         SimStateService $simStateService,
-        OutboundRetryService $outboundRetryService
+        OutboundRetryService $outboundRetryService,
+        RedisQueueService $redisQueueService,
+        QueueRebuildService $queueRebuildService
     )
     {
         $this->smsSender = $smsSender;
         $this->simStateService = $simStateService;
         $this->outboundRetryService = $outboundRetryService;
+        $this->redisQueueService = $redisQueueService;
+        $this->queueRebuildService = $queueRebuildService;
     }
 
     /**
@@ -63,6 +74,11 @@ class SimQueueWorkerService
                 continue;
             }
 
+            if ($sim->isOperatorPaused()) {
+                $this->sleepSeconds($this->simStateService->getInactiveSleepSeconds());
+                continue;
+            }
+
             if (!$this->simStateService->canSend($sim)) {
                 if ($sim->isCoolingDown()) {
                     $this->sleepSeconds($this->simStateService->getCooldownSleepSeconds());
@@ -72,10 +88,21 @@ class SimQueueWorkerService
                 continue;
             }
 
-            $message = $this->claimNextMessage($sim);
+            if ($this->queueRebuildService->hasLock((int) $sim->id)) {
+                $this->sleepSeconds($this->simStateService->getIdleSleepSeconds());
+                continue;
+            }
+
+            $messageId = $this->redisQueueService->popNext((int) $sim->id);
+
+            if ($messageId === null) {
+                $this->sleepSeconds($this->simStateService->getIdleSleepSeconds());
+                continue;
+            }
+
+            $message = $this->claimPoppedMessage($sim, (int) $messageId);
 
             if ($message === null) {
-                $this->sleepSeconds($this->simStateService->getIdleSleepSeconds());
                 continue;
             }
 
@@ -123,40 +150,34 @@ class SimQueueWorkerService
     }
 
     /**
-     * Claim next eligible outbound message safely.
+     * Claim one popped message ID by re-checking DB truth before send.
      *
      * @param \App\Models\Sim $sim
+     * @param int $messageId
      * @return \App\Models\OutboundMessage|null
      */
-    protected function claimNextMessage(Sim $sim): ?OutboundMessage
+    protected function claimPoppedMessage(Sim $sim, int $messageId): ?OutboundMessage
     {
-        return DB::transaction(function () use ($sim) {
-            $query = OutboundMessage::query()
+        return DB::transaction(function () use ($sim, $messageId) {
+            $message = OutboundMessage::query()
+                ->where('id', $messageId)
                 ->where('company_id', $sim->company_id)
-                ->where('status', 'pending')
-                ->where(function ($q) {
-                    $q->whereNull('locked_at')
-                        ->orWhere('locked_at', '<=', $this->staleLockCutoff());
-                })
+                ->where('sim_id', $sim->id)
+                ->where('status', 'queued')
                 ->where(function ($q) {
                     $q->whereNull('scheduled_at')
                         ->orWhere('scheduled_at', '<=', now());
                 })
-                ->where(function ($q) use ($sim) {
-                    $q->where('sim_id', $sim->id)
-                        ->orWhereNull('sim_id');
-                })
-                ->orderByDesc('priority')
-                ->orderBy('created_at');
-
-            $message = $this->applyClaimLock($query)->first();
+                ->lockForUpdate()
+                ->first();
 
             if ($message === null) {
-                return null;
-            }
+                Log::warning('SIM worker dropped stale redis message ID', [
+                    'sim_id' => $sim->id,
+                    'message_id' => $messageId,
+                ]);
 
-            if ($message->sim_id === null) {
-                $message->sim_id = $sim->id;
+                return null;
             }
 
             $message->status = 'sending';
@@ -165,34 +186,6 @@ class SimQueueWorkerService
 
             return $message->fresh();
         });
-    }
-
-    /**
-     * Apply DB-specific row-locking strategy for claim query.
-     *
-     * @param \Illuminate\Database\Eloquent\Builder $query
-     * @return \Illuminate\Database\Eloquent\Builder
-     */
-    protected function applyClaimLock(Builder $query): Builder
-    {
-        $driver = DB::connection()->getDriverName();
-
-        if (in_array($driver, ['mysql', 'pgsql'], true)) {
-            return $query->lock('FOR UPDATE SKIP LOCKED');
-        }
-
-        // Fallback lock keeps structure clear for future driver-specific enhancements.
-        return $query->lockForUpdate();
-    }
-
-    /**
-     * Get stale lock cutoff timestamp.
-     *
-     * @return \Illuminate\Support\Carbon
-     */
-    protected function staleLockCutoff()
-    {
-        return now()->subSeconds((int) config('services.gateway.outbound_stale_lock_seconds', 300));
     }
 
     /**

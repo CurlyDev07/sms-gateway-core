@@ -2,8 +2,10 @@
 
 namespace Tests\Unit\Services;
 
+use App\Events\SimOperatorStatusChanged;
 use App\Services\SimOperatorStatusService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Event;
 use InvalidArgumentException;
 use Tests\Support\CreatesGatewayEntities;
 use Tests\TestCase;
@@ -33,12 +35,21 @@ class SimOperatorStatusServiceTest extends TestCase
     /** @test */
     public function it_updates_operator_status_for_same_company_sim(): void
     {
+        Event::fake();
+
         $company = $this->createCompany();
         $sim = $this->createSim($company, ['operator_status' => 'active']);
 
         $this->service->setOperatorStatus($sim, 'paused', $company);
 
         $this->assertSame('paused', $sim->fresh()->operator_status);
+
+        Event::assertDispatched(SimOperatorStatusChanged::class, function (SimOperatorStatusChanged $event) use ($sim, $company) {
+            return $event->simId === (int) $sim->id
+                && $event->companyId === (int) $company->id
+                && $event->oldStatus === 'active'
+                && $event->newStatus === 'paused';
+        });
     }
 
     /** @test */
@@ -55,23 +66,33 @@ class SimOperatorStatusServiceTest extends TestCase
     /** @test */
     public function it_throws_when_sim_does_not_belong_to_company(): void
     {
-        $this->expectException(InvalidArgumentException::class);
+        Event::fake();
 
         $companyA = $this->createCompany(['code' => 'CMPA']);
         $companyB = $this->createCompany(['code' => 'CMPB']);
         $sim = $this->createSim($companyA);
 
-        $this->service->setOperatorStatus($sim, 'paused', $companyB);
+        try {
+            $this->service->setOperatorStatus($sim, 'paused', $companyB);
+            $this->fail('Expected InvalidArgumentException was not thrown.');
+        } catch (InvalidArgumentException $e) {
+            $this->assertStringContainsString('SIM does not belong to authenticated company', $e->getMessage());
+        }
+
+        Event::assertNotDispatched(SimOperatorStatusChanged::class);
     }
 
     /** @test */
     public function same_status_is_a_noop(): void
     {
+        Event::fake();
+
         $company = $this->createCompany();
         $sim = $this->createSim($company, ['operator_status' => 'active']);
 
         $this->service->setOperatorStatus($sim, 'active', $company);
 
         $this->assertSame('active', $sim->fresh()->operator_status);
+        Event::assertNotDispatched(SimOperatorStatusChanged::class);
     }
 }

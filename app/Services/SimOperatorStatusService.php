@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Events\SimOperatorStatusChanged;
 use App\Models\Company;
 use App\Models\Sim;
 use Illuminate\Support\Facades\Log;
@@ -52,6 +53,13 @@ class SimOperatorStatusService
         $sim->update([
             'operator_status' => $normalizedStatus,
         ]);
+
+        event(new SimOperatorStatusChanged(
+            (int) $sim->id,
+            (int) $sim->company_id,
+            $currentStatus,
+            $normalizedStatus
+        ));
 
         Log::info('SIM operator status changed', [
             'sim_id' => $sim->id,
