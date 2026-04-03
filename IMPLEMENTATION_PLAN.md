@@ -592,8 +592,15 @@ UPDATE outbound_messages SET sim_id = {original_sim} WHERE ...
 - `SimQueueWorkerService` rewritten to Redis pop + rebuild-lock check + DB-truth recheck
 - paused→active auto-requeue wiring implemented (`SimOperatorStatusChanged` + `PausedSimResumeListener`)
 - `Kernel.php` retry scheduler wiring implemented (every five minutes)
+- focused Phase 2 infrastructure tests added:
+  - `RedisQueueServiceTest`
+  - `QueueRebuildServiceTest`
+  - `RebuildSimQueueCommandTest`
+  - `RetrySchedulerCommandTest`
+  - `NormalizePausedQueuedToPendingCommandTest`
+  - `InitializeQueueMigrationCommandTest`
 - supporting tests/helper updates added
-- full suite currently green: 66 passed
+- full suite currently green: 96 passed
 - Phase 2 is not complete; Phase 3 has not started
 
 ### 6.1 Phase 2 Scope
@@ -633,7 +640,7 @@ UPDATE outbound_messages SET sim_id = {original_sim} WHERE ...
 
 5. **Services Updated**
    - **GatewayOutboundController** — enqueue to Redis immediately on active SIM
-   - **SimSelectionService** — use Redis LLEN for queue load (faster than DB)
+   - **SimSelectionService** — keep existing DB-backed queue-load ordering and availability filters
 
 ### 6.2 Phase 2 Database Schema
 
@@ -955,7 +962,6 @@ When `operator_status === 'blocked'`:
 - `app/Http/Controllers/GatewayOutboundController.php` (add Redis enqueue)
 - `app/Services/SimOperatorStatusService.php` (fire event on status change)
 - `app/Console/Kernel.php` (register RetrySchedulerCommand)
-- `config/queue.php` (verify Redis connection)
 
 ### 6.7 Phase 2 Validation Checklist
 
@@ -967,9 +973,9 @@ Before Phase 3, verify:
   - [ ] `sms:queue:sim:{sim_id}:blasting` exists
 
 - [ ] RedisQueueService works:
-  - [ ] enqueueMessage() pushes to correct queue
-  - [ ] dequeueMessage() respects priority order
-  - [ ] getQueueDepth() returns correct counts
+  - [ ] enqueue() pushes to correct queue
+  - [ ] popNext() respects priority order
+  - [ ] depth() returns correct counts
   - [ ] Rebuild lock blocks dequeue
 
 - [ ] Message intake enqueues to Redis:
@@ -1011,8 +1017,8 @@ Before Phase 3, verify:
   - [ ] No duplicates
 
 - [ ] InitializeQueueMigrationCommand works:
-  - [ ] Pending messages migrated to Redis
-  - [ ] Status updated to queued
+  - [ ] Pending DB truth is seeded to Redis queues
+  - [ ] No forced DB status rewrite during initialization
   - [ ] No loss, no duplicates
 
 - [ ] Multi-tenant isolation preserved
