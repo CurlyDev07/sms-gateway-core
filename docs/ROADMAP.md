@@ -3,13 +3,15 @@
 ---
 
 ## CURRENT PHASE
-Phase 1 – COMPLETE (Locked)
+Phase 2 – IN PROGRESS
 
 ### Phase Status
 - Phase 0: COMPLETE (Locked)
 - Phase 1: COMPLETE (Locked)
-- Phase 2: NOT STARTED
+- Phase 2: IN PROGRESS
+- Phase 3: NOT STARTED
 - Phase 1 lock result: manual migration baseline + failover/reassign hardening complete
+- Phase 2 slice checkpoint: Redis transport + rebuild + retry + worker/controller/event wiring implemented
 
 ---
 
@@ -50,7 +52,15 @@ Legacy baseline status:
 ---
 
 ## IN PROGRESS
-- None. Phase 1 is complete and locked; Phase 2 has not started.
+- Phase 2 slice implemented:
+  - Redis queue transport (`RedisQueueService`)
+  - DB-first queue rebuild + rebuild lock (`QueueRebuildService`)
+  - normalization/init/rebuild/retry commands
+  - outbound intake Phase 2 semantics
+  - Redis worker rewrite with DB-truth recheck + rebuild-lock awareness
+  - paused→active auto-requeue event/listener wiring
+  - retry scheduler wiring in Kernel
+  - full suite green (66 passed)
 
 ---
 

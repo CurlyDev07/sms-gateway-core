@@ -1,7 +1,7 @@
 # SMS Gateway Core – Implementation Plan (Revised)
 
-**Last Updated:** 2026-04-03 (Phase 1 Complete and Locked)
-**Status:** Phase 1 Complete (Locked)
+**Last Updated:** 2026-04-04 (Phase 2 Slice Checkpoint)
+**Status:** Phase 2 In Progress (Slice Checkpoint)
 **Alignment:** Validated against all 9 locked docs with phase-boundary corrections
 
 ---
@@ -328,7 +328,7 @@ php artisan queue:restart
 - manual migration baseline is complete
 - failover/reassign hardening is complete
 - tests are green
-- Phase 2 has not started
+- Phase 2 had not started at the Phase 1 lock point
 
 ### 5.1 Phase 1 Scope
 
@@ -573,11 +573,28 @@ UPDATE outbound_messages SET sim_id = {original_sim} WHERE ...
 
 **Goal:** Replace DB-claim queueing with Redis per-SIM queues. Introduce rebuild lock and worker-visible coordination. Implement paused→active auto-requeue and full blocked worker semantics.
 
-**Status:** Follows Phase 1
+**Status:** In Progress (Slice Checkpoint)
 **Duration:** 5-7 days
 **Risk Level:** High (architectural change, worker rewrite, rebuild lock introduction)
 **What's Locked:** All rules
 **What's New:** Redis queue transport, rebuild lock pattern, paused auto-requeue, blocked worker semantics
+
+### 6.0 Current Checkpoint (In Progress)
+
+- `RedisQueueService` implemented
+- `QueueRebuildService` implemented with worker-visible rebuild lock
+- commands implemented:
+  - `NormalizePausedQueuedToPendingCommand`
+  - `RebuildSimQueueCommand`
+  - `InitializeQueueMigrationCommand`
+  - `RetrySchedulerCommand`
+- `GatewayOutboundController` updated to Phase 2 intake semantics
+- `SimQueueWorkerService` rewritten to Redis pop + rebuild-lock check + DB-truth recheck
+- paused→active auto-requeue wiring implemented (`SimOperatorStatusChanged` + `PausedSimResumeListener`)
+- `Kernel.php` retry scheduler wiring implemented (every five minutes)
+- supporting tests/helper updates added
+- full suite currently green: 66 passed
+- Phase 2 is not complete; Phase 3 has not started
 
 ### 6.1 Phase 2 Scope
 

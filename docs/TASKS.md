@@ -1,6 +1,6 @@
 # TASKS
 
-Last Updated: 2026-04-03
+Last Updated: 2026-04-04
 
 ---
 
@@ -210,6 +210,8 @@ This rule must now also be reflected in outbound API intake implementation.
 
 # PHASE 2 — FINAL ALIGNED TASKS
 
+Phase 2 Status: IN PROGRESS (slice checkpoint implemented; phase not complete)
+
 ## TASK 012A — PYTHON SMS EXECUTION LAYER STABILIZATION
 Status: NEXT
 
@@ -237,7 +239,7 @@ Locked:
 ---
 
 ## TASK 012B — OPERATOR STATUS MODEL
-Status: NEXT
+Status: DONE (Baseline + Phase 2 wiring)
 
 Goal:
 Implement operator-controlled SIM intake/delivery states.
@@ -275,10 +277,15 @@ Required code areas:
 - operator command(s)
 - event/listener for paused→active resume
 
+Completed in current Phase 2 slice:
+- paused → active event/listener wiring implemented
+- active/paused/blocked intake semantics implemented in controller
+- worker behavior aligned for paused skip + blocked drain
+
 ---
 
 ## TASK 012C — HEALTH / ASSIGNMENT FLAGS
-Status: NEXT
+Status: DONE (Baseline)
 
 Goal:
 Implement final SIM assignment and health flags.
@@ -300,6 +307,12 @@ Also surface:
 - stuck_6h
 - stuck_24h
 - stuck_3d
+
+Implemented baseline:
+- `accept_new_assignments`
+- `disabled_for_new_assignments`
+- `last_success_at`
+- health check command and scheduler baseline
 
 ---
 
@@ -333,7 +346,7 @@ Completed in current slice:
 - Phase 1 migration baseline tests added for service and commands
 - `CustomerSimAssignmentService::reassignSim()` automatic reassignment path disabled (manual migration only)
 - focused unit test added for disabled `reassignSim` behavior
-- current full suite green: 61 passed
+- checkpoint validation at lock time: full suite green (61 passed)
 
 Lock result:
 - Phase 1 manual-migration baseline complete; next work starts in Phase 2
@@ -341,7 +354,7 @@ Lock result:
 ---
 
 ## TASK 012E — DB-FIRST QUEUE REBUILD
-Status: NEXT
+Status: IN PROGRESS (Slice checkpoint)
 
 Goal:
 Implement safe queue rebuild behavior.
@@ -365,10 +378,16 @@ Must include:
 - worker checks rebuild lock before any LPOP
 - always clear lock in `finally`
 
+Completed in current Phase 2 slice:
+- `QueueRebuildService` implemented with worker-visible rebuild lock
+- `RebuildSimQueueCommand` implemented
+- `InitializeQueueMigrationCommand` implemented
+- `NormalizePausedQueuedToPendingCommand` implemented
+
 ---
 
 ## TASK 012F — RETRY POLICY UPDATE
-Status: NEXT
+Status: IN PROGRESS (Slice checkpoint)
 
 Goal:
 Replace older retry model with final aligned retry behavior.
@@ -389,12 +408,16 @@ This task updates:
 - retry docs
 - operator monitoring expectations
 
+Completed in current Phase 2 slice:
+- `RetrySchedulerCommand` implemented for due retry re-enqueue
+- scheduler wiring added in `Kernel.php` (every five minutes)
+
 ---
 
 # PHASE 3 — REDIS PER-SIM QUEUE ARCHITECTURE
 
 ## TASK 013 — REDIS PER-SIM 3-QUEUE MODEL
-Status: NEXT
+Status: IN PROGRESS (Slice checkpoint)
 
 Goal:
 Move from DB-claim queueing to Redis per-SIM queue transport.
@@ -426,10 +449,15 @@ This task updates:
 - queue rebuild services
 - migration rebuild path
 
+Completed in current Phase 2 slice:
+- `RedisQueueService` implemented (chat/followup/blasting tiers)
+- worker moved to Redis pop with priority order + DB-truth recheck
+- rebuild services/commands integrated with per-SIM Redis queues
+
 ---
 
 ## TASK 014 — MESSAGE INTAKE → REDIS ROUTING
-Status: NEXT
+Status: IN PROGRESS (Slice checkpoint)
 
 Goal:
 Make outbound intake route directly into per-SIM Redis queue when SIM is active.
@@ -446,10 +474,13 @@ Final intake semantics:
 - paused → save only, 202 warning
 - blocked → reject, no DB save
 
+Completed in current Phase 2 slice:
+- controller now enqueues on active, saves pending on paused, rejects blocked
+
 ---
 
 ## TASK 015 — PAUSED→ACTIVE AUTO-REQUEUE
-Status: NEXT
+Status: IN PROGRESS (Slice checkpoint)
 
 Goal:
 When SIM resumes from paused to active:
@@ -462,10 +493,14 @@ Requirements:
 - no duplicate queue entries
 - no message loss
 
+Completed in current Phase 2 slice:
+- `SimOperatorStatusChanged` event + `PausedSimResumeListener` wired in `EventServiceProvider`
+- listener triggers DB-first rebuild for paused→active only
+
 ---
 
 ## TASK 016 — BLOCKED INTAKE GATE
-Status: NEXT
+Status: IN PROGRESS (Slice checkpoint)
 
 Goal:
 Ensure blocked SIM rejects new intake while allowing old queued work to drain.
@@ -480,6 +515,10 @@ This must be explicit in:
 - worker semantics
 - docs
 - tests
+
+Completed in current Phase 2 slice:
+- blocked intake rejects new requests with no DB save
+- worker allows draining old queued work for blocked SIM
 
 ---
 

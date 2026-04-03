@@ -1,6 +1,34 @@
 # CHANGELOG
 
-Last Updated: 2026-04-03
+Last Updated: 2026-04-04
+
+---
+
+## [2026-04-04] Phase 2 Slice Checkpoint — Redis Transport + Rebuild Wiring (In Progress)
+
+### Summary
+Recorded the current Phase 2 implementation slice without marking Phase 2 complete.
+
+### Completed In This Slice
+- Redis queue transport implemented (`RedisQueueService`)
+- queue rebuild + rebuild lock implemented (`QueueRebuildService`)
+- normalization/init/rebuild/retry commands implemented:
+  - `gateway:normalize-paused-queued-to-pending`
+  - `gateway:rebuild-sim-queue`
+  - `gateway:init-queue-migration`
+  - `gateway:retry-scheduler`
+- outbound controller updated to Phase 2 intake semantics (active enqueue, paused pending, blocked reject)
+- worker rewritten to Redis pop + rebuild-lock check + DB-truth recheck (`SimQueueWorkerService`)
+- paused→active auto-requeue event/listener wiring implemented
+- retry scheduler wired in Kernel
+- supporting test/helper updates added
+
+### Validation
+- full suite currently green: 66 passed
+
+### Status
+- Phase 2 IN PROGRESS
+- Phase 3 not started
 
 ---
 
