@@ -7,6 +7,7 @@ use App\Models\Sim;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use RuntimeException;
 
 class CustomerSimAssignmentService
 {
@@ -134,9 +135,7 @@ class CustomerSimAssignmentService
     }
 
     /**
-     * Reassign a customer to another SIM.
-     *
-     * Allowed only when safe_to_migrate is true or current SIM is unavailable.
+     * Automatic reassignment is disabled in Phase 1 (manual migration only).
      *
      * @param int $companyId
      * @param string $customerPhone
@@ -146,63 +145,12 @@ class CustomerSimAssignmentService
     {
         $customerPhone = trim($customerPhone);
 
-        return DB::transaction(function () use ($companyId, $customerPhone) {
-            $assignment = CustomerSimAssignment::query()
-                ->with('sim')
-                ->where('company_id', $companyId)
-                ->where('customer_phone', $customerPhone)
-                ->lockForUpdate()
-                ->first();
+        Log::warning('Automatic SIM reassignment blocked (manual migration only)', [
+            'company_id' => $companyId,
+            'customer_phone' => $customerPhone,
+        ]);
 
-            if ($assignment === null) {
-                return $this->assignSim($companyId, $customerPhone);
-            }
-
-            $currentSimUnavailable = $assignment->sim === null || !$assignment->sim->isAvailable();
-
-            if (!$assignment->canMigrate() && !$currentSimUnavailable) {
-                Log::info('SIM reassignment skipped: migration not allowed', [
-                    'company_id' => $companyId,
-                    'customer_phone' => $customerPhone,
-                    'assignment_id' => $assignment->id,
-                    'sim_id' => $assignment->sim_id,
-                ]);
-
-                return $assignment->sim;
-            }
-
-            $newSim = $this->simSelectionService->selectBestSim($companyId, $assignment->sim_id);
-
-            if ($newSim === null) {
-                Log::warning('SIM reassignment failed: no alternate SIM available', [
-                    'company_id' => $companyId,
-                    'customer_phone' => $customerPhone,
-                    'assignment_id' => $assignment->id,
-                    'current_sim_id' => $assignment->sim_id,
-                ]);
-
-                return null;
-            }
-
-            $previousSimId = $assignment->sim_id;
-
-            $assignment->update([
-                'sim_id' => $newSim->id,
-                'status' => 'migrated',
-                'last_used_at' => now(),
-                'last_outbound_at' => now(),
-            ]);
-
-            Log::info('SIM reassigned for customer', [
-                'company_id' => $companyId,
-                'customer_phone' => $customerPhone,
-                'assignment_id' => $assignment->id,
-                'from_sim_id' => $previousSimId,
-                'to_sim_id' => $newSim->id,
-            ]);
-
-            return $newSim;
-        });
+        throw new RuntimeException('Automatic SIM reassignment is disabled. Use manual migration commands instead.');
     }
 
     /**

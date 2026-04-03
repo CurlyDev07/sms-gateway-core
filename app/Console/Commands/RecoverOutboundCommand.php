@@ -15,7 +15,7 @@ class RecoverOutboundCommand extends Command
     /**
      * @var string
      */
-    protected $description = 'Recover stale locked outbound messages and apply retry/final-fail policy';
+    protected $description = 'Recover stale locked outbound messages and reschedule fixed retry (DB-first)';
 
     /**
      * @param \App\Services\StaleLockRecoveryService $recoveryService

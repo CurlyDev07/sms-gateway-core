@@ -53,8 +53,6 @@ class StaleLockRecoveryService
                     return;
                 }
 
-                $willRetry = $this->outboundRetryService->canRetry($message);
-
                 $this->outboundRetryService->handleSendFailure(
                     $message,
                     'Recovered stale locked message (sending timeout)',
@@ -69,14 +67,6 @@ class StaleLockRecoveryService
                     'sim_id' => $message->sim_id,
                     'locked_at' => optional($message->locked_at)->toDateTimeString(),
                 ]);
-
-                if (!$willRetry) {
-                    Log::error('Stale lock marked final failed', [
-                        'message_id' => $message->id,
-                        'company_id' => $message->company_id,
-                        'sim_id' => $message->sim_id,
-                    ]);
-                }
             });
         }
 
