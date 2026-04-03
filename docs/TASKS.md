@@ -208,7 +208,7 @@ This rule must now also be reflected in outbound API intake implementation.
 
 ---
 
-# PHASE 2 CONTINUATION — FINAL ALIGNED TASKS
+# PHASE 2 — FINAL ALIGNED TASKS
 
 ## TASK 012A — PYTHON SMS EXECUTION LAYER STABILIZATION
 Status: NEXT
@@ -304,7 +304,7 @@ Also surface:
 ---
 
 ## TASK 012D — MANUAL MIGRATION ONLY
-Status: IN PROGRESS (SLICE 2 CHECKPOINT READY)
+Status: DONE (Locked)
 
 Goal:
 Replace auto-failover direction with manual migration architecture.
@@ -335,8 +335,8 @@ Completed in current slice:
 - focused unit test added for disabled `reassignSim` behavior
 - current full suite green: 61 passed
 
-Remaining in this task:
-- continue Phase 1 migration hardening and full checklist completion before Phase 1 lock
+Lock result:
+- Phase 1 manual-migration baseline complete; next work starts in Phase 2
 
 ---
 

@@ -3,12 +3,13 @@
 ---
 
 ## CURRENT PHASE
-Phase 1 – Manual Migration Baseline (IN PROGRESS)
+Phase 1 – COMPLETE (Locked)
 
 ### Phase Status
 - Phase 0: COMPLETE (Locked)
-- Phase 1: IN PROGRESS
-- Current completed slice: manual migration baseline + stale recovery alignment + reassignSim manual-migration-only hardening
+- Phase 1: COMPLETE (Locked)
+- Phase 2: NOT STARTED
+- Phase 1 lock result: manual migration baseline + failover/reassign hardening complete
 
 ---
 
@@ -49,10 +50,7 @@ Legacy baseline status:
 ---
 
 ## IN PROGRESS
-- Reliability hardening rollout (operational scheduling of recovery/retry commands)
-- Python execution layer stabilization
-- Python modem discovery hardening
-- SIM-centric queue / worker design alignment
+- None. Phase 1 is complete and locked; Phase 2 has not started.
 
 ---
 

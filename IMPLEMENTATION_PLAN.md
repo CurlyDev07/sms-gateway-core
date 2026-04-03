@@ -1,7 +1,7 @@
 # SMS Gateway Core – Implementation Plan (Revised)
 
-**Last Updated:** 2026-04-03 (Phase 1 Slice Checkpoint)
-**Status:** Phase 1 In Progress (Manual Migration Baseline Slice 2)
+**Last Updated:** 2026-04-03 (Phase 1 Complete and Locked)
+**Status:** Phase 1 Complete (Locked)
 **Alignment:** Validated against all 9 locked docs with phase-boundary corrections
 
 ---
@@ -90,7 +90,7 @@ Each phase is **self-contained** and does NOT depend on future phases.
 **Goal:** Add operator control fields, health tracking, and correct retry policy. Implement intake guardrails for operator status.
 
 **Status:** Complete (Locked)
-**Lock Result:** 39/39 tests passed; Phase 1 started (slice-based rollout in progress)
+**Lock Result:** 39/39 tests passed; Phase 0 complete and locked
 **Duration:** 2-3 days
 **Risk Level:** Low (additive schema, no worker changes, no Redis yet)
 **What's Locked:** All architecture, all rules
@@ -317,24 +317,18 @@ php artisan queue:restart
 
 **Goal:** Implement operator-triggered manual migration (bulk + single customer) with DB-first semantics. Establish migration pattern before introducing Redis.
 
-**Status:** In Progress (Slice 2 checkpoint ready)
+**Status:** Complete (Locked)
 **Duration:** 3-4 days
 **Risk Level:** Medium (complex data movement, critical operator tool)
 **What's Locked:** All rules, no Redis yet
 **What's New:** Migration services + commands using DB-first pattern (no rebuild lock needed yet)
 
-### 5.0 Current Checkpoint (Slice 2 Ready)
+### 5.0 Lock Result
 
-- automatic failover CLI entry points are hard-disabled (`gateway:failover-sim`, `gateway:scan-failover`)
-- `SimMigrationService` is implemented for DB-first manual migration baseline
-- single-customer migration command is implemented (`gateway:migrate-single-customer`)
-- bulk migration command is implemented (`gateway:migrate-sim-customers`)
-- stale recovery remains DB-first and aligned to same-SIM retry safety
-- Phase 1 slice tests were added for migration service/commands, failover-disabled behavior, and recovery command behavior
-- `CustomerSimAssignmentService::reassignSim()` automatic reassignment path is disabled (manual migration only)
-- focused unit test added for disabled reassignment behavior
-- full suite currently green: 61 passed
-- Phase 1 remains in progress (not complete)
+- manual migration baseline is complete
+- failover/reassign hardening is complete
+- tests are green
+- Phase 2 has not started
 
 ### 5.1 Phase 1 Scope
 
@@ -349,12 +343,12 @@ php artisan queue:restart
 
 1. **Services Created**
    - **SimMigrationService** — bulk and single customer migration with DB-first semantics
-   - **StaleMessageRecoveryService** — recover stuck 'sending' messages to 'pending'
+   - **StaleLockRecoveryService** — recover stuck 'sending' messages to 'pending'
 
 2. **Commands Created**
    - **MigrateSimCustomersCommand** — bulk migrate all customers from SIM A → SIM B
    - **MigrateSingleCustomerCommand** — single customer migration
-   - **RecoverStaleMessagesCommand** — manual recovery of stuck sending messages
+   - **RecoverOutboundCommand** — manual recovery of stuck sending messages
 
 3. **Services Updated**
    - **CustomerSimAssignmentService** — add methods: updateAssignment(), getAssignmentsForSim()
@@ -363,10 +357,10 @@ php artisan queue:restart
 
 **New:**
 - `app/Services/SimMigrationService.php`
-- `app/Services/StaleMessageRecoveryService.php`
+- `app/Services/StaleLockRecoveryService.php`
 - `app/Console/Commands/MigrateSimCustomersCommand.php`
 - `app/Console/Commands/MigrateSingleCustomerCommand.php`
-- `app/Console/Commands/RecoverStaleMessagesCommand.php`
+- `app/Console/Commands/RecoverOutboundCommand.php`
 
 **Modified:**
 - `app/Services/CustomerSimAssignmentService.php` — add helper methods
@@ -495,9 +489,9 @@ class SimMigrationService {
 }
 ```
 
-**StaleMessageRecoveryService.php:**
+**StaleLockRecoveryService.php:**
 ```php
-class StaleMessageRecoveryService {
+class StaleLockRecoveryService {
     public function recoverStaleMessages(Sim $sim): int {
         // Find messages stuck in 'sending' > 10 minutes old
         $staleMessages = OutboundMessage::where([
@@ -545,7 +539,7 @@ Before Phase 2, verify:
 
 - [ ] MigrateSimCustomersCommand and MigrateSingleCustomerCommand work
 
-- [ ] StaleMessageRecoveryService.recoverStaleMessages() works:
+- [ ] StaleLockRecoveryService.recoverStaleMessages() works:
   - [ ] Finds sending messages >10 min old
   - [ ] Updates to pending
   - [ ] Does NOT affect recent sending messages
@@ -1211,8 +1205,8 @@ Before production, verify:
    - API: Respect operator_status at intake (202 paused, 503 blocked)
 
 2. **PHASE 1** — Manual Migration Baseline
-   - Services: SimMigrationService, StaleMessageRecoveryService
-   - Commands: MigrateSimCustomersCommand, MigrateSingleCustomerCommand, RecoverStaleMessagesCommand
+   - Services: SimMigrationService, StaleLockRecoveryService
+   - Commands: MigrateSimCustomersCommand, MigrateSingleCustomerCommand, RecoverOutboundCommand
    - Expected: Operators can manually migrate customers
 
 3. **PHASE 2** — Redis Per-SIM Queue + Rebuild Lock + Auto-Requeue
