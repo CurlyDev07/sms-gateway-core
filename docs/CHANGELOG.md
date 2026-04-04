@@ -4,7 +4,7 @@ Last Updated: 2026-04-04
 
 ---
 
-## [2026-04-04] Phase 2 Slice Checkpoint — Redis Transport + Rebuild Wiring (In Progress)
+## [2026-04-04] Phase 2 Slice Checkpoint — Redis Transport + Rebuild Wiring + Laravel Python Integration (In Progress)
 
 ### Summary
 Recorded the current Phase 2 implementation slice without marking Phase 2 complete.
@@ -29,14 +29,21 @@ Recorded the current Phase 2 implementation slice without marking Phase 2 comple
   - `NormalizePausedQueuedToPendingCommandTest`
   - `InitializeQueueMigrationCommandTest`
   - `SimQueueWorkerServiceRedisTest`
+- Laravel-side Python integration slice added:
+  - `sims.imsi` migration added
+  - `Sim` model includes `imsi`
+  - `SmsSendResult` includes `errorLayer`
+  - `PythonApiSmsSender` aligned to Python engine contract
+  - `PythonApiSmsSenderTest` added
 - supporting test/helper updates added
 
 ### Validation
-- full suite currently green: 103 passed
+- full suite currently green: 109 passed
 
 ### Status
 - Phase 2 IN PROGRESS
 - Phase 3 not started
+- Python execution service/runtime stabilization is still not complete
 
 ---
 

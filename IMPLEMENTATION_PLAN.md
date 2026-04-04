@@ -600,9 +600,16 @@ UPDATE outbound_messages SET sim_id = {original_sim} WHERE ...
   - `NormalizePausedQueuedToPendingCommandTest`
   - `InitializeQueueMigrationCommandTest`
   - `SimQueueWorkerServiceRedisTest`
+- Laravel-side Python integration slice added:
+  - `sims.imsi` migration added
+  - `Sim` model includes `imsi`
+  - `SmsSendResult` includes `errorLayer`
+  - `PythonApiSmsSender` aligned to Python engine contract
+  - `PythonApiSmsSenderTest` added
 - supporting tests/helper updates added
-- full suite currently green: 103 passed
+- full suite currently green: 109 passed
 - Phase 2 is not complete; Phase 3 has not started
+- Python execution service/runtime stabilization remains open (Task 012A)
 
 ### 6.1 Phase 2 Scope
 
@@ -645,7 +652,8 @@ UPDATE outbound_messages SET sim_id = {original_sim} WHERE ...
 
 ### 6.2 Phase 2 Database Schema
 
-**NO schema changes in Phase 2** — outbound_messages.status already supports pending/queued/sending/sent/failed transitions.
+**Minimal schema change landed in current Phase 2 slice:** `sims.imsi` for Laravel-side Python execution integration.
+No other Phase 2 schema changes are required; outbound_messages.status already supports pending/queued/sending/sent/failed transitions.
 
 ### 6.3 Phase 2 Key Components
 

@@ -211,10 +211,10 @@ This rule must now also be reflected in outbound API intake implementation.
 # PHASE 2 — FINAL ALIGNED TASKS
 
 Phase 2 Status: IN PROGRESS (substantial slice implemented; phase not complete)
-Phase 2 Checkpoint Validation: full suite green (103 passed)
+Phase 2 Checkpoint Validation: full suite green (109 passed)
 
 ## TASK 012A — PYTHON SMS EXECUTION LAYER STABILIZATION
-Status: NEXT
+Status: IN PROGRESS (Laravel integration slice landed; Python runtime service not complete)
 
 Goal:
 - finalize Python as stable execution layer
@@ -236,6 +236,22 @@ Locked:
 - no business logic ownership
 - no tenant policy ownership
 - no retry policy ownership
+
+Completed in current Phase 2 slice:
+- `sims.imsi` migration added for Python execution identity plumbing
+- `Sim` model updated to include `imsi`
+- `SmsSendResult` updated to include `errorLayer`
+- `PythonApiSmsSender` aligned to Python engine contract:
+  - resolve IMSI from SIM
+  - fail early on missing IMSI
+  - send IMSI string as `sim_id`
+  - success detection via top-level `success === true`
+  - extract top-level `error` and `raw.error_layer`
+- focused test added: `PythonApiSmsSenderTest`
+
+Remaining for TASK 012A:
+- actual Python execution service/runtime (`/send`, `/modems/discover`, `/modems/health`)
+- modem discovery/registry/runtime stabilization
 
 ---
 
