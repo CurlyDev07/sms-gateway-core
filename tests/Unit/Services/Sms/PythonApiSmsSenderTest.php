@@ -82,8 +82,11 @@ class PythonApiSmsSenderTest extends TestCase
     }
 
     /** @test */
-    public function it_returns_network_error_on_connection_failure(): void
+    public function it_returns_transport_error_layer_when_connection_to_python_fails(): void
     {
+        // ConnectionException = Laravel cannot reach Python (TCP failure, Python is down).
+        // This is NOT a carrier rejection — it is a transport failure and must retry.
+        // errorLayer must be 'transport', not 'network', so the worker does not permanently fail the message.
         Http::fake(function () {
             throw new ConnectionException('connection refused');
         });
@@ -95,7 +98,7 @@ class PythonApiSmsSenderTest extends TestCase
 
         $this->assertFalse($result->success);
         $this->assertSame('NETWORK_ERROR', $result->error);
-        $this->assertSame('network', $result->errorLayer);
+        $this->assertSame('transport', $result->errorLayer);
     }
 
     /** @test */

@@ -134,7 +134,7 @@ class PythonApiSmsSender implements SmsSenderInterface
 
             return SmsSendResult::failed('NETWORK_ERROR', [
                 'exception' => $e->getMessage(),
-            ], 'network');
+            ], 'transport');
         } catch (Throwable $e) {
             Log::error('SMS_SEND_EXCEPTION', [
                 'sim_id' => $simId,

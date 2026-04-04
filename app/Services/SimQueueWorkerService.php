@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Contracts\SmsSenderInterface;
+use App\DTO\SmsSendResult;
 use App\Models\OutboundMessage;
 use App\Models\Sim;
 use App\Models\SimDailyStat;
@@ -136,13 +137,14 @@ class SimQueueWorkerService
                     'message_id' => $message->id,
                 ]);
             } else {
-                $this->markMessageFailed($message, $result->error);
-
                 Log::warning('SIM worker send failure', [
                     'sim_id' => $sim->id,
                     'message_id' => $message->id,
                     'error' => $result->error,
+                    'error_layer' => $result->errorLayer,
                 ]);
+
+                $this->markMessageFailed($message, $result);
             }
 
             $this->sleepSeconds($this->simStateService->getSleepSecondsForMessageType($sim, $message->message_type));
@@ -243,25 +245,39 @@ class SimQueueWorkerService
     }
 
     /**
-     * Mark message failed without retry workflow.
+     * Route send failure to permanent failure or scheduled retry based on errorLayer.
+     *
+     * network errorLayer = Python-confirmed carrier/provider rejection → mark failed, no retry.
+     * All other layers (transport, hardware, modem, gateway, unknown, null) → schedule retry.
      *
      * @param \App\Models\OutboundMessage $message
-     * @param string|null $error
+     * @param \App\DTO\SmsSendResult $result
      * @return void
      */
-    protected function markMessageFailed(OutboundMessage $message, ?string $error = null): void
+    protected function markMessageFailed(OutboundMessage $message, SmsSendResult $result): void
     {
-        DB::transaction(function () use ($message, $error) {
+        DB::transaction(function () use ($message, $result) {
             $lockedMessage = OutboundMessage::query()->lockForUpdate()->find($message->id);
 
             if ($lockedMessage === null) {
                 return;
             }
 
-            $this->outboundRetryService->handleSendFailure($lockedMessage, $error, 'worker_send_failure');
+            if ($result->errorLayer === 'network') {
+                $this->outboundRetryService->handlePermanentFailure(
+                    $lockedMessage,
+                    $result->error,
+                    'worker_send_failure'
+                );
+            } else {
+                $this->outboundRetryService->handleSendFailure(
+                    $lockedMessage,
+                    $result->error,
+                    'worker_send_failure'
+                );
+            }
         });
     }
-
 
     /**
      * Get stats column name for message type sent count.

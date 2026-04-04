@@ -44,6 +44,42 @@ class OutboundRetryService
     }
 
     /**
+     * Handle a permanent carrier/provider rejection with no retry scheduled.
+     *
+     * Use this when the errorLayer is 'network' (Python-confirmed carrier rejection).
+     * The message is marked failed and will not be retried automatically.
+     * Operator may manually intervene or migrate the message.
+     *
+     * @param \App\Models\OutboundMessage $message
+     * @param string|null $error
+     * @param string $source
+     * @return void
+     */
+    public function handlePermanentFailure(OutboundMessage $message, ?string $error = null, string $source = 'send'): void
+    {
+        $nextRetryCount = (int) $message->retry_count + 1;
+        $reason = $error ?: 'Permanent carrier rejection';
+
+        $message->update([
+            'status' => 'failed',
+            'retry_count' => $nextRetryCount,
+            'failed_at' => now(),
+            'failure_reason' => $reason,
+            'scheduled_at' => null,
+            'locked_at' => null,
+        ]);
+
+        Log::warning('Outbound permanent failure (no retry scheduled)', [
+            'message_id' => $message->id,
+            'company_id' => $message->company_id,
+            'sim_id' => $message->sim_id,
+            'retry_count' => $nextRetryCount,
+            'source' => $source,
+            'failure_reason' => $reason,
+        ]);
+    }
+
+    /**
      * Determine if outbound message can still be retried.
      *
      * @param \App\Models\OutboundMessage $message

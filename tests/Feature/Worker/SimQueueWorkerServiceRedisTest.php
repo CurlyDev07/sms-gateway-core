@@ -242,8 +242,9 @@ class SimQueueWorkerServiceRedisTest extends TestCase
     }
 
     /** @test */
-    public function failed_send_routes_through_retry_path_and_returns_row_to_pending(): void
+    public function failed_send_with_null_error_layer_routes_through_retry_path_and_returns_row_to_pending(): void
     {
+        // null errorLayer (e.g. non-Python senders, test mocks) must always retry conservatively.
         Carbon::setTestNow(Carbon::parse('2026-04-04 16:00:00'));
 
         $company = $this->createCompany();
@@ -260,7 +261,7 @@ class SimQueueWorkerServiceRedisTest extends TestCase
         $smsSender = Mockery::mock(SmsSenderInterface::class);
         $smsSender->shouldReceive('send')
             ->once()
-            ->andReturn(SmsSendResult::failed('NETWORK_ERROR', ['status' => 'failed']));
+            ->andReturn(SmsSendResult::failed('SOME_ERROR', ['status' => 'failed']));
 
         $simState = Mockery::mock(SimStateService::class);
         $simState->shouldReceive('canSend')->once()->andReturn(true);
@@ -269,6 +270,7 @@ class SimQueueWorkerServiceRedisTest extends TestCase
 
         $retryService = Mockery::mock(OutboundRetryService::class)->makePartial();
         $retryService->shouldReceive('handleSendFailure')->once()->passthru();
+        $retryService->shouldNotReceive('handlePermanentFailure');
 
         $redisQueue = Mockery::mock(RedisQueueService::class);
         $redisQueue->shouldReceive('popNext')->once()->with($sim->id)->andReturn($message->id);
@@ -291,7 +293,117 @@ class SimQueueWorkerServiceRedisTest extends TestCase
         $this->assertNull($fresh->locked_at);
         $this->assertNotNull($fresh->failed_at);
         $this->assertNotNull($fresh->scheduled_at);
-        $this->assertSame('NETWORK_ERROR', $fresh->failure_reason);
+        $this->assertSame('SOME_ERROR', $fresh->failure_reason);
+    }
+
+    /** @test */
+    public function network_layer_failure_permanently_marks_message_as_failed_with_no_retry_scheduled(): void
+    {
+        // errorLayer='network' = Python-confirmed carrier/provider rejection.
+        // Must NOT schedule a retry — message goes to status='failed' with no scheduled_at.
+        Carbon::setTestNow(Carbon::parse('2026-04-04 17:00:00'));
+
+        $company = $this->createCompany();
+        $sim = $this->createSim($company, ['operator_status' => 'active', 'status' => 'active']);
+        $message = $this->createOutboundMessage([
+            'company_id' => $company->id,
+            'sim_id' => $sim->id,
+            'status' => 'queued',
+            'scheduled_at' => null,
+            'message_type' => 'CHAT',
+            'retry_count' => 2,
+        ]);
+
+        $smsSender = Mockery::mock(SmsSenderInterface::class);
+        $smsSender->shouldReceive('send')
+            ->once()
+            ->andReturn(SmsSendResult::failed('SEND_FAILED', ['error_layer' => 'network'], 'network'));
+
+        $simState = Mockery::mock(SimStateService::class);
+        $simState->shouldReceive('canSend')->once()->andReturn(true);
+        $simState->shouldReceive('getSleepSecondsForMessageType')->once()->andReturn(1);
+        $simState->shouldNotReceive('markSendSuccess');
+
+        $retryService = Mockery::mock(OutboundRetryService::class)->makePartial();
+        $retryService->shouldReceive('handlePermanentFailure')->once()->passthru();
+        $retryService->shouldNotReceive('handleSendFailure');
+
+        $redisQueue = Mockery::mock(RedisQueueService::class);
+        $redisQueue->shouldReceive('popNext')->once()->with($sim->id)->andReturn($message->id);
+
+        $rebuild = Mockery::mock(QueueRebuildService::class);
+        $rebuild->shouldReceive('hasLock')->once()->with($sim->id)->andReturn(false);
+
+        $worker = new TestableSimQueueWorkerService($smsSender, $simState, $retryService, $redisQueue, $rebuild);
+
+        try {
+            $worker->run($sim->id);
+            $this->fail('Expected StopWorkerLoopException was not thrown.');
+        } catch (StopWorkerLoopException $e) {
+            $this->assertSame('stop-loop', $e->getMessage());
+        }
+
+        $fresh = $message->fresh();
+        $this->assertSame('failed', $fresh->status);
+        $this->assertSame(3, (int) $fresh->retry_count);
+        $this->assertNull($fresh->locked_at);
+        $this->assertNotNull($fresh->failed_at);
+        $this->assertNull($fresh->scheduled_at);
+        $this->assertSame('SEND_FAILED', $fresh->failure_reason);
+    }
+
+    /** @test */
+    public function non_network_error_layer_failure_routes_to_retry_path(): void
+    {
+        // errorLayer='modem' (and hardware, transport, gateway, unknown) must still retry.
+        // Only 'network' is terminal. Modem issues are temporary.
+        Carbon::setTestNow(Carbon::parse('2026-04-04 18:00:00'));
+
+        $company = $this->createCompany();
+        $sim = $this->createSim($company, ['operator_status' => 'active', 'status' => 'active']);
+        $message = $this->createOutboundMessage([
+            'company_id' => $company->id,
+            'sim_id' => $sim->id,
+            'status' => 'queued',
+            'scheduled_at' => null,
+            'message_type' => 'CHAT',
+            'retry_count' => 0,
+        ]);
+
+        $smsSender = Mockery::mock(SmsSenderInterface::class);
+        $smsSender->shouldReceive('send')
+            ->once()
+            ->andReturn(SmsSendResult::failed('MODEM_TIMEOUT', ['error_layer' => 'modem'], 'modem'));
+
+        $simState = Mockery::mock(SimStateService::class);
+        $simState->shouldReceive('canSend')->once()->andReturn(true);
+        $simState->shouldReceive('getSleepSecondsForMessageType')->once()->andReturn(1);
+        $simState->shouldNotReceive('markSendSuccess');
+
+        $retryService = Mockery::mock(OutboundRetryService::class)->makePartial();
+        $retryService->shouldReceive('handleSendFailure')->once()->passthru();
+        $retryService->shouldNotReceive('handlePermanentFailure');
+
+        $redisQueue = Mockery::mock(RedisQueueService::class);
+        $redisQueue->shouldReceive('popNext')->once()->with($sim->id)->andReturn($message->id);
+
+        $rebuild = Mockery::mock(QueueRebuildService::class);
+        $rebuild->shouldReceive('hasLock')->once()->with($sim->id)->andReturn(false);
+
+        $worker = new TestableSimQueueWorkerService($smsSender, $simState, $retryService, $redisQueue, $rebuild);
+
+        try {
+            $worker->run($sim->id);
+            $this->fail('Expected StopWorkerLoopException was not thrown.');
+        } catch (StopWorkerLoopException $e) {
+            $this->assertSame('stop-loop', $e->getMessage());
+        }
+
+        $fresh = $message->fresh();
+        $this->assertSame('pending', $fresh->status);
+        $this->assertSame(1, (int) $fresh->retry_count);
+        $this->assertNull($fresh->locked_at);
+        $this->assertNotNull($fresh->scheduled_at);
     }
 
     private function buildWorkerForClaimTests(): TestableSimQueueWorkerService

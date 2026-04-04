@@ -60,6 +60,38 @@ class OutboundRetryServiceTest extends TestCase
     }
 
     /** @test */
+    public function handle_permanent_failure_marks_message_as_failed_with_no_retry_scheduled(): void
+    {
+        Carbon::setTestNow(Carbon::parse('2026-03-30 12:00:00'));
+
+        $company = $this->createCompany();
+        $sim = $this->createSim($company);
+
+        $message = OutboundMessage::query()->create([
+            'company_id' => $company->id,
+            'sim_id' => $sim->id,
+            'customer_phone' => '09170000003',
+            'message' => 'Hello',
+            'message_type' => 'CHAT',
+            'priority' => 100,
+            'status' => 'sending',
+            'retry_count' => 1,
+            'locked_at' => now(),
+        ]);
+
+        $this->service->handlePermanentFailure($message, 'SEND_FAILED');
+
+        $fresh = $message->fresh();
+
+        $this->assertSame('failed', $fresh->status);
+        $this->assertSame(2, (int) $fresh->retry_count);
+        $this->assertSame('SEND_FAILED', $fresh->failure_reason);
+        $this->assertNotNull($fresh->failed_at);
+        $this->assertNull($fresh->scheduled_at);
+        $this->assertNull($fresh->locked_at);
+    }
+
+    /** @test */
     public function can_retry_is_always_true_under_phase_zero_forever_retry_policy(): void
     {
         $company = $this->createCompany();
