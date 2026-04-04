@@ -21,6 +21,7 @@ class Sim extends Model
         'modem_id',
         'slot_name',
         'phone_number',
+        'imsi',
         'carrier',
         'sim_label',
         'status',
