@@ -211,7 +211,7 @@ This rule must now also be reflected in outbound API intake implementation.
 # PHASE 2 — FINAL ALIGNED TASKS
 
 Phase 2 Status: IN PROGRESS (substantial slice implemented; phase not complete)
-Phase 2 Checkpoint Validation: full suite green (109 passed)
+Phase 2 Checkpoint Validation: full suite green (112 passed)
 
 ## TASK 012A — PYTHON SMS EXECUTION LAYER STABILIZATION
 Status: Integration-ready (functional slice complete; production hardening items open)
@@ -252,7 +252,6 @@ Completed in current Phase 2 slice:
 Remaining for TASK 012A (production hardening):
 - Python API authentication (shared secret header — both Python and Laravel sides)
 - per-modem send lock on Python side (concurrent sends to same modem may collide)
-- Laravel-side errorLayer-driven retry differentiation (network-layer errors should not retry; currently retried unconditionally)
 
 ---
 
@@ -435,6 +434,10 @@ Completed in current Phase 2 slice:
 - `RetrySchedulerCommand` implemented for due retry re-enqueue
 - scheduler wiring added in `Kernel.php` (every five minutes)
 - focused test added: `RetrySchedulerCommandTest`
+- `OutboundRetryService::handlePermanentFailure()` added — terminal path for network-layer carrier rejections
+- `SimQueueWorkerService` routes `errorLayer='network'` → permanent failure; all other layers → retry
+- `PythonApiSmsSender` `ConnectionException` corrected to `errorLayer='transport'` (was `'network'`)
+- tests added/updated: `OutboundRetryServiceTest`, `SimQueueWorkerServiceRedisTest`, `PythonApiSmsSenderTest`
 
 ---
 

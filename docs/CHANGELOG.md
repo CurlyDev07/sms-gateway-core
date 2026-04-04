@@ -4,6 +4,33 @@ Last Updated: 2026-04-04
 
 ---
 
+## [2026-04-04] Phase 2 Slice Checkpoint — errorLayer-Aware Retry Policy (In Progress)
+
+### Summary
+Implemented Laravel-side errorLayer-driven retry differentiation. Network-layer failures (Python-confirmed carrier/provider rejection) now become terminal. All other error layers remain retriable.
+
+### Completed In This Slice
+- `OutboundRetryService::handlePermanentFailure()` added — marks `status='failed'`, no `scheduled_at`, no retry
+- `SimQueueWorkerService::markMessageFailed()` now routes on `errorLayer`:
+  - `network` → permanent failure (`status='failed'`, `scheduled_at=null`)
+  - all other layers (transport, hardware, modem, gateway, unknown, null) → existing retry path
+- `PythonApiSmsSender` corrected: `ConnectionException` (Laravel→Python TCP failure) now classified as `errorLayer='transport'` instead of `'network'`; prevents Python outage from permanently killing messages
+- tests added/updated:
+  - `OutboundRetryServiceTest` — permanent failure test
+  - `SimQueueWorkerServiceRedisTest` — network layer terminal test, non-network retry test, null errorLayer retry test
+  - `PythonApiSmsSenderTest` — updated ConnectionException assertion to `'transport'`
+
+### Validation
+- full suite currently green: 112 passed
+
+### Status
+- Phase 2 IN PROGRESS
+- Phase 3 not started
+- TASK 012A Laravel-side errorLayer retry gap is now closed
+- Remaining open items: Python API authentication (shared secret), per-modem send lock on Python side
+
+---
+
 ## [2026-04-04] Phase 2 Slice Checkpoint — Redis Transport + Rebuild Wiring + Laravel Python Integration (In Progress)
 
 ### Summary

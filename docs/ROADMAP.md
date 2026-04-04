@@ -11,8 +11,8 @@ Phase 2 – IN PROGRESS
 - Phase 2: IN PROGRESS
 - Phase 3: NOT STARTED
 - Phase 1 lock result: manual migration baseline + failover/reassign hardening complete
-- Phase 2 slice checkpoint: Redis transport + rebuild + retry + worker/controller/event wiring implemented (+ worker Redis-path + Laravel-side Python integration coverage)
-- Phase 2 checkpoint validation: full suite green (109 passed)
+- Phase 2 slice checkpoint: Redis transport + rebuild + retry + worker/controller/event wiring + Laravel-side Python integration + errorLayer-aware retry policy implemented
+- Phase 2 checkpoint validation: full suite green (112 passed)
 
 ---
 
@@ -66,8 +66,12 @@ Legacy baseline status:
     - `SmsSendResult.errorLayer` support
     - `PythonApiSmsSender` contract alignment + tests
   - focused Phase 2 infrastructure + worker Redis-path + sender integration tests added
-  - full suite green (109 passed)
-  - Task 012A: Python endpoints confirmed integration-ready; production hardening items (auth, per-modem lock, errorLayer retry) remain open
+  - errorLayer-aware retry policy implemented:
+    - `network` errorLayer → terminal failure (`status='failed'`, no retry)
+    - all other layers → existing 5-minute forever retry path
+    - `PythonApiSmsSender` ConnectionException corrected to `transport` layer
+  - full suite green (112 passed)
+  - Task 012A: Python endpoints confirmed integration-ready; Laravel-side retry gap closed; remaining: Python API auth (shared secret), per-modem send lock
 
 ---
 
@@ -84,7 +88,7 @@ Status: Functional slice complete; production hardening items open (see Task 012
 - Structured modem / hardware error normalization ✓
 - No full scan during send path ✓
 - Execution-layer correctness and observability ✓
-Remaining: Python API auth (shared secret), per-modem send lock, Laravel errorLayer retry differentiation
+Remaining: Python API auth (shared secret), per-modem send lock
 
 ### Phase 2B — Operator Control + Health Rules (Already Implemented/Locked)
 Status: Completed and locked in Phase 0 baseline. Retained for traceability; not active NEXT scope.

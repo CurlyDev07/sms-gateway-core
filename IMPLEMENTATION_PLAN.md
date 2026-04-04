@@ -607,9 +607,14 @@ UPDATE outbound_messages SET sim_id = {original_sim} WHERE ...
   - `PythonApiSmsSender` aligned to Python engine contract
   - `PythonApiSmsSenderTest` added
 - supporting tests/helper updates added
-- full suite currently green: 109 passed
+- errorLayer-aware retry policy implemented:
+  - `OutboundRetryService::handlePermanentFailure()` — terminal path for network-layer carrier rejections
+  - `SimQueueWorkerService` routes `errorLayer='network'` → permanent failure; all other layers → retry
+  - `PythonApiSmsSender` ConnectionException corrected to `errorLayer='transport'`
+  - tests added/updated: `OutboundRetryServiceTest`, `SimQueueWorkerServiceRedisTest`, `PythonApiSmsSenderTest`
+- full suite currently green: 112 passed
 - Phase 2 is not complete; Phase 3 has not started
-- Python execution service/runtime stabilization remains open (Task 012A)
+- Task 012A Laravel-side retry gap closed; remaining: Python API auth (shared secret), per-modem send lock
 
 ### 6.1 Phase 2 Scope
 
