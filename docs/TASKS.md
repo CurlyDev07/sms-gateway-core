@@ -214,7 +214,7 @@ Phase 2 Status: IN PROGRESS (substantial slice implemented; phase not complete)
 Phase 2 Checkpoint Validation: full suite green (109 passed)
 
 ## TASK 012A — PYTHON SMS EXECUTION LAYER STABILIZATION
-Status: IN PROGRESS (Laravel integration slice landed; Python runtime service not complete)
+Status: Integration-ready (functional slice complete; production hardening items open)
 
 Goal:
 - finalize Python as stable execution layer
@@ -249,9 +249,10 @@ Completed in current Phase 2 slice:
   - extract top-level `error` and `raw.error_layer`
 - focused test added: `PythonApiSmsSenderTest`
 
-Remaining for TASK 012A:
-- actual Python execution service/runtime (`/send`, `/modems/discover`, `/modems/health`)
-- modem discovery/registry/runtime stabilization
+Remaining for TASK 012A (production hardening):
+- Python API authentication (shared secret header — both Python and Laravel sides)
+- per-modem send lock on Python side (concurrent sends to same modem may collide)
+- Laravel-side errorLayer-driven retry differentiation (network-layer errors should not retry; currently retried unconditionally)
 
 ---
 

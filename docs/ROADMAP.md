@@ -67,22 +67,24 @@ Legacy baseline status:
     - `PythonApiSmsSender` contract alignment + tests
   - focused Phase 2 infrastructure + worker Redis-path + sender integration tests added
   - full suite green (109 passed)
-  - Python execution service/runtime work remains open under Task 012A
+  - Task 012A: Python endpoints confirmed integration-ready; production hardening items (auth, per-modem lock, errorLayer retry) remain open
 
 ---
 
 ## NEXT
 
 ### Phase 2A — Python SMS Execution Layer Stabilization
-- Python API server (`/send`, `/modems/discover`, `/modems/health`)
-- Stable modem discovery / modem registry
-- Stable SIM-centric identity resolution
-- AT command SMS sending (`AT+CMGS`)
-- Multi-modem support (USB hub)
-- Modem health check
-- Structured modem / hardware error normalization
-- No full scan during send path
-- Execution-layer correctness and observability
+Status: Functional slice complete; production hardening items open (see Task 012A).
+- Python API server (`/send`, `/modems/discover`, `/modems/health`) ✓
+- Stable modem discovery / modem registry ✓
+- Stable SIM-centric identity resolution ✓
+- AT command SMS sending (`AT+CMGS`) ✓
+- Multi-modem support (USB hub) ✓
+- Modem health check ✓
+- Structured modem / hardware error normalization ✓
+- No full scan during send path ✓
+- Execution-layer correctness and observability ✓
+Remaining: Python API auth (shared secret), per-modem send lock, Laravel errorLayer retry differentiation
 
 ### Phase 2B — Operator Control + Health Rules (Already Implemented/Locked)
 Status: Completed and locked in Phase 0 baseline. Retained for traceability; not active NEXT scope.
@@ -127,29 +129,26 @@ Status: Completed in baseline hardening. Retained for traceability; not active N
 ---
 
 ## PHASE 3 — REDIS + PER-SIM QUEUE ARCHITECTURE
-- Introduce Redis as queue transport / coordination layer
-- Per-SIM isolated queue model
-- 3 Redis queues per SIM:
-  - `chat`
-  - `followup`
-  - `blasting`
-- Worker priority order:
-  1. chat
-  2. followup
-  3. blasting
-- AUTO_REPLY grouped into chat tier
-- Per-SIM worker consumption from Redis
-- Redis rebuild lock for queue rebuild safety
-- DB-first queue rebuild from MySQL truth
-- pending-only safe rebuild scope
-- paused → active auto-requeue path
-- no duplicate queue rebuild guarantee
+Note: All items listed below were absorbed into Phase 2 and are already complete.
+See Phase 4 for the active next scope.
 
-### Phase 3 exit condition
-- each SIM has isolated queue behavior
-- one SIM never blocks another SIM
-- Redis is active for queue transport
-- MySQL remains source of truth
+- Introduce Redis as queue transport / coordination layer ✓ (Phase 2)
+- Per-SIM isolated queue model ✓ (Phase 2)
+- 3 Redis queues per SIM ✓ (Phase 2)
+- Worker priority order (chat → followup → blasting) ✓ (Phase 2)
+- AUTO_REPLY grouped into chat tier ✓ (Phase 2)
+- Per-SIM worker consumption from Redis ✓ (Phase 2)
+- Redis rebuild lock for queue rebuild safety ✓ (Phase 2)
+- DB-first queue rebuild from MySQL truth ✓ (Phase 2)
+- pending-only safe rebuild scope ✓ (Phase 2)
+- paused → active auto-requeue path ✓ (Phase 2)
+- no duplicate queue rebuild guarantee ✓ (Phase 2)
+
+### Phase 3 exit condition (met in Phase 2)
+- each SIM has isolated queue behavior ✓
+- one SIM never blocks another SIM ✓
+- Redis is active for queue transport ✓
+- MySQL remains source of truth ✓
 
 ---
 
