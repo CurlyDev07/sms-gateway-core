@@ -1,6 +1,6 @@
 # TASKS
 
-Last Updated: 2026-04-04
+Last Updated: 2026-04-06
 
 ---
 
@@ -28,6 +28,13 @@ Locked:
 - MySQL is source of truth
 - SIM is the core operational unit
 - tenant-aware schema is in place
+
+Added in Phase 2 slice (2026-04-06):
+- idempotent bootstrap seeders added for fresh-clone dev setup:
+  - `BootstrapCompanySeeder`, `BootstrapModemSeeder`, `BootstrapSimSeeder`, `BootstrapApiClientSeeder`
+  - `DatabaseSeeder` updated to call all four in dependency order
+  - env() fallbacks supported; IMSI placeholder is explicit (15 zeros)
+  - `php artisan migrate --seed` now produces a working dev baseline
 
 ---
 
@@ -211,7 +218,7 @@ This rule must now also be reflected in outbound API intake implementation.
 # PHASE 2 — FINAL ALIGNED TASKS
 
 Phase 2 Status: IN PROGRESS (substantial slice implemented; phase not complete)
-Phase 2 Checkpoint Validation: full suite green (112 passed)
+Phase 2 Checkpoint Validation: full suite green (115 passed)
 
 ## TASK 012A — PYTHON SMS EXECUTION LAYER STABILIZATION
 Status: Integration-ready (functional slice complete; production hardening items open)
@@ -248,6 +255,10 @@ Completed in current Phase 2 slice:
   - success detection via top-level `success === true`
   - extract top-level `error` and `raw.error_layer`
 - focused test added: `PythonApiSmsSenderTest`
+
+Completed additionally in this slice:
+- full Laravel↔Python↔modem live smoke test proven end-to-end (physical SMS received; all paths confirmed)
+- `SMS_PYTHON_API_SEND_PATH` config key added as minor dev/testing affordance (default: `/send`; production behavior unchanged)
 
 Remaining for TASK 012A (production hardening):
 - Python API authentication (shared secret header — both Python and Laravel sides)
@@ -330,6 +341,13 @@ Implemented baseline:
 - `disabled_for_new_assignments`
 - `last_success_at`
 - health check command and scheduler baseline
+
+Bug fix landed this slice:
+- `sims.last_success_at` was not being persisted on successful sends
+- Root cause: `SimStateService::markSendSuccess()` set `last_sent_at` but never set `last_success_at`
+- Fix: `$sim->last_success_at = now()` added; persists on all three code paths (BURST, BURST→COOLDOWN, NORMAL)
+- `SimStateServiceTest` added covering all three paths
+- `SimHealthService` and `CheckSimHealthCommand` now have real data available; explicit validation against live-populated values remains open
 
 ---
 

@@ -1,6 +1,62 @@
 # CHANGELOG
 
-Last Updated: 2026-04-04
+Last Updated: 2026-04-06
+
+---
+
+## [2026-04-06] Phase 2 Slice Checkpoint — Live Smoke Test Proven + last_success_at Fix + Bootstrap Seeders (In Progress)
+
+### Summary
+Full Laravel↔Python↔modem integration smoke test completed and proven live. Bug fix: `sims.last_success_at` was not being persisted on successful sends. Bootstrap seeders added for fresh-clone dev setup.
+
+### Completed In This Slice
+
+#### Live Integration Smoke Test — Proven End-to-End
+All checklist items confirmed in Docker runtime against real hardware:
+- Python health/discover/modems health endpoints pass
+- Laravel config/Redis/DB connectivity verified in Docker
+- IMSI cross-reference passes (Laravel SIM record → Python routing)
+- transport failure path proven (PythonApiSmsSender ConnectionException → `transport` errorLayer → retry)
+- retry re-enqueue path proven (retry scheduler picks up pending+scheduled_at row, enqueues to Redis)
+- success path proven: physical SMS received; `outbound_messages.status=sent`, `sent_at` populated
+- `sims.last_success_at` and `sims.last_sent_at` update correctly after success (post-fix)
+- `sim_daily_stats.sent_count` increments correctly after success
+- Redis queue depth drains to 0 after successful send
+- terminal failure path proven using temporary Python stub (`/dev/stub/send-network-fail`):
+  - `status=failed`, `scheduled_at=null` confirmed
+  - retry scheduler run confirmed zero eligible rows (status=failed is invisible to scheduler)
+- stale lock check: no orphaned sending rows after clean run
+- temporary `.env` stub path override removed; normal `/send` path restored
+
+#### Bug Fix — `sims.last_success_at` Not Persisting
+- Root cause: `SimStateService::markSendSuccess()` set `$sim->last_sent_at = now()` but never set `$sim->last_success_at`
+- Fix: added `$sim->last_success_at = now();` immediately after `last_sent_at` assignment in `SimStateService:111`
+- Both fields are now persisted on all three code paths (BURST, BURST→COOLDOWN, NORMAL) via the existing `$sim->save()` calls
+- `SimStateServiceTest` added covering all three paths (normal, burst below limit, burst-into-cooldown)
+
+#### Bootstrap Seeders Added
+Idempotent bootstrap seeders for fresh-clone dev setup (`php artisan migrate --seed`):
+- `BootstrapCompanySeeder` — one default active company, keyed on `code='bootstrap'`
+- `BootstrapModemSeeder` — one placeholder modem (`status=offline`)
+- `BootstrapSimSeeder` — one active SIM, placeholder IMSI (`000000000000000`), env() overridable
+- `BootstrapApiClientSeeder` — one active API client; api_secret hashed once on first create only
+- `DatabaseSeeder` updated to call all four in dependency order
+- env() fallbacks: `BOOTSTRAP_COMPANY_NAME`, `BOOTSTRAP_SIM_PHONE`, `BOOTSTRAP_SIM_IMSI`, `BOOTSTRAP_API_KEY`, `BOOTSTRAP_API_SECRET`
+
+#### Minor Dev Affordance
+- `SMS_PYTHON_API_SEND_PATH` config key added (`config/sms.php`, backed by `PythonApiSmsSender`)
+- Allows configuring the HTTP path appended to `SMS_PYTHON_API_URL` without code changes
+- Default: `/send` (production behavior unchanged)
+- Used for smoke test stub proof; `.env` override since removed
+
+### Validation
+- full suite currently green: 115 passed
+
+### Status
+- Phase 2 IN PROGRESS
+- Phase 3 not started
+- `sims.last_success_at` bug now closed; `SimHealthService` and `CheckSimHealthCommand` will now receive real data
+- Remaining open items: Python API authentication (shared secret), per-modem send lock on Python side, SimHealthService validation against live-populated `last_success_at`
 
 ---
 
