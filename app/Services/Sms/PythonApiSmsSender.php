@@ -61,8 +61,9 @@ class PythonApiSmsSender implements SmsSenderInterface
         }
 
         try {
+            $sendPath = (string) config('sms.python_api_send_path', '/send');
             $response = Http::timeout(35)
-                ->post($baseUrl.'/send', [
+                ->post($baseUrl.$sendPath, [
                     'sim_id' => (string) $imsi,
                     'phone' => $phone,
                     'message' => $message,
