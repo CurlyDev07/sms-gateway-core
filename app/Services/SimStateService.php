@@ -108,6 +108,7 @@ class SimStateService
     public function markSendSuccess(Sim $sim, string $messageType): void
     {
         $sim->last_sent_at = now();
+        $sim->last_success_at = now();
 
         if ($this->shouldUseBurstMode($messageType)) {
             $nextBurstCount = (int) $sim->burst_count + 1;
