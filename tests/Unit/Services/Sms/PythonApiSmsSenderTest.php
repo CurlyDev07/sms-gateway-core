@@ -134,6 +134,57 @@ class PythonApiSmsSenderTest extends TestCase
     }
 
     /** @test */
+    public function it_sends_auth_header_when_token_is_configured(): void
+    {
+        config()->set('sms.python_api_token', 'test-gateway-secret');
+
+        Http::fake([
+            'http://python-engine.test/send' => Http::response([
+                'success' => true,
+                'message_id' => 'py-msg-456',
+                'raw' => [],
+            ], 200),
+        ]);
+
+        $company = $this->createCompany();
+        $sim = $this->createSim($company, ['imsi' => '515031234567890']);
+
+        $result = $this->sender->send((int) $sim->id, '09171234567', 'Hello');
+
+        $this->assertTrue($result->success);
+
+        Http::assertSent(function (Request $request) {
+            return $request->hasHeader('X-Gateway-Token')
+                && $request->header('X-Gateway-Token')[0] === 'test-gateway-secret';
+        });
+    }
+
+    /** @test */
+    public function it_does_not_send_auth_header_when_token_is_not_configured(): void
+    {
+        config()->set('sms.python_api_token', '');
+
+        Http::fake([
+            'http://python-engine.test/send' => Http::response([
+                'success' => true,
+                'message_id' => 'py-msg-789',
+                'raw' => [],
+            ], 200),
+        ]);
+
+        $company = $this->createCompany();
+        $sim = $this->createSim($company, ['imsi' => '515031234567890']);
+
+        $result = $this->sender->send((int) $sim->id, '09171234567', 'Hello');
+
+        $this->assertTrue($result->success);
+
+        Http::assertSent(function (Request $request) {
+            return !$request->hasHeader('X-Gateway-Token');
+        });
+    }
+
+    /** @test */
     public function it_returns_python_execution_failure_using_top_level_error_and_raw_error_layer(): void
     {
         Http::fake([

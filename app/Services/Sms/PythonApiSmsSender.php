@@ -62,13 +62,20 @@ class PythonApiSmsSender implements SmsSenderInterface
 
         try {
             $sendPath = (string) config('sms.python_api_send_path', '/send');
-            $response = Http::timeout(35)
-                ->post($baseUrl.$sendPath, [
-                    'sim_id' => (string) $imsi,
-                    'phone' => $phone,
-                    'message' => $message,
-                    'meta' => $meta,
-                ]);
+            $token = (string) config('sms.python_api_token', '');
+
+            $http = Http::timeout(35);
+
+            if ($token !== '') {
+                $http = $http->withHeaders(['X-Gateway-Token' => $token]);
+            }
+
+            $response = $http->post($baseUrl.$sendPath, [
+                'sim_id' => (string) $imsi,
+                'phone' => $phone,
+                'message' => $message,
+                'meta' => $meta,
+            ]);
 
             $json = $response->json();
             $payload = is_array($json) ? $json : ['body' => (string) $response->body()];
