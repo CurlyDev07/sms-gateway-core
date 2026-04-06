@@ -4,6 +4,55 @@ Last Updated: 2026-04-06
 
 ---
 
+## [2026-04-06] Phase 2 Complete and Locked
+
+### Summary
+Phase 2 is now formally complete and locked. All Phase 2 scope items are implemented, tested, and live-proven. One item (Python-side per-modem send lock) is explicitly deferred as Python-owned hardware-safe execution behavior outside Phase 2 lock scope.
+
+### Lock Result
+- full suite green: 120 passed
+- all Phase 2 tasks complete: 012A, 012B, 012C, 012D, 012E, 012F, 013, 014, 015, 016
+- transport architecture (Redis per-SIM queues, rebuild lock, retry policy) live-proven
+- authenticated Laravel↔Python↔modem end-to-end send live-proven
+- all success / retry / terminal failure / stale lock paths confirmed live
+- `sims.last_success_at` correctly populated and health check validated
+- bootstrap seeders in place for fresh-clone dev setup
+
+### Explicit Deferral
+- **per-modem send lock** — Python-owned concurrency guard for serial port access; deferred outside Phase 2 lock scope
+  - does not affect correctness of current single-modem live setup
+  - Python may implement as hardware-safe execution behavior per locked layer ownership rules
+  - to be addressed as a Python-side item before multi-modem concurrent load
+
+### Phase 3 / Phase 4
+- Phase 3 items were absorbed into Phase 2 (see ROADMAP.md)
+- Phase 4 (monitoring, stuck-age, dashboard, admin APIs) is NOT STARTED
+
+---
+
+## [2026-04-06] Phase 2 Slice Checkpoint — SimHealthService Validation Complete (In Progress)
+
+### Summary
+Validated `SimHealthService` and `CheckSimHealthCommand` behavior now that `sims.last_success_at` is correctly populated by the live system. Three additive tests added to `SimHealthServiceTest`. No service or command code changed.
+
+### Completed In This Slice
+- 3 tests added to `SimHealthServiceTest`:
+  - `compute_stuck_age_returns_all_true_when_last_success_at_is_null` — pins the null case (all stuck flags true), which was the universal pre-fix production state
+  - `check_health_returns_correct_full_shape_for_healthy_sim_with_recent_last_success_at` — pins the healthy result shape: `status=healthy`, `minutes_since_last_success` is a real integer, all `stuck.*` false, `reason=null`
+  - `is_unhealthy_returns_true_at_exactly_30_minute_boundary` — pins `>=` boundary: exactly 30 minutes is unhealthy
+- existing `CheckSimHealthCommandTest` tests remain green against real-timestamp scenarios
+- `SimHealthService` and `CheckSimHealthCommand` are now fully validated for the corrected `last_success_at` data path
+
+### Validation
+- full suite currently green: 120 passed
+
+### Status
+- Phase 2 IN PROGRESS
+- SimHealthService / CheckSimHealthCommand validation item is now closed
+- Remaining open Phase 2 hardening item: per-modem send lock on Python side
+
+---
+
 ## [2026-04-06] Phase 2 Slice Checkpoint — Python API Authentication Complete (In Progress)
 
 ### Summary

@@ -3,16 +3,18 @@
 ---
 
 ## CURRENT PHASE
-Phase 2 – IN PROGRESS
+Phase 4 – NOT STARTED
 
 ### Phase Status
 - Phase 0: COMPLETE (Locked)
 - Phase 1: COMPLETE (Locked)
-- Phase 2: IN PROGRESS
-- Phase 3: NOT STARTED
+- Phase 2: COMPLETE (Locked)
+- Phase 3: COMPLETE (absorbed into Phase 2 — see Phase 3 section)
+- Phase 4: NOT STARTED
 - Phase 1 lock result: manual migration baseline + failover/reassign hardening complete
-- Phase 2 slice checkpoint: Redis transport + rebuild + retry + worker/controller/event wiring + Laravel-side Python integration + errorLayer-aware retry policy + live smoke-test proven + last_success_at bug fix + bootstrap seeders + Python API authentication implemented
-- Phase 2 checkpoint validation: full suite green (117 passed)
+- Phase 2 lock result: Redis transport + rebuild + retry + worker/controller/event wiring + Laravel-side Python integration + errorLayer-aware retry policy + live smoke-test proven + last_success_at bug fix + bootstrap seeders + Python API authentication + SimHealthService validation — all complete and locked
+- Phase 2 lock validation: full suite green (120 passed)
+- Phase 2 explicit deferral: per-modem send lock is Python-owned hardware-safe execution behavior; deferred outside Phase 2 lock scope
 
 ---
 
@@ -52,7 +54,7 @@ Legacy baseline status:
 
 ---
 
-## IN PROGRESS
+## PHASE 2 LOCK SUMMARY (Complete)
 - Phase 2 slice implemented:
   - Redis queue transport (`RedisQueueService`)
   - DB-first queue rebuild + rebuild lock (`QueueRebuildService`)
@@ -70,20 +72,21 @@ Legacy baseline status:
     - `network` errorLayer → terminal failure (`status='failed'`, no retry)
     - all other layers → existing 5-minute forever retry path
     - `PythonApiSmsSender` ConnectionException corrected to `transport` layer
-  - full suite green (117 passed)
+  - full suite green (120 passed)
   - Task 012A: Python endpoints confirmed integration-ready; Laravel-side retry gap closed; Python API authentication complete (X-Gateway-Token, both sides, live-proven); remaining: per-modem send lock
   - live smoke test proven end-to-end (physical SMS received; all success/retry/terminal paths confirmed)
   - `sims.last_success_at` bug fixed: `SimStateService` now persists on all send-success paths; `SimStateServiceTest` added
   - bootstrap seeders added: `BootstrapCompanySeeder`, `BootstrapModemSeeder`, `BootstrapSimSeeder`, `BootstrapApiClientSeeder`
   - `SMS_PYTHON_API_SEND_PATH` config key added as minor dev/testing affordance (default: `/send`)
   - Python API authentication implemented: `X-Gateway-Token` header sent by Laravel, validated by Python
+  - `SimHealthService`/`CheckSimHealthCommand` validated against real-populated `last_success_at` (3 tests added to `SimHealthServiceTest`)
 
 ---
 
 ## NEXT
 
 ### Phase 2A — Python SMS Execution Layer Stabilization
-Status: Functional slice complete; production hardening items open (see Task 012A).
+Status: COMPLETE (Locked for Phase 2)
 - Python API server (`/send`, `/modems/discover`, `/modems/health`) ✓
 - Stable modem discovery / modem registry ✓
 - Stable SIM-centric identity resolution ✓
@@ -93,7 +96,8 @@ Status: Functional slice complete; production hardening items open (see Task 012
 - Structured modem / hardware error normalization ✓
 - No full scan during send path ✓
 - Execution-layer correctness and observability ✓
-Remaining: per-modem send lock on Python side
+- Python API authentication (`X-Gateway-Token`) ✓
+Deferred (Python-owned, non-blocking): per-modem send lock — hardware-safe serial port concurrency guard; to be implemented Python-side before multi-modem concurrent load
 
 ### Phase 2B — Operator Control + Health Rules (Already Implemented/Locked)
 Status: Completed and locked in Phase 0 baseline. Retained for traceability; not active NEXT scope.

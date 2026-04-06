@@ -217,11 +217,12 @@ This rule must now also be reflected in outbound API intake implementation.
 
 # PHASE 2 — FINAL ALIGNED TASKS
 
-Phase 2 Status: IN PROGRESS (substantial slice implemented; phase not complete)
-Phase 2 Checkpoint Validation: full suite green (117 passed)
+Phase 2 Status: COMPLETE (Locked)
+Phase 2 Lock Validation: full suite green (120 passed)
+Phase 2 Explicit Deferral: per-modem send lock — Python-owned hardware-safe execution behavior; deferred outside Phase 2 lock scope; non-blocking for current single-modem live setup
 
 ## TASK 012A — PYTHON SMS EXECUTION LAYER STABILIZATION
-Status: Integration-ready (Python API authentication complete; one hardening item open)
+Status: DONE (Phase 2 locked; per-modem send lock explicitly deferred as Python-owned)
 
 Goal:
 - finalize Python as stable execution layer
@@ -266,8 +267,8 @@ Completed additionally in this slice:
   - two tests added to `PythonApiSmsSenderTest` covering header-sent and header-absent cases
   - authenticated live send proven end-to-end (physical SMS received)
 
-Remaining for TASK 012A (production hardening):
-- per-modem send lock on Python side (concurrent sends to same modem may collide)
+Deferred outside Phase 2 lock scope:
+- per-modem send lock (Python-owned) — hardware-safe serial port concurrency guard; does not affect correctness of current single-modem setup; to be addressed Python-side before multi-modem concurrent load
 
 ---
 
@@ -352,7 +353,7 @@ Bug fix landed this slice:
 - Root cause: `SimStateService::markSendSuccess()` set `last_sent_at` but never set `last_success_at`
 - Fix: `$sim->last_success_at = now()` added; persists on all three code paths (BURST, BURST→COOLDOWN, NORMAL)
 - `SimStateServiceTest` added covering all three paths
-- `SimHealthService` and `CheckSimHealthCommand` now have real data available; explicit validation against live-populated values remains open
+- `SimHealthService` and `CheckSimHealthCommand` validation completed: 3 tests added to `SimHealthServiceTest` covering null `last_success_at` stuck-flags, healthy result shape, and exact 30-minute boundary; item is now closed
 
 ---
 
@@ -394,7 +395,7 @@ Lock result:
 ---
 
 ## TASK 012E — DB-FIRST QUEUE REBUILD
-Status: IN PROGRESS (Slice checkpoint)
+Status: DONE (Phase 2 locked)
 
 Goal:
 Implement safe queue rebuild behavior.
@@ -432,7 +433,7 @@ Completed in current Phase 2 slice:
 ---
 
 ## TASK 012F — RETRY POLICY UPDATE
-Status: IN PROGRESS (Slice checkpoint)
+Status: DONE (Phase 2 locked)
 
 Goal:
 Replace older retry model with final aligned retry behavior.
@@ -467,7 +468,7 @@ Completed in current Phase 2 slice:
 # PHASE 2 CONTINUATION — REDIS PER-SIM QUEUE ARCHITECTURE
 
 ## TASK 013 — REDIS PER-SIM 3-QUEUE MODEL
-Status: IN PROGRESS (Slice checkpoint)
+Status: DONE (Phase 2 locked)
 
 Goal:
 Move from DB-claim queueing to Redis per-SIM queue transport.
@@ -509,7 +510,7 @@ Completed in current Phase 2 slice:
 ---
 
 ## TASK 014 — MESSAGE INTAKE → REDIS ROUTING
-Status: IN PROGRESS (Slice checkpoint)
+Status: DONE (Phase 2 locked)
 
 Goal:
 Make outbound intake route directly into per-SIM Redis queue when SIM is active.
@@ -532,7 +533,7 @@ Completed in current Phase 2 slice:
 ---
 
 ## TASK 015 — PAUSED→ACTIVE AUTO-REQUEUE
-Status: IN PROGRESS (Slice checkpoint)
+Status: DONE (Phase 2 locked)
 
 Goal:
 When SIM resumes from paused to active:
@@ -552,7 +553,7 @@ Completed in current Phase 2 slice:
 ---
 
 ## TASK 016 — BLOCKED INTAKE GATE
-Status: IN PROGRESS (Slice checkpoint)
+Status: DONE (Phase 2 locked)
 
 Goal:
 Ensure blocked SIM rejects new intake while allowing old queued work to drain.
