@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\GatewayInboundController;
 use App\Http\Controllers\GatewayOutboundController;
+use App\Http\Controllers\MessageStatusController;
 use App\Http\Controllers\SimController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -32,9 +33,7 @@ Route::middleware(['api.client', 'tenant.resolve'])->group(function () {
         return response()->json(['ok' => false, 'error' => 'not_implemented'], 501);
     });
 
-    Route::get('/messages/status', function () {
-        return response()->json(['ok' => false, 'error' => 'not_implemented'], 501);
-    });
+    Route::get('/messages/status', [MessageStatusController::class, 'show']);
 
     Route::get('/sims', [SimController::class, 'index']);
 
