@@ -3,18 +3,19 @@
 ---
 
 ## CURRENT PHASE
-Phase 4 – NOT STARTED
+Phase 4 – IN PROGRESS (backend API surfaces complete; dashboard not started)
 
 ### Phase Status
 - Phase 0: COMPLETE (Locked)
 - Phase 1: COMPLETE (Locked)
 - Phase 2: COMPLETE (Locked)
 - Phase 3: COMPLETE (absorbed into Phase 2 — see Phase 3 section)
-- Phase 4: NOT STARTED
+- Phase 4: IN PROGRESS — backend/API control surfaces complete; frontend dashboard not started
 - Phase 1 lock result: manual migration baseline + failover/reassign hardening complete
 - Phase 2 lock result: Redis transport + rebuild + retry + worker/controller/event wiring + Laravel-side Python integration + errorLayer-aware retry policy + live smoke-test proven + last_success_at bug fix + bootstrap seeders + Python API authentication + SimHealthService validation — all complete and locked
 - Phase 2 lock validation: full suite green (120 passed)
 - Phase 2 explicit deferral: per-modem send lock is Python-owned hardware-safe execution behavior; deferred outside Phase 2 lock scope
+- Phase 4 checkpoint validation: full suite green (175 passed)
 
 ---
 
@@ -166,18 +167,32 @@ See Phase 4 for the active next scope.
 ---
 
 ## PHASE 4 — MONITORING + CONTROL SURFACES
-- SIM health monitoring
-- Per-SIM queue depth visibility
+
+### Phase 4 Checkpoint (2026-04-06) — Backend API Complete
+Backend/API surfaces implemented and tested (175 passed). No frontend work yet.
+
+#### Completed (Backend Only)
+- `GET /api/sims` — SIM list with health, queue depth, assignment flags ✓
+- `GET /api/messages/status` — message status by `client_message_id` ✓
+- `GET /api/assignments` — customer-SIM assignments with nested SIM ✓
+- `POST /api/admin/sim/{id}/status` — operator status control ✓
+- `POST /api/admin/sim/{id}/enable-assignments` — enable new assignments ✓
+- `POST /api/admin/sim/{id}/disable-assignments` — disable new assignments ✓
+- `POST /api/admin/migrate-single-customer` — single-customer migration ✓
+- `POST /api/admin/migrate-bulk` — bulk SIM migration ✓
+- `POST /api/admin/sim/{id}/rebuild-queue` — per-SIM queue rebuild trigger ✓
+
+#### Remaining Phase 4 Work
+- SIM health monitoring (backend: done; dashboard: not started)
+- Per-SIM queue depth visibility (backend: done; dashboard: not started)
 - per-SIM message counts by tier
-- operator status visibility
-- last success visibility
-- stuck-age warnings
-- admin APIs / controls for:
-  - SIM status
-  - enable/disable new assignments
-  - migration
-  - queue rebuild / recovery tools
+- stuck-age warnings (backend: done; dashboard: not started)
 - logging and error tracking
+- frontend dashboard (NOT STARTED)
+
+#### Intentional Deferral
+- `StaleLockRecoveryService` not exposed as tenant API (system-scoped; wrong blast radius)
+- Per-modem send lock (Python-owned; outside Phase 4 scope)
 
 ---
 

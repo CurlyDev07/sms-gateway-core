@@ -1,6 +1,6 @@
 # TASKS
 
-Last Updated: 2026-04-06
+Last Updated: 2026-04-06 (Phase 4 backend checkpoint)
 
 ---
 
@@ -577,49 +577,49 @@ Completed in current Phase 2 slice:
 
 # PHASE 4 — MONITORING + OPERATOR TOOLS
 
-## TASK 017 — HEALTH CHECK COMMAND + SCHEDULER
-Status: NEXT
+Phase 4 Status: IN PROGRESS
+Phase 4 Checkpoint (2026-04-06): backend/API surfaces complete — 175 passed; dashboard not started
 
-Goal:
-- scheduled check every 5 minutes
-- set `disabled_for_new_assignments` where appropriate
-- drive operator visibility
+## TASK 017 — HEALTH CHECK COMMAND + SCHEDULER
+Status: DONE (backend/service layer — Phase 0/2)
+API surface: DONE (Phase 4 — exposed via GET /api/sims health field)
+Dashboard: NOT STARTED
+
+Completed:
+- `SimHealthService` implemented in Phase 0 (30-min threshold, stuck-age flags, disable logic)
+- `CheckSimHealthCommand` implemented in Phase 0 (scheduled every 5 minutes)
+- `SimHealthService` validated in Phase 2 against real `last_success_at` data (3 tests added to `SimHealthServiceTest`)
+- health status, stuck flags, and `minutes_since_last_success` exposed via `GET /api/sims` in Phase 4
 
 ---
 
 ## TASK 018 — STUCK-AGE MONITORING
-Status: NEXT
+Status: DONE (backend/service layer — Phase 0/2)
+API surface: DONE (Phase 4 — exposed via GET /api/sims stuck field)
+Dashboard: NOT STARTED
 
-Goal:
-Surface:
-- 30-minute no-success alert
-- 6h stuck
-- 24h stuck
-- 3d stuck
-
-Use:
-- `last_success_at`
-
-Do not stop retries automatically.
+Completed:
+- `stuck_6h`, `stuck_24h`, `stuck_3d` computed by `SimHealthService::computeStuckAge()`
+- exposed in `GET /api/sims` response as `sims[].stuck` object
+- do not stop retries; visibility only
 
 ---
 
 ## TASK 019 — MANUAL MIGRATION TOOLING
-Status: NEXT
+Status: DONE (Phase 4 — API surfaces complete)
 
-Goal:
-Operator tooling for:
-- bulk SIM migration
-- single-customer migration
-- queue rebuild support
-- safe recovery flow
-
-Migration flow must be documented and testable.
+Completed:
+- `POST /api/admin/migrate-single-customer` — single-customer migration via `SimMigrationService::migrateSingleCustomer()`; tenant-scoped; returns `assignments_moved` + `messages_moved`
+- `POST /api/admin/migrate-bulk` — bulk migration via `SimMigrationService::migrateBulk()`; tenant-scoped; same result shape
+- `POST /api/admin/sim/{id}/rebuild-queue` — per-SIM Redis queue rebuild from DB truth via `QueueRebuildService`; returns 409 if lock already held
+- all three endpoints fully tested; CLI commands remain available alongside API
 
 ---
 
 ## TASK 020 — DASHBOARD SURFACES
-Status: FUTURE-NEXT
+Status: NOT STARTED
+
+Backend API feeding the dashboard is complete (TASKS 017–019, GET /api/sims, GET /api/assignments, GET /api/messages/status, all admin endpoints). Dashboard/UI layer not started.
 
 Dashboard needs per SIM:
 - queued count

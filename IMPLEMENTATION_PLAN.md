@@ -1,7 +1,7 @@
 # SMS Gateway Core – Implementation Plan (Revised)
 
-**Last Updated:** 2026-04-06 (Phase 2 Complete and Locked)
-**Status:** Phase 2 Complete (Locked) — Phase 4 Not Started
+**Last Updated:** 2026-04-06 (Phase 4 Backend Checkpoint)
+**Status:** Phase 2 Complete (Locked) — Phase 4 In Progress (backend/API complete; dashboard not started)
 **Alignment:** Validated against all 9 locked docs with phase-boundary corrections
 
 ---
@@ -613,7 +613,7 @@ UPDATE outbound_messages SET sim_id = {original_sim} WHERE ...
   - `PythonApiSmsSender` ConnectionException corrected to `errorLayer='transport'`
   - tests added/updated: `OutboundRetryServiceTest`, `SimQueueWorkerServiceRedisTest`, `PythonApiSmsSenderTest`
 - full suite green at lock: 120 passed
-- Phase 2 is COMPLETE and LOCKED; Phase 3 absorbed into Phase 2; Phase 4 not started
+- Phase 2 is COMPLETE and LOCKED; Phase 3 absorbed into Phase 2; Phase 4 IN PROGRESS (see Phase 4 checkpoint below)
 - Task 012A: DONE — Python API authentication complete (`X-Gateway-Token`, both sides, live-proven); per-modem send lock explicitly deferred as Python-owned hardware-safe execution behavior
 - live smoke test proven end-to-end (physical SMS received; success/retry/terminal/stale-lock paths all confirmed)
 - `sims.last_success_at` bug fixed: `SimStateService::markSendSuccess()` now sets both `last_sent_at` and `last_success_at`; `SimStateServiceTest` added
@@ -1070,7 +1070,47 @@ php artisan queue:restart
 
 ---
 
-## 7. PHASE 3: HEALTH MONITORING & OPERATOR DASHBOARD
+## 7. PHASE 4: BACKEND API CONTROL SURFACES
+
+**Goal:** Expose minimum-safe operator visibility and control surfaces via tenant-authenticated API. Backend only; no frontend dashboard.
+
+**Status:** IN PROGRESS — backend/API complete at this checkpoint; dashboard not started
+**Checkpoint Validation:** full suite green (175 passed)
+
+### 7.0 Phase 4 Checkpoint (2026-04-06)
+
+#### Read-Only Visibility (Complete)
+
+| Endpoint | Controller | Notes |
+|----------|-----------|-------|
+| `GET /api/sims` | `SimController` | health, stuck-age, queue depth per SIM |
+| `GET /api/messages/status` | `MessageStatusController` | lookup by `client_message_id`; optional `sim_id` filter |
+| `GET /api/assignments` | `AssignmentController` | customer-SIM list; optional filters; nested SIM object |
+
+#### Admin/Control (Complete)
+
+| Endpoint | Controller | Delegates To |
+|----------|-----------|-------------|
+| `POST /api/admin/sim/{id}/status` | `SimAdminController` | `SimOperatorStatusService` |
+| `POST /api/admin/sim/{id}/enable-assignments` | `SimAdminController` | direct `$sim->update()` |
+| `POST /api/admin/sim/{id}/disable-assignments` | `SimAdminController` | direct `$sim->update()` |
+| `POST /api/admin/migrate-single-customer` | `MigrationController` | `SimMigrationService::migrateSingleCustomer()` |
+| `POST /api/admin/migrate-bulk` | `MigrationController` | `SimMigrationService::migrateBulk()` |
+| `POST /api/admin/sim/{id}/rebuild-queue` | `SimAdminController` | `QueueRebuildService::rebuildSimQueue()` |
+
+#### Intentional Exclusions
+- `StaleLockRecoveryService` not exposed as tenant API: system-scoped (no `company_id`), wrong blast radius
+- Dashboard/frontend: NOT STARTED
+
+#### Architecture Preserved
+- All Phase 0/1/2 behaviors unchanged
+- No schema changes
+- No new services (all controllers delegate to existing services/models)
+- Tenant isolation enforced on every endpoint via `TenantContext::companyId()`
+
+---
+
+## 8. PHASE 3: HEALTH MONITORING & OPERATOR DASHBOARD
 
 **Goal:** Build operator visibility into SIM health, queue depth, stuck messages, and provide monitoring surfaces.
 

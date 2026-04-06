@@ -4,6 +4,41 @@ Last Updated: 2026-04-06
 
 ---
 
+## [2026-04-06] Phase 4 Checkpoint — Backend API Control Surfaces (In Progress)
+
+### Summary
+Phase 4 backend/API slices are now implemented and tested. These are backend-only additions: no frontend dashboard, no UI, no schema changes. Phase 4 is IN PROGRESS — backend complete at this checkpoint, dashboard/frontend not yet started.
+
+### Implemented This Checkpoint
+
+#### Read-Only Visibility APIs
+- `GET /api/sims` — per-SIM list with health status, queue depth, and assignment flags; `SimController` + `SimHealthService` + `RedisQueueService`
+- `GET /api/messages/status` — message status lookup by `client_message_id` (required); optional `sim_id` filter; tenant-scoped; `MessageStatusController`
+- `GET /api/assignments` — customer-SIM assignment list with nested SIM object; optional `customer_phone` and `sim_id` filters; tenant-scoped; `AssignmentController`
+
+#### Admin/Control APIs
+- `POST /api/admin/sim/{id}/status` — set operator status (`active`/`paused`/`blocked`) via existing `SimOperatorStatusService`; `SimAdminController`
+- `POST /api/admin/sim/{id}/enable-assignments` — set `accept_new_assignments=true`; `SimAdminController`
+- `POST /api/admin/sim/{id}/disable-assignments` — set `accept_new_assignments=false`; `SimAdminController`
+- `POST /api/admin/migrate-single-customer` — migrate one customer's assignment + pending/queued messages via existing `SimMigrationService`; `MigrationController`
+- `POST /api/admin/migrate-bulk` — bulk migrate all assignments + pending/queued messages via existing `SimMigrationService`; `MigrationController`
+- `POST /api/admin/sim/{id}/rebuild-queue` — trigger per-SIM Redis queue rebuild from DB truth via existing `QueueRebuildService`; returns 409 Conflict if lock already held; `SimAdminController`
+
+#### Intentional Exclusions This Checkpoint
+- `StaleLockRecoveryService` not exposed as tenant API: it is system-scoped (no `company_id`), queries all tenants globally — wrong blast radius and wrong scope for tenant control surface; remains scheduled-maintenance-only
+- Dashboard/frontend: not started; this checkpoint is backend API only
+
+### Validation
+- full suite: 175 passed
+
+### Status
+- Phase 4 IN PROGRESS
+- Backend API control surfaces: complete
+- Frontend dashboard: NOT STARTED
+- Per-modem send lock: deferred (Python-owned, outside Phase 4 scope)
+
+---
+
 ## [2026-04-06] Phase 2 Complete and Locked
 
 ### Summary
