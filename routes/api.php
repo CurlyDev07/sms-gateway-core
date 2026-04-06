@@ -1,8 +1,10 @@
 <?php
 
+use App\Http\Controllers\AssignmentController;
 use App\Http\Controllers\GatewayInboundController;
 use App\Http\Controllers\GatewayOutboundController;
 use App\Http\Controllers\MessageStatusController;
+use App\Http\Controllers\SimAdminController;
 use App\Http\Controllers\SimController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -37,9 +39,7 @@ Route::middleware(['api.client', 'tenant.resolve'])->group(function () {
 
     Route::get('/sims', [SimController::class, 'index']);
 
-    Route::get('/assignments', function () {
-        return response()->json(['ok' => false, 'error' => 'not_implemented'], 501);
-    });
+    Route::get('/assignments', [AssignmentController::class, 'index']);
 
     Route::post('/assignments/set', function () {
         return response()->json(['ok' => false, 'error' => 'not_implemented'], 501);
@@ -48,6 +48,8 @@ Route::middleware(['api.client', 'tenant.resolve'])->group(function () {
     Route::post('/assignments/mark-safe', function () {
         return response()->json(['ok' => false, 'error' => 'not_implemented'], 501);
     });
+
+    Route::post('/admin/sim/{id}/status', [SimAdminController::class, 'setStatus']);
 
     Route::post('/admin/rebalance', function () {
         return response()->json(['ok' => false, 'error' => 'not_implemented'], 501);
