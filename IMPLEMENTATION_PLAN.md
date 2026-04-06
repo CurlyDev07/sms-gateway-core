@@ -1,6 +1,6 @@
 # SMS Gateway Core – Implementation Plan (Revised)
 
-**Last Updated:** 2026-04-06 (Phase 2 Slice Checkpoint)
+**Last Updated:** 2026-04-06 (Phase 2 Slice Checkpoint — Python API Auth Complete)
 **Status:** Phase 2 In Progress (Slice Checkpoint)
 **Alignment:** Validated against all 9 locked docs with phase-boundary corrections
 
@@ -612,13 +612,14 @@ UPDATE outbound_messages SET sim_id = {original_sim} WHERE ...
   - `SimQueueWorkerService` routes `errorLayer='network'` → permanent failure; all other layers → retry
   - `PythonApiSmsSender` ConnectionException corrected to `errorLayer='transport'`
   - tests added/updated: `OutboundRetryServiceTest`, `SimQueueWorkerServiceRedisTest`, `PythonApiSmsSenderTest`
-- full suite currently green: 115 passed
+- full suite currently green: 117 passed
 - Phase 2 is not complete; Phase 3 has not started
-- Task 012A Laravel-side retry gap closed; remaining: Python API auth (shared secret), per-modem send lock
+- Task 012A: Python API authentication complete — `X-Gateway-Token` header sent by Laravel, validated by Python; authenticated live send proven; remaining: per-modem send lock only
 - live smoke test proven end-to-end (physical SMS received; success/retry/terminal/stale-lock paths all confirmed)
 - `sims.last_success_at` bug fixed: `SimStateService::markSendSuccess()` now sets both `last_sent_at` and `last_success_at`; `SimStateServiceTest` added
 - bootstrap seeders added (`BootstrapCompanySeeder`, `BootstrapModemSeeder`, `BootstrapSimSeeder`, `BootstrapApiClientSeeder`); `DatabaseSeeder` updated
 - `SMS_PYTHON_API_SEND_PATH` config key added as minor dev/testing affordance (default: `/send`)
+- `SMS_PYTHON_API_TOKEN` config key added; `PythonApiSmsSender` sends `X-Gateway-Token` when configured
 
 ### 6.1 Phase 2 Scope
 

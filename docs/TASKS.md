@@ -218,10 +218,10 @@ This rule must now also be reflected in outbound API intake implementation.
 # PHASE 2 — FINAL ALIGNED TASKS
 
 Phase 2 Status: IN PROGRESS (substantial slice implemented; phase not complete)
-Phase 2 Checkpoint Validation: full suite green (115 passed)
+Phase 2 Checkpoint Validation: full suite green (117 passed)
 
 ## TASK 012A — PYTHON SMS EXECUTION LAYER STABILIZATION
-Status: Integration-ready (functional slice complete; production hardening items open)
+Status: Integration-ready (Python API authentication complete; one hardening item open)
 
 Goal:
 - finalize Python as stable execution layer
@@ -259,9 +259,14 @@ Completed in current Phase 2 slice:
 Completed additionally in this slice:
 - full Laravel↔Python↔modem live smoke test proven end-to-end (physical SMS received; all paths confirmed)
 - `SMS_PYTHON_API_SEND_PATH` config key added as minor dev/testing affordance (default: `/send`; production behavior unchanged)
+- Python API authentication complete:
+  - `SMS_PYTHON_API_TOKEN` config key added (`config/sms.php`)
+  - `PythonApiSmsSender` sends `X-Gateway-Token` header when token configured; omits when empty (backward-safe)
+  - Python `/send` and protected endpoints validate `X-Gateway-Token`; `/health` intentionally open
+  - two tests added to `PythonApiSmsSenderTest` covering header-sent and header-absent cases
+  - authenticated live send proven end-to-end (physical SMS received)
 
 Remaining for TASK 012A (production hardening):
-- Python API authentication (shared secret header — both Python and Laravel sides)
 - per-modem send lock on Python side (concurrent sends to same modem may collide)
 
 ---

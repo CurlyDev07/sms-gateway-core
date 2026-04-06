@@ -4,6 +4,33 @@ Last Updated: 2026-04-06
 
 ---
 
+## [2026-04-06] Phase 2 Slice Checkpoint — Python API Authentication Complete (In Progress)
+
+### Summary
+Python API shared-secret authentication is now complete and live-proven on both sides. Laravel sends `X-Gateway-Token`; Python validates it. Authenticated end-to-end send confirmed with physical SMS received.
+
+### Completed In This Slice
+- `SMS_PYTHON_API_TOKEN` config key added (`config/sms.php`, `env('SMS_PYTHON_API_TOKEN', '')`)
+- `PythonApiSmsSender` now sends `X-Gateway-Token` header when token is configured; omits header when empty (backward-safe default for deployments that have not yet configured auth)
+- Python engine `/send` (and other protected endpoints) now validates `X-Gateway-Token`; rejects missing or wrong token
+- `/health` endpoint intentionally left open (no auth required)
+- two tests added to `PythonApiSmsSenderTest`:
+  - `it_sends_auth_header_when_token_is_configured`
+  - `it_does_not_send_auth_header_when_token_is_not_configured`
+- `.env.example` updated with `SMS_PYTHON_API_TOKEN=` entry
+- authenticated live send proven end-to-end: Laravel → Python (with token) → modem → physical SMS received
+- `outbound_messages.status=sent`, `sims.last_success_at` and `last_sent_at` updated correctly on authenticated send
+
+### Validation
+- full suite currently green: 117 passed
+
+### Status
+- Phase 2 IN PROGRESS
+- Task 012A Python API authentication is now complete
+- Remaining open items: per-modem send lock on Python side; `SimHealthService`/`CheckSimHealthCommand` live validation against populated `last_success_at`
+
+---
+
 ## [2026-04-06] Phase 2 Slice Checkpoint — Live Smoke Test Proven + last_success_at Fix + Bootstrap Seeders (In Progress)
 
 ### Summary
