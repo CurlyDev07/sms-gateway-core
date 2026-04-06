@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>SIM Fleet Status</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 24px;
+            color: #1f2937;
+        }
+
+        h1 {
+            margin: 0 0 12px 0;
+            font-size: 24px;
+        }
+
+        .muted {
+            color: #6b7280;
+            margin-bottom: 16px;
+        }
+
+        .controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-bottom: 16px;
+            align-items: end;
+        }
+
+        label {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            font-size: 14px;
+        }
+
+        input {
+            min-width: 260px;
+            padding: 8px;
+            border: 1px solid #d1d5db;
+            border-radius: 4px;
+        }
+
+        button {
+            padding: 9px 14px;
+            border: 1px solid #111827;
+            background: #111827;
+            color: #ffffff;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .status {
+            margin: 8px 0 14px 0;
+            min-height: 20px;
+            font-size: 14px;
+        }
+
+        .error {
+            color: #b91c1c;
+        }
+
+        .ok {
+            color: #065f46;
+        }
+
+        .table-wrap {
+            overflow-x: auto;
+            border: 1px solid #e5e7eb;
+        }
+
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            min-width: 1500px;
+            font-size: 13px;
+        }
+
+        th, td {
+            border-bottom: 1px solid #e5e7eb;
+            text-align: left;
+            padding: 8px 10px;
+            vertical-align: top;
+        }
+
+        thead th {
+            background: #f9fafb;
+            position: sticky;
+            top: 0;
+            z-index: 1;
+        }
+    </style>
+</head>
+<body>
+<h1>SIM Fleet Status</h1>
+<p class="muted">
+    Read-only fleet visibility page powered by <code>GET /api/sims</code>.
+    Provide tenant API credentials (X-API-KEY / X-API-SECRET) to load SIM status.
+</p>
+
+<div class="controls">
+    <label>
+        X-API-KEY
+        <input id="apiKey" type="text" placeholder="Enter API key">
+    </label>
+    <label>
+        X-API-SECRET
+        <input id="apiSecret" type="password" placeholder="Enter API secret">
+    </label>
+    <button id="loadButton" type="button">Load SIMs</button>
+</div>
+
+<div id="status" class="status muted">No data loaded yet.</div>
+
+<div class="table-wrap">
+    <table>
+        <thead>
+        <tr>
+            <th>Phone Number</th>
+            <th>Carrier</th>
+            <th>SIM Label</th>
+            <th>Operator Status</th>
+            <th>Health Status</th>
+            <th>Health Reason</th>
+            <th>Stuck 6h</th>
+            <th>Stuck 24h</th>
+            <th>Stuck 3d</th>
+            <th>Queue Total</th>
+            <th>Queue Chat</th>
+            <th>Queue Followup</th>
+            <th>Queue Blasting</th>
+            <th>Accept New Assignments</th>
+            <th>Disabled For New Assignments</th>
+            <th>Last Success At</th>
+        </tr>
+        </thead>
+        <tbody id="simRows">
+        <tr>
+            <td colspan="16" class="muted">No SIM rows loaded.</td>
+        </tr>
+        </tbody>
+    </table>
+</div>
+
+<script>
+    (() => {
+        const apiPath = '/api/sims';
+        const loadButton = document.getElementById('loadButton');
+        const apiKeyInput = document.getElementById('apiKey');
+        const apiSecretInput = document.getElementById('apiSecret');
+        const statusEl = document.getElementById('status');
+        const rowsEl = document.getElementById('simRows');
+
+        const escapeHtml = (value) => {
+            return String(value)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        };
+
+        const boolText = (value) => value ? 'true' : 'false';
+
+        const setStatus = (text, type = 'muted') => {
+            statusEl.className = `status ${type}`;
+            statusEl.textContent = text;
+        };
+
+        const renderRows = (sims) => {
+            if (!Array.isArray(sims) || sims.length === 0) {
+                rowsEl.innerHTML = '<tr><td colspan="16" class="muted">No SIM rows found for this tenant.</td></tr>';
+                return;
+            }
+
+            rowsEl.innerHTML = sims.map((sim) => {
+                const health = sim.health || {};
+                const stuck = sim.stuck || {};
+                const queueDepth = sim.queue_depth || {};
+
+                return `
+                    <tr>
+                        <td>${escapeHtml(sim.phone_number ?? '')}</td>
+                        <td>${escapeHtml(sim.carrier ?? '')}</td>
+                        <td>${escapeHtml(sim.sim_label ?? '')}</td>
+                        <td>${escapeHtml(sim.operator_status ?? '')}</td>
+                        <td>${escapeHtml(health.status ?? '')}</td>
+                        <td>${escapeHtml(health.reason ?? '')}</td>
+                        <td>${escapeHtml(boolText(stuck.stuck_6h ?? false))}</td>
+                        <td>${escapeHtml(boolText(stuck.stuck_24h ?? false))}</td>
+                        <td>${escapeHtml(boolText(stuck.stuck_3d ?? false))}</td>
+                        <td>${escapeHtml(queueDepth.total ?? 0)}</td>
+                        <td>${escapeHtml(queueDepth.chat ?? 0)}</td>
+                        <td>${escapeHtml(queueDepth.followup ?? 0)}</td>
+                        <td>${escapeHtml(queueDepth.blasting ?? 0)}</td>
+                        <td>${escapeHtml(boolText(sim.accept_new_assignments ?? false))}</td>
+                        <td>${escapeHtml(boolText(sim.disabled_for_new_assignments ?? false))}</td>
+                        <td>${escapeHtml(sim.last_success_at ?? '')}</td>
+                    </tr>
+                `;
+            }).join('');
+        };
+
+        loadButton.addEventListener('click', async () => {
+            const apiKey = apiKeyInput.value.trim();
+            const apiSecret = apiSecretInput.value.trim();
+
+            if (!apiKey || !apiSecret) {
+                setStatus('Both X-API-KEY and X-API-SECRET are required.', 'error');
+                return;
+            }
+
+            setStatus('Loading SIM fleet...', 'muted');
+
+            try {
+                const response = await fetch(apiPath, {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'application/json',
+                        'X-API-KEY': apiKey,
+                        'X-API-SECRET': apiSecret
+                    }
+                });
+
+                let payload = null;
+                try {
+                    payload = await response.json();
+                } catch (_) {
+                    payload = null;
+                }
+
+                if (!response.ok || !payload || payload.ok !== true) {
+                    const error = payload && payload.error ? payload.error : `HTTP ${response.status}`;
+                    setStatus(`Load failed: ${error}`, 'error');
+                    renderRows([]);
+                    return;
+                }
+
+                renderRows(payload.sims || []);
+                setStatus(`Loaded ${payload.sims.length} SIM(s).`, 'ok');
+            } catch (error) {
+                setStatus(`Load failed: ${error.message}`, 'error');
+                renderRows([]);
+            }
+        });
+    })();
+</script>
+</body>
+</html>
+
