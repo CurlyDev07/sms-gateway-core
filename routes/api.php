@@ -4,6 +4,7 @@ use App\Http\Controllers\AssignmentController;
 use App\Http\Controllers\GatewayInboundController;
 use App\Http\Controllers\GatewayOutboundController;
 use App\Http\Controllers\MessageStatusController;
+use App\Http\Controllers\MigrationController;
 use App\Http\Controllers\SimAdminController;
 use App\Http\Controllers\SimController;
 use Illuminate\Http\Request;
@@ -41,15 +42,17 @@ Route::middleware(['api.client', 'tenant.resolve'])->group(function () {
 
     Route::get('/assignments', [AssignmentController::class, 'index']);
 
-    Route::post('/assignments/set', function () {
-        return response()->json(['ok' => false, 'error' => 'not_implemented'], 501);
-    });
+    Route::post('/assignments/set', [AssignmentController::class, 'set']);
 
-    Route::post('/assignments/mark-safe', function () {
-        return response()->json(['ok' => false, 'error' => 'not_implemented'], 501);
-    });
+    Route::post('/assignments/mark-safe', [AssignmentController::class, 'markSafe']);
 
     Route::post('/admin/sim/{id}/status', [SimAdminController::class, 'setStatus']);
+    Route::post('/admin/sim/{id}/enable-assignments', [SimAdminController::class, 'enableAssignments']);
+    Route::post('/admin/sim/{id}/disable-assignments', [SimAdminController::class, 'disableAssignments']);
+    Route::post('/admin/sim/{id}/rebuild-queue', [SimAdminController::class, 'rebuildQueue']);
+
+    Route::post('/admin/migrate-single-customer', [MigrationController::class, 'migrateSingleCustomer']);
+    Route::post('/admin/migrate-bulk', [MigrationController::class, 'migrateBulk']);
 
     Route::post('/admin/rebalance', function () {
         return response()->json(['ok' => false, 'error' => 'not_implemented'], 501);
