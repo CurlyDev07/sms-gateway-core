@@ -102,4 +102,59 @@ class SimHealthServiceTest extends TestCase
         $this->assertTrue($stuck['stuck_24h']);
         $this->assertFalse($stuck['stuck_3d']);
     }
+
+    /** @test */
+    public function compute_stuck_age_returns_all_true_when_last_success_at_is_null(): void
+    {
+        // When last_success_at is null (never had a successful send), all stuck flags are true.
+        // This was the universal production state before the last_success_at bug was fixed.
+        $company = $this->createCompany();
+        $sim = $this->createSim($company, ['last_success_at' => null]);
+
+        $stuck = $this->service->computeStuckAge($sim);
+
+        $this->assertTrue($stuck['stuck_6h']);
+        $this->assertTrue($stuck['stuck_24h']);
+        $this->assertTrue($stuck['stuck_3d']);
+    }
+
+    /** @test */
+    public function check_health_returns_correct_full_shape_for_healthy_sim_with_recent_last_success_at(): void
+    {
+        // Validates the healthy code path returns the expected result shape now that
+        // last_success_at is correctly populated by SimStateService on every successful send.
+        Carbon::setTestNow(Carbon::parse('2026-04-06 10:00:00'));
+
+        $company = $this->createCompany();
+        $sim = $this->createSim($company, [
+            'last_success_at' => Carbon::now()->subMinutes(10),
+            'disabled_for_new_assignments' => false,
+        ]);
+
+        $result = $this->service->checkHealth($sim);
+
+        $this->assertSame('healthy', $result['status']);
+        $this->assertNull($result['reason']);
+        $this->assertNotNull($result['last_success_at']);
+        $this->assertIsInt($result['minutes_since_last_success']);
+        $this->assertSame(10, $result['minutes_since_last_success']);
+        $this->assertFalse($result['stuck']['stuck_6h']);
+        $this->assertFalse($result['stuck']['stuck_24h']);
+        $this->assertFalse($result['stuck']['stuck_3d']);
+        $this->assertFalse($result['disable_flag_changed']);
+    }
+
+    /** @test */
+    public function is_unhealthy_returns_true_at_exactly_30_minute_boundary(): void
+    {
+        // isUnhealthy uses >= threshold, so exactly 30 minutes must be unhealthy.
+        Carbon::setTestNow(Carbon::parse('2026-04-06 10:30:00'));
+
+        $company = $this->createCompany();
+        $sim = $this->createSim($company, [
+            'last_success_at' => Carbon::now()->subMinutes(30),
+        ]);
+
+        $this->assertTrue($this->service->isUnhealthy($sim));
+    }
 }
