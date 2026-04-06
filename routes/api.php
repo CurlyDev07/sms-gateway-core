@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\GatewayInboundController;
 use App\Http\Controllers\GatewayOutboundController;
+use App\Http\Controllers\SimController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -35,9 +36,7 @@ Route::middleware(['api.client', 'tenant.resolve'])->group(function () {
         return response()->json(['ok' => false, 'error' => 'not_implemented'], 501);
     });
 
-    Route::get('/sims', function () {
-        return response()->json(['ok' => false, 'error' => 'not_implemented'], 501);
-    });
+    Route::get('/sims', [SimController::class, 'index']);
 
     Route::get('/assignments', function () {
         return response()->json(['ok' => false, 'error' => 'not_implemented'], 501);

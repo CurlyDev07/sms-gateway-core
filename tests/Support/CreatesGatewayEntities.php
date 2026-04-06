@@ -14,13 +14,17 @@ trait CreatesGatewayEntities
     {
         static $companySequence = 1;
 
-        return Company::query()->create(array_merge([
+        $company = Company::query()->create(array_merge([
             'uuid' => (string) Str::uuid(),
             'name' => 'Company '.$companySequence,
             'code' => 'CMP'.str_pad((string) $companySequence, 4, '0', STR_PAD_LEFT),
             'status' => 'active',
             'timezone' => 'Asia/Manila',
         ], $overrides));
+
+        $companySequence++;
+
+        return $company;
     }
 
     protected function createSim(Company $company, array $overrides = []): Sim
