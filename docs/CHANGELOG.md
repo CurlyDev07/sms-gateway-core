@@ -1,6 +1,41 @@
 # CHANGELOG
 
-Last Updated: 2026-04-06
+Last Updated: 2026-04-07
+
+---
+
+## [2026-04-07] Phase 4 Checkpoint — Dashboard Surfaces + UX Polish (In Progress)
+
+### Summary
+Phase 4 is now in a backend+frontend checkpoint state. Backend/operator APIs remain complete, and the first operator dashboard surfaces are now implemented and tested. Phase 4 remains IN PROGRESS.
+
+### Implemented This Checkpoint
+
+#### Dashboard Pages (Blade + inline JS)
+- `/dashboard` — dashboard home/navigation landing page
+- `/dashboard/sims` — SIM fleet read-only visibility powered by `GET /api/sims`
+- `/dashboard/assignments` — assignment visibility powered by `GET /api/assignments`
+- `/dashboard/sims/{id}` — SIM detail/control page using existing admin/control APIs
+- `/dashboard/migration` — migration workflow UI using existing assignment/migration APIs
+- `/dashboard/messages/status` — message status lookup powered by `GET /api/messages/status`
+
+#### UX Polish Pass
+- shared local credential persistence (`X-API-KEY`, `X-API-SECRET`) across dashboard pages
+- consistent cross-page dashboard navigation links
+- clearer action-status messaging (action results preserved across post-action refresh)
+- direct SIM-detail links from fleet/assignment/migration tables
+- no backend API redesign and no schema changes
+
+### Validation
+- full suite: 196 passed
+
+### Status
+- Phase 4 IN PROGRESS
+- Backend API control surfaces: complete
+- Core dashboard/operator UI surfaces: implemented
+- Remaining: broader monitoring/analytics/error-tracking depth and later scale-oriented operator tooling
+- Phase 2 remains locked
+- Phase 3 not started
 
 ---
 

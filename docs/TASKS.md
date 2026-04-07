@@ -1,6 +1,6 @@
 # TASKS
 
-Last Updated: 2026-04-06 (Phase 4 backend checkpoint)
+Last Updated: 2026-04-07 (Phase 4 dashboard + UX checkpoint)
 
 ---
 
@@ -578,12 +578,12 @@ Completed in current Phase 2 slice:
 # PHASE 4 — MONITORING + OPERATOR TOOLS
 
 Phase 4 Status: IN PROGRESS
-Phase 4 Checkpoint (2026-04-06): backend/API surfaces complete — 175 passed; dashboard not started
+Phase 4 Checkpoint (2026-04-07): backend/API + core dashboard surfaces complete — 196 passed
 
 ## TASK 017 — HEALTH CHECK COMMAND + SCHEDULER
 Status: DONE (backend/service layer — Phase 0/2)
 API surface: DONE (Phase 4 — exposed via GET /api/sims health field)
-Dashboard: NOT STARTED
+Dashboard: IN PROGRESS (visible on `/dashboard/sims` and `/dashboard/sims/{id}`)
 
 Completed:
 - `SimHealthService` implemented in Phase 0 (30-min threshold, stuck-age flags, disable logic)
@@ -596,7 +596,7 @@ Completed:
 ## TASK 018 — STUCK-AGE MONITORING
 Status: DONE (backend/service layer — Phase 0/2)
 API surface: DONE (Phase 4 — exposed via GET /api/sims stuck field)
-Dashboard: NOT STARTED
+Dashboard: IN PROGRESS (visible on `/dashboard/sims` and `/dashboard/sims/{id}`)
 
 Completed:
 - `stuck_6h`, `stuck_24h`, `stuck_3d` computed by `SimHealthService::computeStuckAge()`
@@ -617,9 +617,20 @@ Completed:
 ---
 
 ## TASK 020 — DASHBOARD SURFACES
-Status: NOT STARTED
+Status: IN PROGRESS (core operator pages implemented)
 
-Backend API feeding the dashboard is complete (TASKS 017–019, GET /api/sims, GET /api/assignments, GET /api/messages/status, all admin endpoints). Dashboard/UI layer not started.
+Completed in current Phase 4 slices:
+- `/dashboard` home/navigation page
+- `/dashboard/sims` read-only SIM fleet visibility page
+- `/dashboard/assignments` read-only assignment visibility page
+- `/dashboard/sims/{id}` SIM detail/control page (existing admin APIs only)
+- `/dashboard/migration` migration workflow page (existing migration/assignment APIs only)
+- `/dashboard/messages/status` message status lookup page
+- dashboard UX polish pass:
+  - shared credential persistence across dashboard pages
+  - consistent cross-page navigation
+  - improved action-status visibility after refresh
+  - SIM-detail deep links from list pages
 
 Dashboard needs per SIM:
 - queued count
@@ -631,6 +642,10 @@ Dashboard needs per SIM:
 - failed/retrying visibility
 - signal / modem health where available
 - cross-tenant operator monitoring where allowed
+
+Remaining for TASK 020 before Phase 4 lock:
+- deeper monitoring/analytics/error-tracking surfaces beyond the current core operator pages
+- additional operator hardening polish as needed from real usage feedback
 
 ---
 

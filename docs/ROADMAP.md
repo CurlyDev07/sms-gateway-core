@@ -3,19 +3,19 @@
 ---
 
 ## CURRENT PHASE
-Phase 4 – IN PROGRESS (backend API surfaces complete; dashboard not started)
+Phase 4 – IN PROGRESS (backend/API + core dashboard operator surfaces implemented)
 
 ### Phase Status
 - Phase 0: COMPLETE (Locked)
 - Phase 1: COMPLETE (Locked)
 - Phase 2: COMPLETE (Locked)
 - Phase 3: COMPLETE (absorbed into Phase 2 — see Phase 3 section)
-- Phase 4: IN PROGRESS — backend/API control surfaces complete; frontend dashboard not started
+- Phase 4: IN PROGRESS — backend/API control surfaces complete; core dashboard operator surfaces implemented
 - Phase 1 lock result: manual migration baseline + failover/reassign hardening complete
 - Phase 2 lock result: Redis transport + rebuild + retry + worker/controller/event wiring + Laravel-side Python integration + errorLayer-aware retry policy + live smoke-test proven + last_success_at bug fix + bootstrap seeders + Python API authentication + SimHealthService validation — all complete and locked
 - Phase 2 lock validation: full suite green (120 passed)
 - Phase 2 explicit deferral: per-modem send lock is Python-owned hardware-safe execution behavior; deferred outside Phase 2 lock scope
-- Phase 4 checkpoint validation: full suite green (175 passed)
+- Phase 4 checkpoint validation: full suite green (196 passed)
 
 ---
 
@@ -168,10 +168,10 @@ See Phase 4 for the active next scope.
 
 ## PHASE 4 — MONITORING + CONTROL SURFACES
 
-### Phase 4 Checkpoint (2026-04-06) — Backend API Complete
-Backend/API surfaces implemented and tested (175 passed). No frontend work yet.
+### Phase 4 Checkpoint (2026-04-07) — Backend + Core Dashboard Slice Complete
+Backend/API surfaces and core dashboard/operator pages are implemented and tested (196 passed). Phase 4 remains in progress.
 
-#### Completed (Backend Only)
+#### Completed (Backend + Frontend)
 - `GET /api/sims` — SIM list with health, queue depth, assignment flags ✓
 - `GET /api/messages/status` — message status by `client_message_id` ✓
 - `GET /api/assignments` — customer-SIM assignments with nested SIM ✓
@@ -181,14 +181,23 @@ Backend/API surfaces implemented and tested (175 passed). No frontend work yet.
 - `POST /api/admin/migrate-single-customer` — single-customer migration ✓
 - `POST /api/admin/migrate-bulk` — bulk SIM migration ✓
 - `POST /api/admin/sim/{id}/rebuild-queue` — per-SIM queue rebuild trigger ✓
+- `/dashboard` — operator home/navigation page ✓
+- `/dashboard/sims` — SIM fleet visibility page ✓
+- `/dashboard/assignments` — assignment visibility page ✓
+- `/dashboard/sims/{id}` — SIM detail/control page ✓
+- `/dashboard/migration` — migration workflow page ✓
+- `/dashboard/messages/status` — message status lookup page ✓
+- dashboard UX polish pass ✓
+  - shared credential persistence
+  - consistent navigation links
+  - improved action status messaging
+  - SIM detail deep links from list pages
 
 #### Remaining Phase 4 Work
-- SIM health monitoring (backend: done; dashboard: not started)
-- Per-SIM queue depth visibility (backend: done; dashboard: not started)
-- per-SIM message counts by tier
-- stuck-age warnings (backend: done; dashboard: not started)
+- per-SIM message counts by tier beyond current queue-depth visibility
+- stuck-age warnings (backend: done; dashboard visibility now available on operator pages)
 - logging and error tracking
-- frontend dashboard (NOT STARTED)
+- additional dashboard hardening/usability depth as needed before Phase 4 lock
 
 #### Intentional Deferral
 - `StaleLockRecoveryService` not exposed as tenant API (system-scoped; wrong blast radius)

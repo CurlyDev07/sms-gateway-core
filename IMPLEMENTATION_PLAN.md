@@ -1,7 +1,7 @@
 # SMS Gateway Core – Implementation Plan (Revised)
 
-**Last Updated:** 2026-04-06 (Phase 4 Backend Checkpoint)
-**Status:** Phase 2 Complete (Locked) — Phase 4 In Progress (backend/API complete; dashboard not started)
+**Last Updated:** 2026-04-07 (Phase 4 Dashboard + UX Checkpoint)
+**Status:** Phase 2 Complete (Locked) — Phase 4 In Progress (backend/API complete; core dashboard/operator pages implemented)
 **Alignment:** Validated against all 9 locked docs with phase-boundary corrections
 
 ---
@@ -1070,14 +1070,14 @@ php artisan queue:restart
 
 ---
 
-## 7. PHASE 4: BACKEND API CONTROL SURFACES
+## 7. PHASE 4: OPERATOR API + DASHBOARD SURFACES
 
-**Goal:** Expose minimum-safe operator visibility and control surfaces via tenant-authenticated API. Backend only; no frontend dashboard.
+**Goal:** Expose minimum-safe operator visibility and control surfaces via tenant-authenticated API, then deliver core operator dashboard pages using those existing APIs.
 
-**Status:** IN PROGRESS — backend/API complete at this checkpoint; dashboard not started
-**Checkpoint Validation:** full suite green (175 passed)
+**Status:** IN PROGRESS — backend/API complete; core dashboard/operator pages implemented; Phase 4 not locked
+**Checkpoint Validation:** full suite green (196 passed)
 
-### 7.0 Phase 4 Checkpoint (2026-04-06)
+### 7.0 Phase 4 Checkpoint (2026-04-07)
 
 #### Read-Only Visibility (Complete)
 
@@ -1098,15 +1098,34 @@ php artisan queue:restart
 | `POST /api/admin/migrate-bulk` | `MigrationController` | `SimMigrationService::migrateBulk()` |
 | `POST /api/admin/sim/{id}/rebuild-queue` | `SimAdminController` | `QueueRebuildService::rebuildSimQueue()` |
 
+#### Dashboard/UI (Complete in Current Checkpoint)
+
+| Route | Controller | Notes |
+|----------|-----------|-------|
+| `/dashboard` | `DashboardHomePageController` | operator navigation entry point |
+| `/dashboard/sims` | `SimFleetStatusPageController` | SIM fleet read-only status |
+| `/dashboard/assignments` | `AssignmentDashboardPageController` | assignment visibility with filters |
+| `/dashboard/sims/{id}` | `SimDetailControlPageController` | SIM detail + existing control actions |
+| `/dashboard/migration` | `MigrationDashboardPageController` | migration workflow UI using existing APIs |
+| `/dashboard/messages/status` | `MessageStatusDashboardPageController` | message status lookup by client ID |
+
+UX polish included:
+- shared local credential persistence across dashboard pages
+- consistent cross-page navigation
+- improved action-status messaging after refresh
+- SIM-detail deep links from list pages
+
 #### Intentional Exclusions
 - `StaleLockRecoveryService` not exposed as tenant API: system-scoped (no `company_id`), wrong blast radius
-- Dashboard/frontend: NOT STARTED
+- no new backend endpoints added for dashboard pages in this checkpoint
+- no schema changes in this checkpoint
 
 #### Architecture Preserved
 - All Phase 0/1/2 behaviors unchanged
-- No schema changes
-- No new services (all controllers delegate to existing services/models)
+- No backend schema changes
+- Dashboard uses existing backend services/endpoints (no backend redesign)
 - Tenant isolation enforced on every endpoint via `TenantContext::companyId()`
+- Phase 4 remains in progress (broader monitoring depth/analytics/error tracking still pending)
 
 ---
 
