@@ -16,6 +16,21 @@
             font-size: 24px;
         }
 
+        .links {
+            margin-bottom: 12px;
+            font-size: 14px;
+        }
+
+        .links a {
+            color: #1d4ed8;
+            text-decoration: none;
+            margin-right: 12px;
+        }
+
+        .links a:hover {
+            text-decoration: underline;
+        }
+
         .muted {
             color: #6b7280;
             margin-bottom: 16px;
@@ -95,21 +110,25 @@
 </head>
 <body>
 <h1>SIM Fleet Status</h1>
+<div class="links">
+    <a href="/dashboard/assignments">View Assignments</a>
+    <a href="/dashboard/migration">Migration Tools</a>
+</div>
 <p class="muted">
     Read-only fleet visibility page powered by <code>GET /api/sims</code>.
     Provide tenant API credentials (X-API-KEY / X-API-SECRET) to load SIM status.
 </p>
 
 <div class="controls">
-    <label>
+    <label title="API key used to identify your tenant account. Example: key_live_xxx">
         X-API-KEY
         <input id="apiKey" type="text" placeholder="Enter API key">
     </label>
-    <label>
+    <label title="API secret paired with your API key. Keep this private.">
         X-API-SECRET
         <input id="apiSecret" type="password" placeholder="Enter API secret">
     </label>
-    <button id="loadButton" type="button">Load SIMs</button>
+    <button id="loadButton" type="button" title="Fetch the latest SIM status list for your tenant.">Load SIMs</button>
 </div>
 
 <div id="status" class="status muted">No data loaded yet.</div>
@@ -121,18 +140,18 @@
             <th>Phone Number</th>
             <th>Carrier</th>
             <th>SIM Label</th>
-            <th>Operator Status</th>
-            <th>Health Status</th>
-            <th>Health Reason</th>
-            <th>Stuck 6h</th>
-            <th>Stuck 24h</th>
-            <th>Stuck 3d</th>
-            <th>Queue Total</th>
-            <th>Queue Chat</th>
-            <th>Queue Followup</th>
-            <th>Queue Blasting</th>
-            <th>Accept New Assignments</th>
-            <th>Disabled For New Assignments</th>
+            <th title="Operator-controlled send state: active, paused, or blocked.">Operator Status</th>
+            <th title="Current health based on last successful send timestamp.">Health Status</th>
+            <th title="Why this SIM is marked healthy or unhealthy. Example: no_success_within_30_minutes.">Health Reason</th>
+            <th title="True means this SIM has not reported a successful send for 6+ hours.">Stuck 6h</th>
+            <th title="True means this SIM has not reported a successful send for 24+ hours.">Stuck 24h</th>
+            <th title="True means this SIM has not reported a successful send for 3+ days.">Stuck 3d</th>
+            <th title="Total pending queued workload across all queue tiers for this SIM.">Queue Total</th>
+            <th title="High-priority queue depth (chat + auto-reply traffic).">Queue Chat</th>
+            <th title="Follow-up queue depth for this SIM.">Queue Followup</th>
+            <th title="Blasting queue depth for this SIM.">Queue Blasting</th>
+            <th title="If true, new customer stickies may be placed on this SIM.">Accept New Assignments</th>
+            <th title="Health/system safety flag that blocks new assignments even if accept_new_assignments is true.">Disabled For New Assignments</th>
             <th>Last Success At</th>
         </tr>
         </thead>
@@ -249,4 +268,3 @@
 </script>
 </body>
 </html>
-

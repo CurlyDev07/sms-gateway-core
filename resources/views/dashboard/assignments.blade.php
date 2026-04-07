@@ -109,30 +109,33 @@
 </head>
 <body>
 <h1>Assignments Status</h1>
-<div class="links"><a href="/dashboard/sims">View SIM Fleet Status</a></div>
+<div class="links">
+    <a href="/dashboard/sims">View SIM Fleet Status</a>
+    <a href="/dashboard/migration">Migration Tools</a>
+</div>
 <p class="muted">
     Read-only assignment visibility page powered by <code>GET /api/assignments</code>.
     Provide tenant API credentials (X-API-KEY / X-API-SECRET) and optional filters to load data.
 </p>
 
 <div class="controls">
-    <label>
+    <label title="API key used to identify your tenant account. Example: key_live_xxx">
         X-API-KEY
         <input id="apiKey" type="text" placeholder="Enter API key">
     </label>
-    <label>
+    <label title="API secret paired with your API key. Keep this private.">
         X-API-SECRET
         <input id="apiSecret" type="password" placeholder="Enter API secret">
     </label>
-    <label>
+    <label title="Optional filter: show assignments for one customer phone only.">
         customer_phone (optional)
         <input id="customerPhone" type="text" placeholder="e.g. 09171234567">
     </label>
-    <label>
+    <label title="Optional filter: show assignments linked to one SIM ID.">
         sim_id (optional)
         <input id="simId" type="number" min="1" step="1" placeholder="e.g. 1">
     </label>
-    <button id="loadButton" type="button">Load Assignments</button>
+    <button id="loadButton" type="button" title="Fetch assignment records using current optional filters.">Load Assignments</button>
 </div>
 
 <div id="status" class="status muted">No data loaded yet.</div>
@@ -145,11 +148,11 @@
             <th>SIM ID</th>
             <th>SIM Nested ID</th>
             <th>SIM Phone Number</th>
-            <th>SIM Operator Status</th>
+            <th title="Operator-controlled send state of the assigned SIM.">SIM Operator Status</th>
             <th>SIM Status</th>
             <th>Assignment Status</th>
-            <th>Has Replied</th>
-            <th>Safe To Migrate</th>
+            <th title="True means this customer has sent an inbound reply on this assignment.">Has Replied</th>
+            <th title="True means operator marked this assignment safe for migration actions.">Safe To Migrate</th>
             <th>Assigned At</th>
             <th>Last Used At</th>
             <th>Last Inbound At</th>
@@ -282,4 +285,3 @@
 </script>
 </body>
 </html>
-

@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AssignmentDashboardPageController;
+use App\Http\Controllers\MigrationDashboardPageController;
 use App\Http\Controllers\SimDetailControlPageController;
 use App\Http\Controllers\SimFleetStatusPageController;
 use Illuminate\Support\Facades\Route;
@@ -25,6 +26,9 @@ Route::get('/dashboard/sims', [SimFleetStatusPageController::class, 'index'])
 
 Route::get('/dashboard/assignments', [AssignmentDashboardPageController::class, 'index'])
     ->name('dashboard.assignments.index');
+
+Route::get('/dashboard/migration', [MigrationDashboardPageController::class, 'index'])
+    ->name('dashboard.migration.index');
 
 Route::get('/dashboard/sims/{id}', [SimDetailControlPageController::class, 'show'])
     ->whereNumber('id')

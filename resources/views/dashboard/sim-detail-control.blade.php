@@ -118,6 +118,7 @@
 <div class="links">
     <a href="/dashboard/sims">Back to SIM Fleet</a>
     <a href="/dashboard/assignments">View Assignments</a>
+    <a href="/dashboard/migration">Migration Tools</a>
 </div>
 <p class="muted">
     SIM ID: <strong id="simIdText">{{ $simId }}</strong>.
@@ -125,27 +126,27 @@
 </p>
 
 <div class="controls">
-    <label>
+    <label title="API key used to identify your tenant account. Example: key_live_xxx">
         X-API-KEY
         <input id="apiKey" type="text" placeholder="Enter API key">
     </label>
-    <label>
+    <label title="API secret paired with your API key. Keep this private.">
         X-API-SECRET
         <input id="apiSecret" type="password" placeholder="Enter API secret">
     </label>
-    <button id="loadButton" type="button">Load SIM</button>
+    <button id="loadButton" type="button" title="Load live SIM status, health, and queue depth.">Load SIM</button>
 </div>
 
 <div id="status" class="status muted">No SIM data loaded yet.</div>
 
 <div class="panel">
     <div class="actions">
-        <button id="setActiveButton" type="button" class="button-secondary">Set Active</button>
-        <button id="setPausedButton" type="button" class="button-secondary">Set Paused</button>
-        <button id="setBlockedButton" type="button" class="button-secondary">Set Blocked</button>
-        <button id="enableAssignmentsButton" type="button" class="button-secondary">Enable Assignments</button>
-        <button id="disableAssignmentsButton" type="button" class="button-secondary">Disable Assignments</button>
-        <button id="rebuildQueueButton" type="button" class="button-secondary">Rebuild Queue</button>
+        <button id="setActiveButton" type="button" class="button-secondary" title="Allow normal intake and processing for this SIM.">Set Active</button>
+        <button id="setPausedButton" type="button" class="button-secondary" title="Pause processing for this SIM while keeping data intact.">Set Paused</button>
+        <button id="setBlockedButton" type="button" class="button-secondary" title="Block this SIM for intake. Use when SIM is unavailable or unsafe.">Set Blocked</button>
+        <button id="enableAssignmentsButton" type="button" class="button-secondary" title="Allow new customer assignments to this SIM.">Enable Assignments</button>
+        <button id="disableAssignmentsButton" type="button" class="button-secondary" title="Prevent new customer assignments to this SIM.">Disable Assignments</button>
+        <button id="rebuildQueueButton" type="button" class="button-secondary" title="Rebuild this SIM's Redis queues from DB pending truth.">Rebuild Queue</button>
     </div>
 
     <div class="grid">
@@ -155,18 +156,18 @@
         <div><span class="field-label">Carrier:</span><span id="field-carrier">-</span></div>
         <div><span class="field-label">SIM Label:</span><span id="field-sim-label">-</span></div>
         <div><span class="field-label">Status:</span><span id="field-status">-</span></div>
-        <div><span class="field-label">Operator Status:</span><span id="field-operator-status">-</span></div>
-        <div><span class="field-label">Health Status:</span><span id="field-health-status">-</span></div>
-        <div><span class="field-label">Health Reason:</span><span id="field-health-reason">-</span></div>
-        <div><span class="field-label">Stuck 6h:</span><span id="field-stuck-6h">-</span></div>
-        <div><span class="field-label">Stuck 24h:</span><span id="field-stuck-24h">-</span></div>
-        <div><span class="field-label">Stuck 3d:</span><span id="field-stuck-3d">-</span></div>
-        <div><span class="field-label">Queue Total:</span><span id="field-queue-total">-</span></div>
-        <div><span class="field-label">Queue Chat:</span><span id="field-queue-chat">-</span></div>
-        <div><span class="field-label">Queue Followup:</span><span id="field-queue-followup">-</span></div>
-        <div><span class="field-label">Queue Blasting:</span><span id="field-queue-blasting">-</span></div>
-        <div><span class="field-label">Accept New Assignments:</span><span id="field-accept-new">-</span></div>
-        <div><span class="field-label">Disabled For New Assignments:</span><span id="field-disabled-new">-</span></div>
+        <div><span class="field-label" title="Operator-controlled send state: active, paused, or blocked.">Operator Status:</span><span id="field-operator-status">-</span></div>
+        <div><span class="field-label" title="Current health based on last successful send timestamp.">Health Status:</span><span id="field-health-status">-</span></div>
+        <div><span class="field-label" title="Why this SIM is healthy or unhealthy. Example: no_success_within_30_minutes.">Health Reason:</span><span id="field-health-reason">-</span></div>
+        <div><span class="field-label" title="True means no successful send for 6+ hours.">Stuck 6h:</span><span id="field-stuck-6h">-</span></div>
+        <div><span class="field-label" title="True means no successful send for 24+ hours.">Stuck 24h:</span><span id="field-stuck-24h">-</span></div>
+        <div><span class="field-label" title="True means no successful send for 3+ days.">Stuck 3d:</span><span id="field-stuck-3d">-</span></div>
+        <div><span class="field-label" title="Total queue depth across all message tiers for this SIM.">Queue Total:</span><span id="field-queue-total">-</span></div>
+        <div><span class="field-label" title="High-priority queue depth (chat + auto-reply).">Queue Chat:</span><span id="field-queue-chat">-</span></div>
+        <div><span class="field-label" title="Follow-up queue depth for this SIM.">Queue Followup:</span><span id="field-queue-followup">-</span></div>
+        <div><span class="field-label" title="Blasting queue depth for this SIM.">Queue Blasting:</span><span id="field-queue-blasting">-</span></div>
+        <div><span class="field-label" title="If true, this SIM can receive new customer assignments.">Accept New Assignments:</span><span id="field-accept-new">-</span></div>
+        <div><span class="field-label" title="System safety flag that blocks new assignments despite acceptance setting.">Disabled For New Assignments:</span><span id="field-disabled-new">-</span></div>
         <div><span class="field-label">Last Success At:</span><span id="field-last-success">-</span></div>
     </div>
 </div>
@@ -358,4 +359,3 @@
 </script>
 </body>
 </html>
-

@@ -13,6 +13,7 @@ class SimFleetStatusPageTest extends TestCase
         $response->assertOk()
             ->assertSee('SIM Fleet Status')
             ->assertSee('GET /api/sims')
+            ->assertSee('Migration Tools')
             ->assertSee('X-API-KEY')
             ->assertSee('X-API-SECRET')
             ->assertSee('Phone Number')
@@ -20,4 +21,3 @@ class SimFleetStatusPageTest extends TestCase
             ->assertSee('Disabled For New Assignments');
     }
 }
-
