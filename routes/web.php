@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AssignmentDashboardPageController;
+use App\Http\Controllers\DashboardHomePageController;
 use App\Http\Controllers\MigrationDashboardPageController;
 use App\Http\Controllers\MessageStatusDashboardPageController;
 use App\Http\Controllers\SimDetailControlPageController;
@@ -21,6 +22,9 @@ use Illuminate\Support\Facades\Route;
 Route::get('/', function () {
     return view('welcome');
 });
+
+Route::get('/dashboard', [DashboardHomePageController::class, 'index'])
+    ->name('dashboard.home');
 
 Route::get('/dashboard/sims', [SimFleetStatusPageController::class, 'index'])
     ->name('dashboard.sims.index');
