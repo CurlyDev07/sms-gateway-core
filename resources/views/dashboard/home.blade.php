@@ -16,6 +16,21 @@
             font-size: 24px;
         }
 
+        .links {
+            margin-bottom: 12px;
+            font-size: 14px;
+        }
+
+        .links a {
+            color: #1d4ed8;
+            text-decoration: none;
+            margin-right: 12px;
+        }
+
+        .links a:hover {
+            text-decoration: underline;
+        }
+
         .muted {
             color: #6b7280;
             margin-bottom: 16px;
@@ -68,6 +83,13 @@
 </head>
 <body>
 <h1>Gateway Dashboard</h1>
+<div class="links">
+    <a href="/dashboard">Dashboard Home</a>
+    <a href="/dashboard/sims">SIM Fleet</a>
+    <a href="/dashboard/assignments">Assignments</a>
+    <a href="/dashboard/migration">Migration</a>
+    <a href="/dashboard/messages/status">Message Status</a>
+</div>
 <p class="muted">
     Entry point for operator tools. Choose a page below to inspect fleet state, assignments,
     migration flows, or message delivery status.

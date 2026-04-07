@@ -67,6 +67,11 @@
             cursor: pointer;
         }
 
+        .button-secondary {
+            background: #ffffff;
+            color: #111827;
+        }
+
         .status {
             margin: 8px 0 14px 0;
             min-height: 20px;
@@ -111,8 +116,11 @@
 <body>
 <h1>SIM Fleet Status</h1>
 <div class="links">
-    <a href="/dashboard/assignments">View Assignments</a>
-    <a href="/dashboard/migration">Migration Tools</a>
+    <a href="/dashboard">Dashboard Home</a>
+    <a href="/dashboard/sims">SIM Fleet</a>
+    <a href="/dashboard/assignments">Assignments</a>
+    <a href="/dashboard/migration">Migration</a>
+    <a href="/dashboard/messages/status">Message Status</a>
 </div>
 <p class="muted">
     Read-only fleet visibility page powered by <code>GET /api/sims</code>.
@@ -129,6 +137,7 @@
         <input id="apiSecret" type="password" placeholder="Enter API secret">
     </label>
     <button id="loadButton" type="button" title="Fetch the latest SIM status list for your tenant.">Load SIMs</button>
+    <button id="clearCredentialsButton" class="button-secondary" type="button" title="Remove saved API credentials from this browser only.">Clear Saved Credentials</button>
 </div>
 
 <div id="status" class="status muted">No data loaded yet.</div>
@@ -137,6 +146,7 @@
     <table>
         <thead>
         <tr>
+            <th>SIM ID</th>
             <th>Phone Number</th>
             <th>Carrier</th>
             <th>SIM Label</th>
@@ -157,7 +167,7 @@
         </thead>
         <tbody id="simRows">
         <tr>
-            <td colspan="16" class="muted">No SIM rows loaded.</td>
+            <td colspan="17" class="muted">No SIM rows loaded.</td>
         </tr>
         </tbody>
     </table>
@@ -167,10 +177,12 @@
     (() => {
         const apiPath = '/api/sims';
         const loadButton = document.getElementById('loadButton');
+        const clearCredentialsButton = document.getElementById('clearCredentialsButton');
         const apiKeyInput = document.getElementById('apiKey');
         const apiSecretInput = document.getElementById('apiSecret');
         const statusEl = document.getElementById('status');
         const rowsEl = document.getElementById('simRows');
+        const credentialsStorageKey = 'gateway_dashboard_credentials_v1';
 
         const escapeHtml = (value) => {
             return String(value)
@@ -183,6 +195,32 @@
 
         const boolText = (value) => value ? 'true' : 'false';
 
+        const saveCredentials = () => {
+            localStorage.setItem(credentialsStorageKey, JSON.stringify({
+                api_key: apiKeyInput.value.trim(),
+                api_secret: apiSecretInput.value.trim()
+            }));
+        };
+
+        const hydrateCredentials = () => {
+            const raw = localStorage.getItem(credentialsStorageKey);
+            if (!raw) {
+                return;
+            }
+
+            try {
+                const parsed = JSON.parse(raw);
+                if (typeof parsed.api_key === 'string') {
+                    apiKeyInput.value = parsed.api_key;
+                }
+                if (typeof parsed.api_secret === 'string') {
+                    apiSecretInput.value = parsed.api_secret;
+                }
+            } catch (_) {
+                localStorage.removeItem(credentialsStorageKey);
+            }
+        };
+
         const setStatus = (text, type = 'muted') => {
             statusEl.className = `status ${type}`;
             statusEl.textContent = text;
@@ -190,7 +228,7 @@
 
         const renderRows = (sims) => {
             if (!Array.isArray(sims) || sims.length === 0) {
-                rowsEl.innerHTML = '<tr><td colspan="16" class="muted">No SIM rows found for this tenant.</td></tr>';
+                rowsEl.innerHTML = '<tr><td colspan="17" class="muted">No SIM rows found for this tenant.</td></tr>';
                 return;
             }
 
@@ -198,9 +236,14 @@
                 const health = sim.health || {};
                 const stuck = sim.stuck || {};
                 const queueDepth = sim.queue_depth || {};
+                const simId = Number(sim.id);
+                const simLink = Number.isFinite(simId)
+                    ? `<a href="/dashboard/sims/${simId}" title="Open SIM detail/control page for SIM ${simId}.">${simId}</a>`
+                    : '-';
 
                 return `
                     <tr>
+                        <td>${simLink}</td>
                         <td>${escapeHtml(sim.phone_number ?? '')}</td>
                         <td>${escapeHtml(sim.carrier ?? '')}</td>
                         <td>${escapeHtml(sim.sim_label ?? '')}</td>
@@ -231,6 +274,7 @@
                 return;
             }
 
+            saveCredentials();
             setStatus('Loading SIM fleet...', 'muted');
 
             try {
@@ -264,6 +308,15 @@
                 renderRows([]);
             }
         });
+
+        clearCredentialsButton.addEventListener('click', () => {
+            localStorage.removeItem(credentialsStorageKey);
+            apiKeyInput.value = '';
+            apiSecretInput.value = '';
+            setStatus('Saved credentials cleared for this browser.', 'muted');
+        });
+
+        hydrateCredentials();
     })();
 </script>
 </body>

@@ -66,6 +66,11 @@
             cursor: pointer;
         }
 
+        .button-secondary {
+            background: #ffffff;
+            color: #111827;
+        }
+
         .status {
             margin: 8px 0 14px 0;
             min-height: 20px;
@@ -110,8 +115,11 @@
 <body>
 <h1>Assignments Status</h1>
 <div class="links">
-    <a href="/dashboard/sims">View SIM Fleet Status</a>
-    <a href="/dashboard/migration">Migration Tools</a>
+    <a href="/dashboard">Dashboard Home</a>
+    <a href="/dashboard/sims">SIM Fleet</a>
+    <a href="/dashboard/assignments">Assignments</a>
+    <a href="/dashboard/migration">Migration</a>
+    <a href="/dashboard/messages/status">Message Status</a>
 </div>
 <p class="muted">
     Read-only assignment visibility page powered by <code>GET /api/assignments</code>.
@@ -136,6 +144,7 @@
         <input id="simId" type="number" min="1" step="1" placeholder="e.g. 1">
     </label>
     <button id="loadButton" type="button" title="Fetch assignment records using current optional filters.">Load Assignments</button>
+    <button id="clearCredentialsButton" class="button-secondary" type="button" title="Remove saved API credentials from this browser only.">Clear Saved Credentials</button>
 </div>
 
 <div id="status" class="status muted">No data loaded yet.</div>
@@ -173,12 +182,14 @@
     (() => {
         const apiPath = '/api/assignments';
         const loadButton = document.getElementById('loadButton');
+        const clearCredentialsButton = document.getElementById('clearCredentialsButton');
         const apiKeyInput = document.getElementById('apiKey');
         const apiSecretInput = document.getElementById('apiSecret');
         const customerPhoneInput = document.getElementById('customerPhone');
         const simIdInput = document.getElementById('simId');
         const statusEl = document.getElementById('status');
         const rowsEl = document.getElementById('assignmentRows');
+        const credentialsStorageKey = 'gateway_dashboard_credentials_v1';
 
         const escapeHtml = (value) => {
             return String(value)
@@ -190,6 +201,32 @@
         };
 
         const boolText = (value) => value ? 'true' : 'false';
+
+        const saveCredentials = () => {
+            localStorage.setItem(credentialsStorageKey, JSON.stringify({
+                api_key: apiKeyInput.value.trim(),
+                api_secret: apiSecretInput.value.trim()
+            }));
+        };
+
+        const hydrateCredentials = () => {
+            const raw = localStorage.getItem(credentialsStorageKey);
+            if (!raw) {
+                return;
+            }
+
+            try {
+                const parsed = JSON.parse(raw);
+                if (typeof parsed.api_key === 'string') {
+                    apiKeyInput.value = parsed.api_key;
+                }
+                if (typeof parsed.api_secret === 'string') {
+                    apiSecretInput.value = parsed.api_secret;
+                }
+            } catch (_) {
+                localStorage.removeItem(credentialsStorageKey);
+            }
+        };
 
         const setStatus = (text, type = 'muted') => {
             statusEl.className = `status ${type}`;
@@ -204,11 +241,15 @@
 
             rowsEl.innerHTML = assignments.map((assignment) => {
                 const sim = assignment.sim || {};
+                const simId = Number(assignment.sim_id ?? sim.id);
+                const simLink = Number.isFinite(simId)
+                    ? `<a href="/dashboard/sims/${simId}" title="Open SIM detail/control page for SIM ${simId}.">${simId}</a>`
+                    : escapeHtml(assignment.sim_id ?? '');
 
                 return `
                     <tr>
                         <td>${escapeHtml(assignment.customer_phone ?? '')}</td>
-                        <td>${escapeHtml(assignment.sim_id ?? '')}</td>
+                        <td>${simLink}</td>
                         <td>${escapeHtml(sim.id ?? '')}</td>
                         <td>${escapeHtml(sim.phone_number ?? '')}</td>
                         <td>${escapeHtml(sim.operator_status ?? '')}</td>
@@ -238,6 +279,7 @@
                 return;
             }
 
+            saveCredentials();
             const query = new URLSearchParams();
             if (customerPhone) {
                 query.set('customer_phone', customerPhone);
@@ -281,6 +323,15 @@
                 renderRows([]);
             }
         });
+
+        clearCredentialsButton.addEventListener('click', () => {
+            localStorage.removeItem(credentialsStorageKey);
+            apiKeyInput.value = '';
+            apiSecretInput.value = '';
+            setStatus('Saved credentials cleared for this browser.', 'muted');
+        });
+
+        hydrateCredentials();
     })();
 </script>
 </body>

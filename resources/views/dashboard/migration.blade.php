@@ -127,8 +127,11 @@
 <body>
 <h1>Migration Tools</h1>
 <div class="links">
-    <a href="/dashboard/sims">View SIM Fleet</a>
-    <a href="/dashboard/assignments">View Assignments</a>
+    <a href="/dashboard">Dashboard Home</a>
+    <a href="/dashboard/sims">SIM Fleet</a>
+    <a href="/dashboard/assignments">Assignments</a>
+    <a href="/dashboard/migration">Migration</a>
+    <a href="/dashboard/messages/status">Message Status</a>
 </div>
 <p class="muted">
     Operator workflow page using existing assignment and migration APIs only.
@@ -156,6 +159,7 @@
             <input id="filterSimId" type="number" min="1" step="1" placeholder="e.g. 1">
         </label>
         <button id="loadAssignmentsButton" type="button" title="Load assignments using optional filters above.">Load Assignments</button>
+        <button id="clearCredentialsButton" class="button-secondary" type="button" title="Remove saved API credentials from this browser only.">Clear Saved Credentials</button>
     </div>
 </div>
 
@@ -262,10 +266,12 @@
         const bulkToSimIdInput = document.getElementById('bulkToSimId');
 
         const loadAssignmentsButton = document.getElementById('loadAssignmentsButton');
+        const clearCredentialsButton = document.getElementById('clearCredentialsButton');
         const markSafeButton = document.getElementById('markSafeButton');
         const setAssignmentButton = document.getElementById('setAssignmentButton');
         const migrateSingleButton = document.getElementById('migrateSingleButton');
         const migrateBulkButton = document.getElementById('migrateBulkButton');
+        const credentialsStorageKey = 'gateway_dashboard_credentials_v1';
 
         const escapeHtml = (value) => {
             return String(value)
@@ -277,6 +283,32 @@
         };
 
         const boolText = (value) => value ? 'true' : 'false';
+
+        const saveCredentials = () => {
+            localStorage.setItem(credentialsStorageKey, JSON.stringify({
+                api_key: apiKeyInput.value.trim(),
+                api_secret: apiSecretInput.value.trim()
+            }));
+        };
+
+        const hydrateCredentials = () => {
+            const raw = localStorage.getItem(credentialsStorageKey);
+            if (!raw) {
+                return;
+            }
+
+            try {
+                const parsed = JSON.parse(raw);
+                if (typeof parsed.api_key === 'string') {
+                    apiKeyInput.value = parsed.api_key;
+                }
+                if (typeof parsed.api_secret === 'string') {
+                    apiSecretInput.value = parsed.api_secret;
+                }
+            } catch (_) {
+                localStorage.removeItem(credentialsStorageKey);
+            }
+        };
 
         const setStatus = (text, type = 'muted') => {
             statusEl.className = `status ${type}`;
@@ -292,6 +324,7 @@
                 return null;
             }
 
+            saveCredentials();
             return {
                 'Accept': 'application/json',
                 'Content-Type': 'application/json',
@@ -308,11 +341,15 @@
 
             rowsEl.innerHTML = assignments.map((assignment) => {
                 const sim = assignment.sim || {};
+                const simId = Number(assignment.sim_id ?? sim.id);
+                const simLink = Number.isFinite(simId)
+                    ? `<a href="/dashboard/sims/${simId}" title="Open SIM detail/control page for SIM ${simId}.">${simId}</a>`
+                    : escapeHtml(assignment.sim_id ?? '');
 
                 return `
                     <tr>
                         <td>${escapeHtml(assignment.customer_phone ?? '')}</td>
-                        <td>${escapeHtml(assignment.sim_id ?? '')}</td>
+                        <td>${simLink}</td>
                         <td>${escapeHtml(sim.id ?? '')}</td>
                         <td>${escapeHtml(sim.phone_number ?? '')}</td>
                         <td>${escapeHtml(sim.operator_status ?? '')}</td>
@@ -331,7 +368,7 @@
             }).join('');
         };
 
-        const loadAssignments = async () => {
+        const loadAssignments = async ({silent = false} = {}) => {
             const headers = getHeaders();
             if (!headers) {
                 return false;
@@ -351,7 +388,9 @@
 
             const url = query.toString() ? `/api/assignments?${query.toString()}` : '/api/assignments';
 
-            setStatus('Loading assignments...', 'muted');
+            if (!silent) {
+                setStatus('Loading assignments...', 'muted');
+            }
 
             try {
                 const response = await fetch(url, {
@@ -363,17 +402,23 @@
 
                 if (!response.ok || !payload || payload.ok !== true) {
                     const error = payload && payload.error ? payload.error : `HTTP ${response.status}`;
-                    setStatus(`Load failed: ${error}`, 'error');
+                    if (!silent) {
+                        setStatus(`Load failed: ${error}`, 'error');
+                    }
                     renderAssignments([]);
                     return false;
                 }
 
                 const assignments = Array.isArray(payload.assignments) ? payload.assignments : [];
                 renderAssignments(assignments);
-                setStatus(`Loaded ${assignments.length} assignment(s).`, 'ok');
+                if (!silent) {
+                    setStatus(`Loaded ${assignments.length} assignment(s).`, 'ok');
+                }
                 return true;
             } catch (error) {
-                setStatus(`Load failed: ${error.message}`, 'error');
+                if (!silent) {
+                    setStatus(`Load failed: ${error.message}`, 'error');
+                }
                 renderAssignments([]);
                 return false;
             }
@@ -405,12 +450,14 @@
                 if (payload.result) {
                     const assignmentsMoved = payload.result.assignments_moved ?? 0;
                     const messagesMoved = payload.result.messages_moved ?? 0;
-                    setStatus(`${label} completed. assignments_moved=${assignmentsMoved}, messages_moved=${messagesMoved}.`, 'ok');
+                    const refreshed = await loadAssignments({ silent: true });
+                    const refreshNote = refreshed ? ' Assignment table refreshed.' : ' Action applied, but table refresh failed.';
+                    setStatus(`${label} completed. assignments_moved=${assignmentsMoved}, messages_moved=${messagesMoved}.${refreshNote}`, 'ok');
                 } else {
-                    setStatus(`${label} completed successfully.`, 'ok');
+                    const refreshed = await loadAssignments({ silent: true });
+                    const refreshNote = refreshed ? ' Assignment table refreshed.' : ' Action applied, but table refresh failed.';
+                    setStatus(`${label} completed successfully.${refreshNote}`, 'ok');
                 }
-
-                await loadAssignments();
                 return true;
             } catch (error) {
                 setStatus(`${label} failed: ${error.message}`, 'error');
@@ -484,6 +531,15 @@
                 to_sim_id: Number(toSimId)
             }, 'Bulk Migrate');
         });
+
+        clearCredentialsButton.addEventListener('click', () => {
+            localStorage.removeItem(credentialsStorageKey);
+            apiKeyInput.value = '';
+            apiSecretInput.value = '';
+            setStatus('Saved credentials cleared for this browser.', 'muted');
+        });
+
+        hydrateCredentials();
     })();
 </script>
 </body>

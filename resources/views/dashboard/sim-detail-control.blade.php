@@ -116,9 +116,11 @@
 <body>
 <h1>SIM Detail / Control</h1>
 <div class="links">
-    <a href="/dashboard/sims">Back to SIM Fleet</a>
-    <a href="/dashboard/assignments">View Assignments</a>
-    <a href="/dashboard/migration">Migration Tools</a>
+    <a href="/dashboard">Dashboard Home</a>
+    <a href="/dashboard/sims">SIM Fleet</a>
+    <a href="/dashboard/assignments">Assignments</a>
+    <a href="/dashboard/migration">Migration</a>
+    <a href="/dashboard/messages/status">Message Status</a>
 </div>
 <p class="muted">
     SIM ID: <strong id="simIdText">{{ $simId }}</strong>.
@@ -135,6 +137,7 @@
         <input id="apiSecret" type="password" placeholder="Enter API secret">
     </label>
     <button id="loadButton" type="button" title="Load live SIM status, health, and queue depth.">Load SIM</button>
+    <button id="clearCredentialsButton" class="button-secondary" type="button" title="Remove saved API credentials from this browser only.">Clear Saved Credentials</button>
 </div>
 
 <div id="status" class="status muted">No SIM data loaded yet.</div>
@@ -178,6 +181,7 @@
         const apiSimsPath = '/api/sims';
 
         const loadButton = document.getElementById('loadButton');
+        const clearCredentialsButton = document.getElementById('clearCredentialsButton');
         const setActiveButton = document.getElementById('setActiveButton');
         const setPausedButton = document.getElementById('setPausedButton');
         const setBlockedButton = document.getElementById('setBlockedButton');
@@ -188,8 +192,35 @@
         const apiKeyInput = document.getElementById('apiKey');
         const apiSecretInput = document.getElementById('apiSecret');
         const statusEl = document.getElementById('status');
+        const credentialsStorageKey = 'gateway_dashboard_credentials_v1';
 
         const boolText = (value) => value ? 'true' : 'false';
+
+        const saveCredentials = () => {
+            localStorage.setItem(credentialsStorageKey, JSON.stringify({
+                api_key: apiKeyInput.value.trim(),
+                api_secret: apiSecretInput.value.trim()
+            }));
+        };
+
+        const hydrateCredentials = () => {
+            const raw = localStorage.getItem(credentialsStorageKey);
+            if (!raw) {
+                return;
+            }
+
+            try {
+                const parsed = JSON.parse(raw);
+                if (typeof parsed.api_key === 'string') {
+                    apiKeyInput.value = parsed.api_key;
+                }
+                if (typeof parsed.api_secret === 'string') {
+                    apiSecretInput.value = parsed.api_secret;
+                }
+            } catch (_) {
+                localStorage.removeItem(credentialsStorageKey);
+            }
+        };
 
         const setStatus = (text, type = 'muted') => {
             statusEl.className = `status ${type}`;
@@ -248,13 +279,17 @@
             setField('field-last-success', sim.last_success_at);
         };
 
-        const loadSim = async () => {
+        const loadSim = async ({silent = false} = {}) => {
             const headers = getHeaders();
             if (!headers) {
-                return false;
+                return { ok: false, error: 'missing_credentials' };
             }
 
-            setStatus('Loading SIM details...', 'muted');
+            saveCredentials();
+
+            if (!silent) {
+                setStatus('Loading SIM details...', 'muted');
+            }
 
             try {
                 const response = await fetch(apiSimsPath, {
@@ -266,23 +301,36 @@
 
                 if (!response.ok || !payload || payload.ok !== true || !Array.isArray(payload.sims)) {
                     const error = payload && payload.error ? payload.error : `HTTP ${response.status}`;
-                    setStatus(`Load failed: ${error}`, 'error');
-                    return false;
+                    if (!silent) {
+                        setStatus(`Load failed: ${error}`, 'error');
+                    }
+
+                    return { ok: false, error };
                 }
 
                 const sim = payload.sims.find((row) => Number(row.id) === simId);
 
                 if (!sim) {
-                    setStatus(`SIM ${simId} not found in tenant scope.`, 'error');
-                    return false;
+                    const error = `SIM ${simId} not found in tenant scope.`;
+                    if (!silent) {
+                        setStatus(error, 'error');
+                    }
+
+                    return { ok: false, error };
                 }
 
                 renderSim(sim);
-                setStatus(`Loaded SIM ${simId}.`, 'ok');
-                return true;
+                if (!silent) {
+                    setStatus(`Loaded SIM ${simId}.`, 'ok');
+                }
+
+                return { ok: true };
             } catch (error) {
-                setStatus(`Load failed: ${error.message}`, 'error');
-                return false;
+                if (!silent) {
+                    setStatus(`Load failed: ${error.message}`, 'error');
+                }
+
+                return { ok: false, error: error.message };
             }
         };
 
@@ -311,12 +359,20 @@
 
                 if (data.result) {
                     const rebuilt = data.result.rebuilt_count ?? 0;
-                    setStatus(`${actionLabel} completed: rebuilt_count=${rebuilt}.`, 'ok');
+                    const baseMessage = `${actionLabel} completed: rebuilt_count=${rebuilt}.`;
+                    const refresh = await loadSim({ silent: true });
+                    const suffix = refresh.ok
+                        ? ' Latest SIM details refreshed.'
+                        : ' Action applied, but detail refresh failed. Use Load SIM.';
+                    setStatus(`${baseMessage}${suffix}`, 'ok');
                 } else {
-                    setStatus(`${actionLabel} completed successfully.`, 'ok');
+                    const baseMessage = `${actionLabel} completed successfully.`;
+                    const refresh = await loadSim({ silent: true });
+                    const suffix = refresh.ok
+                        ? ' Latest SIM details refreshed.'
+                        : ' Action applied, but detail refresh failed. Use Load SIM.';
+                    setStatus(`${baseMessage}${suffix}`, 'ok');
                 }
-
-                await loadSim();
             } catch (error) {
                 setStatus(`${actionLabel} failed: ${error.message}`, 'error');
             }
@@ -355,6 +411,15 @@
 
             callAction(`/api/admin/sim/${simId}/rebuild-queue`, null, 'Rebuild Queue');
         });
+
+        clearCredentialsButton.addEventListener('click', () => {
+            localStorage.removeItem(credentialsStorageKey);
+            apiKeyInput.value = '';
+            apiSecretInput.value = '';
+            setStatus('Saved credentials cleared for this browser.', 'muted');
+        });
+
+        hydrateCredentials();
     })();
 </script>
 </body>

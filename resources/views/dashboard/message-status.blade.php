@@ -67,6 +67,11 @@
             cursor: pointer;
         }
 
+        .button-secondary {
+            background: #ffffff;
+            color: #111827;
+        }
+
         .status {
             margin: 8px 0 14px 0;
             min-height: 20px;
@@ -111,9 +116,11 @@
 <body>
 <h1>Message Status Lookup</h1>
 <div class="links">
-    <a href="/dashboard/sims">View SIM Fleet</a>
-    <a href="/dashboard/assignments">View Assignments</a>
-    <a href="/dashboard/migration">Migration Tools</a>
+    <a href="/dashboard">Dashboard Home</a>
+    <a href="/dashboard/sims">SIM Fleet</a>
+    <a href="/dashboard/assignments">Assignments</a>
+    <a href="/dashboard/migration">Migration</a>
+    <a href="/dashboard/messages/status">Message Status</a>
 </div>
 <p class="muted">
     Read-only lookup page powered by <code>GET /api/messages/status</code>.
@@ -138,6 +145,7 @@
         <input id="simId" type="number" min="1" step="1" placeholder="e.g. 1">
     </label>
     <button id="lookupButton" type="button">Lookup Status</button>
+    <button id="clearCredentialsButton" class="button-secondary" type="button">Clear Saved Credentials</button>
 </div>
 
 <div id="status" class="status muted">No data loaded yet.</div>
@@ -173,12 +181,14 @@
     (() => {
         const apiPath = '/api/messages/status';
         const lookupButton = document.getElementById('lookupButton');
+        const clearCredentialsButton = document.getElementById('clearCredentialsButton');
         const apiKeyInput = document.getElementById('apiKey');
         const apiSecretInput = document.getElementById('apiSecret');
         const clientMessageIdInput = document.getElementById('clientMessageId');
         const simIdInput = document.getElementById('simId');
         const statusEl = document.getElementById('status');
         const rowsEl = document.getElementById('messageRows');
+        const credentialsStorageKey = 'gateway_dashboard_credentials_v1';
 
         const escapeHtml = (value) => {
             return String(value)
@@ -192,6 +202,32 @@
         const setStatus = (text, type = 'muted') => {
             statusEl.className = `status ${type}`;
             statusEl.textContent = text;
+        };
+
+        const saveCredentials = () => {
+            localStorage.setItem(credentialsStorageKey, JSON.stringify({
+                api_key: apiKeyInput.value.trim(),
+                api_secret: apiSecretInput.value.trim()
+            }));
+        };
+
+        const hydrateCredentials = () => {
+            const raw = localStorage.getItem(credentialsStorageKey);
+            if (!raw) {
+                return;
+            }
+
+            try {
+                const parsed = JSON.parse(raw);
+                if (typeof parsed.api_key === 'string') {
+                    apiKeyInput.value = parsed.api_key;
+                }
+                if (typeof parsed.api_secret === 'string') {
+                    apiSecretInput.value = parsed.api_secret;
+                }
+            } catch (_) {
+                localStorage.removeItem(credentialsStorageKey);
+            }
         };
 
         const formatField = (value) => {
@@ -239,6 +275,7 @@
                 return;
             }
 
+            saveCredentials();
             const query = new URLSearchParams();
             query.set('client_message_id', clientMessageId);
             if (simId) {
@@ -279,6 +316,15 @@
                 renderRows([]);
             }
         });
+
+        clearCredentialsButton.addEventListener('click', () => {
+            localStorage.removeItem(credentialsStorageKey);
+            apiKeyInput.value = '';
+            apiSecretInput.value = '';
+            setStatus('Saved credentials cleared for this browser.', 'muted');
+        });
+
+        hydrateCredentials();
     })();
 </script>
 </body>
