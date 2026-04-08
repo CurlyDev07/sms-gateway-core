@@ -11,6 +11,20 @@ class User extends Authenticatable
 {
     use HasApiTokens, HasFactory, Notifiable;
 
+    public const ROLE_OWNER = 'owner';
+    public const ROLE_ADMIN = 'admin';
+    public const ROLE_SUPPORT = 'support';
+
+    /**
+     * Dashboard write roles.
+     *
+     * @var array<int, string>
+     */
+    public const DASHBOARD_WRITE_ROLES = [
+        self::ROLE_OWNER,
+        self::ROLE_ADMIN,
+    ];
+
     /**
      * The attributes that are mass assignable.
      *
@@ -21,6 +35,7 @@ class User extends Authenticatable
         'email',
         'password',
         'company_id',
+        'operator_role',
     ];
 
     /**
@@ -42,6 +57,26 @@ class User extends Authenticatable
         'email_verified_at' => 'datetime',
         'company_id' => 'integer',
     ];
+
+    /**
+     * Determine if this operator can execute dashboard write/control actions.
+     */
+    public function canDashboardWrite(): bool
+    {
+        return in_array((string) $this->operator_role, self::DASHBOARD_WRITE_ROLES, true);
+    }
+
+    /**
+     * Determine if this operator has a valid known role.
+     */
+    public function hasValidOperatorRole(): bool
+    {
+        return in_array((string) $this->operator_role, [
+            self::ROLE_OWNER,
+            self::ROLE_ADMIN,
+            self::ROLE_SUPPORT,
+        ], true);
+    }
 
     /**
      * Get the tenant company bound to this dashboard operator.

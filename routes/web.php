@@ -67,17 +67,19 @@ Route::middleware(['auth', 'dashboard.tenant'])
         Route::get('/sims', [SimController::class, 'index']);
 
         Route::get('/assignments', [AssignmentController::class, 'index']);
-        Route::post('/assignments/set', [AssignmentController::class, 'set']);
-        Route::post('/assignments/mark-safe', [AssignmentController::class, 'markSafe']);
-
         Route::get('/messages/status', [MessageStatusController::class, 'show']);
 
-        Route::post('/admin/sim/{id}/status', [SimAdminController::class, 'setStatus']);
-        Route::post('/admin/sim/{id}/enable-assignments', [SimAdminController::class, 'enableAssignments']);
-        Route::post('/admin/sim/{id}/disable-assignments', [SimAdminController::class, 'disableAssignments']);
-        Route::post('/admin/sim/{id}/rebuild-queue', [SimAdminController::class, 'rebuildQueue']);
+        Route::middleware('dashboard.operator.write')->group(function () {
+            Route::post('/assignments/set', [AssignmentController::class, 'set']);
+            Route::post('/assignments/mark-safe', [AssignmentController::class, 'markSafe']);
 
-        Route::post('/admin/migrate-single-customer', [MigrationController::class, 'migrateSingleCustomer']);
-        Route::post('/admin/migrate-bulk', [MigrationController::class, 'migrateBulk']);
-        Route::post('/admin/rebalance', [MigrationController::class, 'rebalance']);
+            Route::post('/admin/sim/{id}/status', [SimAdminController::class, 'setStatus']);
+            Route::post('/admin/sim/{id}/enable-assignments', [SimAdminController::class, 'enableAssignments']);
+            Route::post('/admin/sim/{id}/disable-assignments', [SimAdminController::class, 'disableAssignments']);
+            Route::post('/admin/sim/{id}/rebuild-queue', [SimAdminController::class, 'rebuildQueue']);
+
+            Route::post('/admin/migrate-single-customer', [MigrationController::class, 'migrateSingleCustomer']);
+            Route::post('/admin/migrate-bulk', [MigrationController::class, 'migrateBulk']);
+            Route::post('/admin/rebalance', [MigrationController::class, 'rebalance']);
+        });
     });
