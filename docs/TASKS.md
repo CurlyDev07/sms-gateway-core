@@ -1,6 +1,6 @@
 # TASKS
 
-Last Updated: 2026-04-08 (Phase 4 backend/API closure + dashboard checkpoint)
+Last Updated: 2026-04-08 (Phase 4 complete and locked)
 
 ---
 
@@ -577,13 +577,13 @@ Completed in current Phase 2 slice:
 
 # PHASE 4 — MONITORING + OPERATOR TOOLS
 
-Phase 4 Status: IN PROGRESS
-Phase 4 Checkpoint (2026-04-08): backend/API + core dashboard surfaces complete (rebalance + bulk send included) — 205 passed
+Phase 4 Status: COMPLETE (Locked)
+Phase 4 Lock Validation (2026-04-08): full suite green — 205 passed
 
 ## TASK 017 — HEALTH CHECK COMMAND + SCHEDULER
 Status: DONE (backend/service layer — Phase 0/2)
 API surface: DONE (Phase 4 — exposed via GET /api/sims health field)
-Dashboard: IN PROGRESS (visible on `/dashboard/sims` and `/dashboard/sims/{id}`)
+Dashboard: DONE (visible on `/dashboard/sims` and `/dashboard/sims/{id}`)
 
 Completed:
 - `SimHealthService` implemented in Phase 0 (30-min threshold, stuck-age flags, disable logic)
@@ -596,7 +596,7 @@ Completed:
 ## TASK 018 — STUCK-AGE MONITORING
 Status: DONE (backend/service layer — Phase 0/2)
 API surface: DONE (Phase 4 — exposed via GET /api/sims stuck field)
-Dashboard: IN PROGRESS (visible on `/dashboard/sims` and `/dashboard/sims/{id}`)
+Dashboard: DONE (visible on `/dashboard/sims` and `/dashboard/sims/{id}`)
 
 Completed:
 - `stuck_6h`, `stuck_24h`, `stuck_3d` computed by `SimHealthService::computeStuckAge()`
@@ -618,7 +618,7 @@ Completed:
 ---
 
 ## TASK 020 — DASHBOARD SURFACES
-Status: IN PROGRESS (core operator pages implemented)
+Status: DONE (Locked)
 
 Completed in current Phase 4 slices:
 - `/dashboard` home/navigation page
@@ -634,20 +634,15 @@ Completed in current Phase 4 slices:
   - improved action-status visibility after refresh
   - SIM-detail deep links from list pages
 
-Dashboard needs per SIM:
-- queued count
-- messages by tier
-- operator_status
-- assignment flags
-- last_success_at
-- active customer count
-- failed/retrying visibility
-- signal / modem health where available
-- cross-tenant operator monitoring where allowed
+Lock result:
+- core operator dashboard surfaces complete and validated
+- no additional core-scope code changes required for Phase 4 lock
 
-Remaining for TASK 020 before Phase 4 lock:
-- deeper monitoring/analytics/error-tracking surfaces beyond the current core operator pages
-- additional operator hardening polish as needed from real usage feedback
+Deferred beyond Phase 4 (later backlog):
+- advanced monitoring analytics
+- deeper error-tracking stack
+- non-essential future UI polish iterations
+- scale-oriented operator tooling
 
 ---
 

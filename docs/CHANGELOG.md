@@ -4,6 +4,57 @@ Last Updated: 2026-04-08
 
 ---
 
+## [2026-04-08] Phase 4 Complete and Locked
+
+### Summary
+Phase 4 core scope is complete and locked. Tenant-safe operator API surfaces and core dashboard/operator pages are implemented, tested, and aligned with the final Phase 4 boundary.
+
+### Lock Scope Completed
+- tenant-safe operator/read APIs:
+  - `/api/messages/send`
+  - `/api/messages/bulk`
+  - `/api/messages/status`
+  - `/api/sims`
+  - `/api/assignments`
+  - `/api/assignments/set`
+  - `/api/assignments/mark-safe`
+  - `/api/admin/sim/{id}/status`
+  - `/api/admin/sim/{id}/enable-assignments`
+  - `/api/admin/sim/{id}/disable-assignments`
+  - `/api/admin/sim/{id}/rebuild-queue`
+  - `/api/admin/migrate-single-customer`
+  - `/api/admin/migrate-bulk`
+  - `/api/admin/rebalance`
+- operator dashboard pages:
+  - `/dashboard`
+  - `/dashboard/sims`
+  - `/dashboard/assignments`
+  - `/dashboard/sims/{id}`
+  - `/dashboard/migration`
+  - `/dashboard/messages/status`
+- UX baseline polish:
+  - shared credential persistence
+  - cross-page navigation
+  - improved action/status visibility
+  - useful deep links
+
+### Validation
+- full suite green: 205 passed
+
+### Deferred Beyond Phase 4
+- advanced monitoring analytics
+- deeper error-tracking stack
+- non-essential future UI polish iterations
+- scale-oriented operator tooling
+
+### Status
+- Phase 4 COMPLETE (Locked)
+- Phase 5 not started
+- Phase 2 remains locked
+- Phase 3 scope remains absorbed into Phase 2
+
+---
+
 ## [2026-04-08] Phase 4 Checkpoint — Rebalance + Bulk Send API Closure (In Progress)
 
 ### Summary

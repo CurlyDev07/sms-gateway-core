@@ -3,19 +3,20 @@
 ---
 
 ## CURRENT PHASE
-Phase 4 – IN PROGRESS (backend/API + dashboard surfaces implemented; rebalance + bulk send endpoints now live)
+Phase 4 – COMPLETE (Locked)
 
 ### Phase Status
 - Phase 0: COMPLETE (Locked)
 - Phase 1: COMPLETE (Locked)
 - Phase 2: COMPLETE (Locked)
 - Phase 3: COMPLETE (absorbed into Phase 2 — see Phase 3 section)
-- Phase 4: IN PROGRESS — backend/API control surfaces complete (including rebalance + bulk send); core dashboard operator surfaces implemented
+- Phase 4: COMPLETE (Locked) — tenant-safe operator API + core dashboard/operator surfaces implemented
+- Phase 5: NOT STARTED
 - Phase 1 lock result: manual migration baseline + failover/reassign hardening complete
 - Phase 2 lock result: Redis transport + rebuild + retry + worker/controller/event wiring + Laravel-side Python integration + errorLayer-aware retry policy + live smoke-test proven + last_success_at bug fix + bootstrap seeders + Python API authentication + SimHealthService validation — all complete and locked
 - Phase 2 lock validation: full suite green (120 passed)
 - Phase 2 explicit deferral: per-modem send lock is Python-owned hardware-safe execution behavior; deferred outside Phase 2 lock scope
-- Phase 4 checkpoint validation: full suite green (205 passed)
+- Phase 4 lock validation: full suite green (205 passed)
 
 ---
 
@@ -168,8 +169,8 @@ See Phase 4 for the active next scope.
 
 ## PHASE 4 — MONITORING + CONTROL SURFACES
 
-### Phase 4 Checkpoint (2026-04-08) — Backend/API Closure + Core Dashboard Slice Complete
-Backend/API surfaces (including rebalance + bulk send) and core dashboard/operator pages are implemented and tested (205 passed). Phase 4 remains in progress.
+### Phase 4 Lock Result (2026-04-08) — Backend/API + Core Dashboard Complete
+Backend/API surfaces (including rebalance + bulk send) and core dashboard/operator pages are implemented and tested (205 passed). Phase 4 is complete and locked.
 
 #### Completed (Backend + Frontend)
 - `GET /api/sims` — SIM list with health, queue depth, assignment flags ✓
@@ -195,11 +196,11 @@ Backend/API surfaces (including rebalance + bulk send) and core dashboard/operat
   - improved action status messaging
   - SIM detail deep links from list pages
 
-#### Remaining Phase 4 Work
-- per-SIM message counts by tier beyond current queue-depth visibility
-- stuck-age warnings (backend: done; dashboard visibility now available on operator pages)
-- logging and error tracking
-- additional dashboard hardening/usability depth as needed before Phase 4 lock
+#### Deferred Beyond Phase 4 (Later Backlog)
+- advanced monitoring analytics
+- deeper error-tracking stack
+- non-essential future UI polish iterations
+- scale-oriented operator tooling
 
 #### Intentional Deferral
 - `StaleLockRecoveryService` not exposed as tenant API (system-scoped; wrong blast radius)

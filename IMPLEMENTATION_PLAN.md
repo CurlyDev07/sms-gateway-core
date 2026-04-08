@@ -1,7 +1,7 @@
 # SMS Gateway Core – Implementation Plan (Revised)
 
-**Last Updated:** 2026-04-08 (Phase 4 Backend/API Closure + Dashboard Checkpoint)
-**Status:** Phase 2 Complete (Locked) — Phase 4 In Progress (backend/API complete incl. rebalance + bulk send; core dashboard/operator pages implemented)
+**Last Updated:** 2026-04-08 (Phase 4 Complete and Locked)
+**Status:** Phase 0/1/2/4 Complete (Locked) — Phase 5 Not Started
 **Alignment:** Validated against all 9 locked docs with phase-boundary corrections
 
 ---
@@ -78,9 +78,10 @@ Phase 1 (Manual Migration)
     ↓
 Phase 2 (Redis + Rebuild Lock + Auto-Requeue)
     ↓
-Phase 3 (Health Monitoring + Dashboard)
+Phase 4 (Operator API + Dashboard Surfaces) [Locked]
 ```
 
+Phase 3 scope was absorbed into Phase 2 and is retained in docs only for historical traceability.
 Each phase is **self-contained** and does NOT depend on future phases.
 
 ---
@@ -613,7 +614,7 @@ UPDATE outbound_messages SET sim_id = {original_sim} WHERE ...
   - `PythonApiSmsSender` ConnectionException corrected to `errorLayer='transport'`
   - tests added/updated: `OutboundRetryServiceTest`, `SimQueueWorkerServiceRedisTest`, `PythonApiSmsSenderTest`
 - full suite green at lock: 120 passed
-- Phase 2 is COMPLETE and LOCKED; Phase 3 absorbed into Phase 2; Phase 4 IN PROGRESS (see Phase 4 checkpoint below)
+- Phase 2 is COMPLETE and LOCKED; Phase 3 absorbed into Phase 2; Phase 4 COMPLETE and LOCKED (see Phase 4 lock result below)
 - Task 012A: DONE — Python API authentication complete (`X-Gateway-Token`, both sides, live-proven); per-modem send lock explicitly deferred as Python-owned hardware-safe execution behavior
 - live smoke test proven end-to-end (physical SMS received; success/retry/terminal/stale-lock paths all confirmed)
 - `sims.last_success_at` bug fixed: `SimStateService::markSendSuccess()` now sets both `last_sent_at` and `last_success_at`; `SimStateServiceTest` added
@@ -1074,10 +1075,10 @@ php artisan queue:restart
 
 **Goal:** Expose minimum-safe operator visibility and control surfaces via tenant-authenticated API, then deliver core operator dashboard pages using those existing APIs.
 
-**Status:** IN PROGRESS — backend/API complete (incl. rebalance + bulk send); core dashboard/operator pages implemented; Phase 4 not locked
-**Checkpoint Validation:** full suite green (205 passed)
+**Status:** COMPLETE (Locked) — backend/API + core dashboard/operator pages implemented
+**Lock Validation:** full suite green (205 passed)
 
-### 7.0 Phase 4 Checkpoint (2026-04-08)
+### 7.0 Phase 4 Lock Result (2026-04-08)
 
 #### Read-Only Visibility (Complete)
 
@@ -1127,11 +1128,20 @@ UX polish included:
 - No backend schema changes
 - Dashboard uses existing backend services/endpoints (no backend redesign)
 - Tenant isolation enforced on every endpoint via `TenantContext::companyId()`
-- Phase 4 remains in progress (broader monitoring depth/analytics/error tracking still pending)
+
+#### Deferred Beyond Phase 4 (Later Backlog)
+- advanced monitoring analytics
+- deeper error-tracking stack
+- non-essential future UI polish iterations
+- scale-oriented operator tooling
 
 ---
 
-## 8. PHASE 3: HEALTH MONITORING & OPERATOR DASHBOARD
+## 8. LEGACY ARCHIVED PLANNING (Superseded)
+
+This section is retained for historical traceability only and is superseded by locked Phase 2/Phase 4 implementation reality.
+
+## 8.1 PHASE 3: HEALTH MONITORING & OPERATOR DASHBOARD
 
 **Goal:** Build operator visibility into SIM health, queue depth, stuck messages, and provide monitoring surfaces.
 
