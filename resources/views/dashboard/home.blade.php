@@ -103,6 +103,7 @@
     <a href="/dashboard/assignments">Assignments</a>
     <a href="/dashboard/migration">Migration</a>
     <a href="/dashboard/messages/status">Message Status</a>
+    <a href="/dashboard/operators">Operators</a>
     <form method="POST" action="{{ route('logout') }}" style="display:inline;">
         @csrf
         <button type="submit" class="logout-button">Logout</button>
@@ -136,6 +137,12 @@
         <h2>Message Status</h2>
         <p>Look up delivery state by client_message_id with optional SIM filter.</p>
         <a href="/dashboard/messages/status">Open Message Status Lookup</a>
+    </section>
+
+    <section class="card">
+        <h2>Operators</h2>
+        <p>View tenant-local dashboard operators and owner-managed role controls.</p>
+        <a href="/dashboard/operators">Open Operator Management</a>
     </section>
 </div>
 

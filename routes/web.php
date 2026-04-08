@@ -4,10 +4,12 @@ use App\Http\Controllers\AssignmentDashboardPageController;
 use App\Http\Controllers\AssignmentController;
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\DashboardHomePageController;
+use App\Http\Controllers\DashboardOperatorController;
 use App\Http\Controllers\MessageStatusController;
 use App\Http\Controllers\MigrationDashboardPageController;
 use App\Http\Controllers\MigrationController;
 use App\Http\Controllers\MessageStatusDashboardPageController;
+use App\Http\Controllers\OperatorDashboardPageController;
 use App\Http\Controllers\SimAdminController;
 use App\Http\Controllers\SimDetailControlPageController;
 use App\Http\Controllers\SimFleetStatusPageController;
@@ -56,6 +58,9 @@ Route::middleware('auth')->group(function () {
     Route::get('/dashboard/messages/status', [MessageStatusDashboardPageController::class, 'index'])
         ->name('dashboard.messages.status.index');
 
+    Route::get('/dashboard/operators', [OperatorDashboardPageController::class, 'index'])
+        ->name('dashboard.operators.index');
+
     Route::get('/dashboard/sims/{id}', [SimDetailControlPageController::class, 'show'])
         ->whereNumber('id')
         ->name('dashboard.sims.show');
@@ -68,6 +73,7 @@ Route::middleware(['auth', 'dashboard.tenant'])
 
         Route::get('/assignments', [AssignmentController::class, 'index']);
         Route::get('/messages/status', [MessageStatusController::class, 'show']);
+        Route::get('/operators', [DashboardOperatorController::class, 'index']);
 
         Route::middleware('dashboard.operator.write')->group(function () {
             Route::post('/assignments/set', [AssignmentController::class, 'set']);
@@ -81,5 +87,10 @@ Route::middleware(['auth', 'dashboard.tenant'])
             Route::post('/admin/migrate-single-customer', [MigrationController::class, 'migrateSingleCustomer']);
             Route::post('/admin/migrate-bulk', [MigrationController::class, 'migrateBulk']);
             Route::post('/admin/rebalance', [MigrationController::class, 'rebalance']);
+        });
+
+        Route::middleware('dashboard.operator.owner')->group(function () {
+            Route::post('/operators/{id}/role', [DashboardOperatorController::class, 'updateRole'])
+                ->whereNumber('id');
         });
     });
