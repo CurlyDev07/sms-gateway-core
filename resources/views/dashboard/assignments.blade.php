@@ -30,6 +30,20 @@
             text-decoration: underline;
         }
 
+        .links .logout-button {
+            border: none;
+            background: none;
+            color: #1d4ed8;
+            padding: 0;
+            cursor: pointer;
+            font-size: 14px;
+            margin-left: 12px;
+        }
+
+        .links .logout-button:hover {
+            text-decoration: underline;
+        }
+
         .muted {
             color: #6b7280;
             margin-bottom: 16px;
@@ -120,6 +134,10 @@
     <a href="/dashboard/assignments">Assignments</a>
     <a href="/dashboard/migration">Migration</a>
     <a href="/dashboard/messages/status">Message Status</a>
+    <form method="POST" action="{{ route('logout') }}" style="display:inline;">
+        @csrf
+        <button type="submit" class="logout-button">Logout</button>
+    </form>
 </div>
 <p class="muted">
     Read-only assignment visibility page powered by <code>GET /api/assignments</code>.
@@ -178,6 +196,7 @@
     </table>
 </div>
 
+@include('dashboard.partials.credential-bootstrap')
 <script>
     (() => {
         const apiPath = '/api/assignments';

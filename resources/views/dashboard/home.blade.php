@@ -31,6 +31,20 @@
             text-decoration: underline;
         }
 
+        .links .logout-button {
+            border: none;
+            background: none;
+            color: #1d4ed8;
+            padding: 0;
+            cursor: pointer;
+            font-size: 14px;
+            margin-left: 12px;
+        }
+
+        .links .logout-button:hover {
+            text-decoration: underline;
+        }
+
         .muted {
             color: #6b7280;
             margin-bottom: 16px;
@@ -89,6 +103,10 @@
     <a href="/dashboard/assignments">Assignments</a>
     <a href="/dashboard/migration">Migration</a>
     <a href="/dashboard/messages/status">Message Status</a>
+    <form method="POST" action="{{ route('logout') }}" style="display:inline;">
+        @csrf
+        <button type="submit" class="logout-button">Logout</button>
+    </form>
 </div>
 <p class="muted">
     Entry point for operator tools. Choose a page below to inspect fleet state, assignments,
@@ -126,7 +144,8 @@
 </div>
 
 <div class="note">
-    Linked pages require tenant API credentials (<code>X-API-KEY</code> and <code>X-API-SECRET</code>) entered on each page.
+    Linked pages use tenant API credentials (<code>X-API-KEY</code> and <code>X-API-SECRET</code>) that are auto-filled from saved browser state.
 </div>
+@include('dashboard.partials.credential-bootstrap')
 </body>
 </html>

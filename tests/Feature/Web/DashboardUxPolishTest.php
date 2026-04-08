@@ -2,12 +2,18 @@
 
 namespace Tests\Feature\Web;
 
+use App\Models\User;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 class DashboardUxPolishTest extends TestCase
 {
+    use RefreshDatabase;
+
     public function test_dashboard_pages_show_consistent_cross_navigation_links(): void
     {
+        $this->actingAs(User::factory()->create());
+
         $paths = [
             '/dashboard',
             '/dashboard/sims',
@@ -31,6 +37,8 @@ class DashboardUxPolishTest extends TestCase
 
     public function test_credentialed_pages_include_clear_saved_credentials_action(): void
     {
+        $this->actingAs(User::factory()->create());
+
         $paths = [
             '/dashboard/sims',
             '/dashboard/assignments',
@@ -47,4 +55,3 @@ class DashboardUxPolishTest extends TestCase
         }
     }
 }
-
