@@ -6,10 +6,81 @@ use App\Models\User;
 use App\Support\TenantContext;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Str;
 
 class DashboardOperatorController extends Controller
 {
+    /**
+     * Create a tenant-local dashboard operator.
+     *
+     * Owner-only endpoint.
+     *
+     * @param \Illuminate\Http\Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function store(Request $request): JsonResponse
+    {
+        $companyId = TenantContext::companyId($request);
+
+        if ($companyId === null) {
+            return response()->json([
+                'ok' => false,
+                'error' => 'forbidden',
+            ], 403);
+        }
+
+        /** @var \App\Models\User|null $actor */
+        $actor = $request->user();
+
+        if ($actor === null || (string) $actor->operator_role !== User::ROLE_OWNER) {
+            return response()->json([
+                'ok' => false,
+                'error' => 'forbidden',
+                'message' => 'insufficient_operator_role',
+            ], 403);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'name' => ['required', 'string', 'max:255'],
+            'email' => ['required', 'email', 'max:255', 'unique:users,email'],
+            'operator_role' => ['required', 'string', 'in:owner,admin,support'],
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'ok' => false,
+                'error' => 'validation_failed',
+                'details' => $validator->errors()->toArray(),
+            ], 422);
+        }
+
+        $validated = $validator->validated();
+        $temporaryPassword = Str::random(16);
+
+        $operator = User::query()->create([
+            'name' => (string) $validated['name'],
+            'email' => (string) $validated['email'],
+            'company_id' => $companyId,
+            'operator_role' => (string) $validated['operator_role'],
+            'password' => Hash::make($temporaryPassword),
+        ]);
+
+        return response()->json([
+            'ok' => true,
+            'operator' => [
+                'id' => $operator->id,
+                'name' => $operator->name,
+                'email' => $operator->email,
+                'company_id' => $operator->company_id,
+                'operator_role' => $operator->operator_role,
+            ],
+            'temporary_password' => $temporaryPassword,
+            'note' => 'save_temporary_password_now',
+        ]);
+    }
+
     /**
      * List tenant-local dashboard operators.
      *

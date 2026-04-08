@@ -57,6 +57,20 @@
             align-items: end;
         }
 
+        label {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            font-size: 14px;
+        }
+
+        input, select {
+            min-width: 220px;
+            padding: 8px;
+            border: 1px solid #d1d5db;
+            border-radius: 4px;
+        }
+
         button {
             padding: 9px 14px;
             border: 1px solid #111827;
@@ -123,6 +137,16 @@
             font-size: 12px;
             color: #6b7280;
         }
+
+        .create-result {
+            margin: 0 0 14px 0;
+            padding: 10px 12px;
+            border: 1px solid #d1d5db;
+            border-radius: 4px;
+            background: #f9fafb;
+            font-size: 14px;
+            display: none;
+        }
     </style>
 </head>
 <body>
@@ -141,12 +165,34 @@
 </div>
 <p class="muted">
     Tenant-local operator list powered by <code>GET /dashboard/api/operators</code>.
-    Role updates are owner-only in this first RBAC management slice.
+    Operator creation and role updates are owner-only in this first RBAC management slice.
 </p>
 
 <div class="controls">
     <button id="loadButton" type="button">Load Operators</button>
 </div>
+
+<div id="createPanel" class="controls" style="display:none;">
+    <label>
+        name
+        <input id="createName" type="text" placeholder="e.g. Jane Operator">
+    </label>
+    <label>
+        email
+        <input id="createEmail" type="email" placeholder="e.g. jane@example.com">
+    </label>
+    <label>
+        operator_role
+        <select id="createRole">
+            <option value="admin" selected>admin</option>
+            <option value="support">support</option>
+            <option value="owner">owner</option>
+        </select>
+    </label>
+    <button id="createOperatorButton" type="button" class="button-secondary">Create Operator</button>
+</div>
+
+<div id="createResult" class="create-result"></div>
 
 <div id="status" class="status muted">No data loaded yet.</div>
 
@@ -174,9 +220,16 @@
     (() => {
         const listPath = '/dashboard/api/operators';
         const rolePathBase = '/dashboard/api/operators';
+        const createPath = '/dashboard/api/operators';
         const csrfToken = @json(csrf_token());
 
         const loadButton = document.getElementById('loadButton');
+        const createPanel = document.getElementById('createPanel');
+        const createNameInput = document.getElementById('createName');
+        const createEmailInput = document.getElementById('createEmail');
+        const createRoleInput = document.getElementById('createRole');
+        const createOperatorButton = document.getElementById('createOperatorButton');
+        const createResultEl = document.getElementById('createResult');
         const statusEl = document.getElementById('status');
         const rowsEl = document.getElementById('operatorRows');
 
@@ -201,6 +254,16 @@
         const setStatus = (text, type = 'muted') => {
             statusEl.className = `status ${type}`;
             statusEl.textContent = text;
+        };
+
+        const hideCreateResult = () => {
+            createResultEl.style.display = 'none';
+            createResultEl.textContent = '';
+        };
+
+        const showCreateResult = (text) => {
+            createResultEl.style.display = 'block';
+            createResultEl.textContent = text;
         };
 
         const renderRows = () => {
@@ -306,6 +369,10 @@
                 state.currentUserId = meta.current_user_id ?? null;
                 state.currentUserRole = meta.current_user_role ?? null;
                 state.canManageRoles = Boolean(meta.can_manage_roles);
+                createPanel.style.display = state.canManageRoles ? 'flex' : 'none';
+                if (!state.canManageRoles) {
+                    hideCreateResult();
+                }
 
                 renderRows();
 
@@ -372,8 +439,74 @@
             }
         };
 
+        const createOperator = async () => {
+            if (!state.canManageRoles) {
+                setStatus('Operator creation requires owner role.', 'error');
+                return;
+            }
+
+            const name = String(createNameInput.value || '').trim();
+            const email = String(createEmailInput.value || '').trim();
+            const operatorRole = String(createRoleInput.value || '').trim();
+
+            if (!name || !email || !operatorRole) {
+                setStatus('name, email, and operator_role are required.', 'error');
+                return;
+            }
+
+            hideCreateResult();
+            setStatus('Creating operator...', 'muted');
+
+            try {
+                const response = await fetch(createPath, {
+                    method: 'POST',
+                    headers: {
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': csrfToken,
+                    },
+                    body: JSON.stringify({
+                        name,
+                        email,
+                        operator_role: operatorRole,
+                    }),
+                });
+
+                let payload = null;
+                try {
+                    payload = await response.json();
+                } catch (_) {
+                    payload = null;
+                }
+
+                if (!response.ok || !payload || payload.ok !== true) {
+                    const error = payload && payload.error ? payload.error : `HTTP ${response.status}`;
+                    setStatus(`Create failed: ${error}`, 'error');
+                    return;
+                }
+
+                const temporaryPassword = payload.temporary_password || '';
+                const operatorEmail = payload.operator && payload.operator.email ? payload.operator.email : email;
+                showCreateResult(`Temporary password for ${operatorEmail}: ${temporaryPassword} (shown once, copy now).`);
+
+                createNameInput.value = '';
+                createEmailInput.value = '';
+                createRoleInput.value = 'admin';
+
+                const refreshed = await loadOperators({silent: true});
+                const refreshSuffix = refreshed ? ' Operator list refreshed.' : ' Operator created but list refresh failed.';
+                setStatus(`Operator created successfully.${refreshSuffix}`, 'ok');
+            } catch (error) {
+                setStatus(`Create failed: ${error.message}`, 'error');
+            }
+        };
+
         loadButton.addEventListener('click', () => {
             loadOperators();
+        });
+
+        createOperatorButton.addEventListener('click', () => {
+            createOperator();
         });
     })();
 </script>
