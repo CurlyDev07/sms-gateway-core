@@ -1,0 +1,493 @@
+{
+  "info": {
+    "name": "SMS Gateway Core API",
+    "_postman_id": "3bcb15f1-4c77-4a11-9e90-123456789abc",
+    "description": "Postman collection for Laravel SMS Gateway tenant-authenticated API testing.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Send SMS - CHAT",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "X-API-KEY",
+            "value": "{{api_key}}"
+          },
+          {
+            "key": "X-API-SECRET",
+            "value": "{{api_secret}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"customer_phone\": \"+639550090156\",\n  \"message\": \"Test message from Postman -> Laravel -> Python\",\n  \"message_type\": \"CHAT\",\n  \"client_message_id\": \"postman_test_001\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{base_url}}/api/messages/send"
+        }
+      }
+    },
+    {
+      "name": "Send SMS - FOLLOW_UP",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "X-API-KEY",
+            "value": "{{api_key}}"
+          },
+          {
+            "key": "X-API-SECRET",
+            "value": "{{api_secret}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"customer_phone\": \"+639171234568\",\n  \"message\": \"Follow-up test message from Postman.\",\n  \"message_type\": \"FOLLOW_UP\",\n  \"client_message_id\": \"followup_0001\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{base_url}}/api/messages/send"
+        }
+      }
+    },
+    {
+      "name": "Send SMS - AUTO_REPLY",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "X-API-KEY",
+            "value": "{{api_key}}"
+          },
+          {
+            "key": "X-API-SECRET",
+            "value": "{{api_secret}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"customer_phone\": \"+639171234569\",\n  \"message\": \"Auto-reply test from Postman.\",\n  \"message_type\": \"AUTO_REPLY\",\n  \"client_message_id\": \"autoreply_0001\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{base_url}}/api/messages/send"
+        }
+      }
+    },
+    {
+      "name": "Message Status Lookup",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          },
+          {
+            "key": "X-API-KEY",
+            "value": "{{api_key}}"
+          },
+          {
+            "key": "X-API-SECRET",
+            "value": "{{api_secret}}"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/messages/status?client_message_id=postman_test_001"
+        }
+      }
+    },
+    {
+      "name": "List SIMs",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          },
+          {
+            "key": "X-API-KEY",
+            "value": "{{api_key}}"
+          },
+          {
+            "key": "X-API-SECRET",
+            "value": "{{api_secret}}"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/sims"
+        }
+      }
+    },
+    {
+      "name": "List Assignments",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          },
+          {
+            "key": "X-API-KEY",
+            "value": "{{api_key}}"
+          },
+          {
+            "key": "X-API-SECRET",
+            "value": "{{api_secret}}"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/assignments"
+        }
+      }
+    },
+    {
+      "name": "Set Operator Status - Active",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "X-API-KEY",
+            "value": "{{api_key}}"
+          },
+          {
+            "key": "X-API-SECRET",
+            "value": "{{api_secret}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"operator_status\": \"active\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{base_url}}/api/admin/sim/{{sim_id}}/status"
+        }
+      }
+    },
+    {
+      "name": "Disable Assignments",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "X-API-KEY",
+            "value": "{{api_key}}"
+          },
+          {
+            "key": "X-API-SECRET",
+            "value": "{{api_secret}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{base_url}}/api/admin/sim/{{sim_id}}/disable-assignments"
+        }
+      }
+    },
+    {
+      "name": "Enable Assignments",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "X-API-KEY",
+            "value": "{{api_key}}"
+          },
+          {
+            "key": "X-API-SECRET",
+            "value": "{{api_secret}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{base_url}}/api/admin/sim/{{sim_id}}/enable-assignments"
+        }
+      }
+    },
+    {
+      "name": "Rebuild Queue",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "X-API-KEY",
+            "value": "{{api_key}}"
+          },
+          {
+            "key": "X-API-SECRET",
+            "value": "{{api_secret}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{base_url}}/api/admin/sim/{{sim_id}}/rebuild-queue"
+        }
+      }
+    },
+    {
+      "name": "Set Assignment",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "X-API-KEY",
+            "value": "{{api_key}}"
+          },
+          {
+            "key": "X-API-SECRET",
+            "value": "{{api_secret}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"customer_phone\": \"+639171234567\",\n  \"sim_id\": 10\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{base_url}}/api/assignments/set"
+        }
+      }
+    },
+    {
+      "name": "Mark Assignment Safe",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "X-API-KEY",
+            "value": "{{api_key}}"
+          },
+          {
+            "key": "X-API-SECRET",
+            "value": "{{api_secret}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"customer_phone\": \"+639171234567\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{base_url}}/api/assignments/mark-safe"
+        }
+      }
+    },
+    {
+      "name": "Migrate Single Customer",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "X-API-KEY",
+            "value": "{{api_key}}"
+          },
+          {
+            "key": "X-API-SECRET",
+            "value": "{{api_secret}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"customer_phone\": \"+639171234567\",\n  \"from_sim_id\": 10,\n  \"to_sim_id\": 11\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{base_url}}/api/admin/migrate-single-customer"
+        }
+      }
+    },
+    {
+      "name": "Bulk Migrate",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "X-API-KEY",
+            "value": "{{api_key}}"
+          },
+          {
+            "key": "X-API-SECRET",
+            "value": "{{api_secret}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"from_sim_id\": 10,\n  \"to_sim_id\": 11\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{base_url}}/api/admin/migrate-bulk"
+        }
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://192.168.1.100:8081"
+    },
+    {
+      "key": "api_key",
+      "value": "bootstrap-api-key"
+    },
+    {
+      "key": "api_secret",
+      "value": "YOUR_PLAINTEXT_SECRET"
+    },
+    {
+      "key": "sim_id",
+      "value": "10"
+    }
+  ]
+}
