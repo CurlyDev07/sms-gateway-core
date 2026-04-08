@@ -31,20 +31,16 @@ class DashboardAuthTest extends TestCase
     public function test_user_can_login_and_access_dashboard(): void
     {
         $company = $this->createCompany();
-        [$apiClient, $plainSecret] = $this->createApiClient($company);
 
         $user = User::factory()->create([
+            'company_id' => $company->id,
             'password' => Hash::make('secret-pass-123'),
         ]);
 
         $this->post('/login', [
             'email' => $user->email,
             'password' => 'secret-pass-123',
-            'dashboard_api_key' => $apiClient->api_key,
-            'dashboard_api_secret' => $plainSecret,
         ])->assertRedirect('/dashboard');
-
-        $this->assertSame((int) $apiClient->id, (int) session('dashboard_api_client_id'));
 
         $this->get('/dashboard')
             ->assertOk()
@@ -70,6 +66,7 @@ class DashboardAuthTest extends TestCase
     public function test_login_without_tenant_binding_is_rejected(): void
     {
         $user = User::factory()->create([
+            'company_id' => null,
             'password' => Hash::make('secret-pass-123'),
         ]);
 
@@ -79,7 +76,7 @@ class DashboardAuthTest extends TestCase
                 'password' => 'secret-pass-123',
             ])
             ->assertRedirect('/login')
-            ->assertSessionHasErrors('dashboard_api_key');
+            ->assertSessionHasErrors('email');
 
         $this->assertGuest();
     }

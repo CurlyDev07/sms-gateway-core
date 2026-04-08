@@ -81,8 +81,7 @@
 <div class="container">
     <h1>Dashboard Login</h1>
     <p class="muted">
-        Sign in with your Laravel user account. Dashboard API credentials are optional when your environment has one
-        active tenant API client; provide them here when tenant selection is needed.
+        Sign in with your Laravel operator account. Tenant access is resolved from your bound company.
     </p>
 
     @if ($errors->any())
@@ -104,16 +103,6 @@
         <label>
             Password
             <input type="password" name="password" required autocomplete="current-password">
-        </label>
-
-        <label>
-            Dashboard API Key (optional)
-            <input type="text" name="dashboard_api_key" value="{{ old('dashboard_api_key') }}" autocomplete="off">
-        </label>
-
-        <label>
-            Dashboard API Secret (optional)
-            <input type="password" name="dashboard_api_secret" autocomplete="off">
         </label>
 
         <label class="checkbox">

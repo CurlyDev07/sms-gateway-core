@@ -3,12 +3,11 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
-use App\Models\ApiClient;
+use App\Models\Company;
 use App\Providers\RouteServiceProvider;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\View\View;
 
 class AuthenticatedSessionController extends Controller
@@ -26,8 +25,7 @@ class AuthenticatedSessionController extends Controller
     /**
      * Handle an incoming dashboard login request.
      *
-     * Dashboard tenant context is resolved server-side and stored in session.
-     * API key/secret are only used as an optional tenant selector when needed.
+     * Dashboard login requires a user account bound to a company tenant.
      *
      * @param \Illuminate\Http\Request $request
      * @return \Illuminate\Http\RedirectResponse
@@ -38,8 +36,6 @@ class AuthenticatedSessionController extends Controller
             'email' => ['required', 'email'],
             'password' => ['required', 'string'],
             'remember' => ['nullable', 'boolean'],
-            'dashboard_api_key' => ['nullable', 'string', 'max:255', 'required_with:dashboard_api_secret'],
-            'dashboard_api_secret' => ['nullable', 'string', 'max:255', 'required_with:dashboard_api_key'],
         ]);
 
         $remember = (bool) ($validated['remember'] ?? false);
@@ -49,7 +45,7 @@ class AuthenticatedSessionController extends Controller
             'password' => (string) $validated['password'],
         ], $remember)) {
             return back()
-                ->withInput($request->except('password', 'dashboard_api_secret'))
+                ->withInput($request->except('password'))
                 ->withErrors([
                     'email' => 'The provided credentials are incorrect.',
                 ]);
@@ -57,28 +53,20 @@ class AuthenticatedSessionController extends Controller
 
         $request->session()->regenerate();
 
-        $credentialsSupplied = (
-            (string) ($validated['dashboard_api_key'] ?? '') !== ''
-            || (string) ($validated['dashboard_api_secret'] ?? '') !== ''
-        );
+        $user = $request->user();
+        $companyId = $user !== null ? (int) ($user->company_id ?? 0) : 0;
 
-        $apiClient = $this->resolveDashboardApiClient($validated);
-
-        if ($apiClient === null) {
+        if ($companyId < 1 || !Company::query()->whereKey($companyId)->exists()) {
             Auth::logout();
             $request->session()->invalidate();
             $request->session()->regenerateToken();
 
             return back()
-                ->withInput($request->except('password', 'dashboard_api_secret'))
+                ->withInput($request->except('password'))
                 ->withErrors([
-                    'dashboard_api_key' => $credentialsSupplied
-                        ? 'Dashboard API credentials are invalid.'
-                        : 'Unable to resolve dashboard tenant context. Provide Dashboard API credentials.',
+                    'email' => 'Your user account is not bound to a valid operator tenant.',
                 ]);
         }
-
-        $request->session()->put('dashboard_api_client_id', (int) $apiClient->id);
 
         return redirect()->intended(RouteServiceProvider::HOME);
     }
@@ -97,50 +85,5 @@ class AuthenticatedSessionController extends Controller
         $request->session()->regenerateToken();
 
         return redirect()->route('login');
-    }
-
-    /**
-     * Resolve the dashboard tenant API client for the current login session.
-     *
-     * Selection order:
-     * 1) Explicit dashboard API credentials from login form.
-     * 2) Single active API client in the system (safe default for single-tenant ops).
-     *
-     * @param array<string, mixed> $validated
-     * @return \App\Models\ApiClient|null
-     */
-    private function resolveDashboardApiClient(array $validated): ?ApiClient
-    {
-        $apiKey = trim((string) ($validated['dashboard_api_key'] ?? ''));
-        $apiSecret = trim((string) ($validated['dashboard_api_secret'] ?? ''));
-
-        if ($apiKey !== '' && $apiSecret !== '') {
-            $apiClient = ApiClient::query()
-                ->where('api_key', $apiKey)
-                ->where('status', 'active')
-                ->whereNotNull('company_id')
-                ->first();
-
-            if ($apiClient === null || !Hash::check($apiSecret, (string) $apiClient->api_secret)) {
-                return null;
-            }
-
-            return $apiClient;
-        }
-
-        $activeClients = ApiClient::query()
-            ->where('status', 'active')
-            ->whereNotNull('company_id')
-            ->orderBy('id')
-            ->limit(2)
-            ->get();
-
-        if ($activeClients->count() === 1) {
-            /** @var \App\Models\ApiClient $apiClient */
-            $apiClient = $activeClients->first();
-            return $apiClient;
-        }
-
-        return null;
     }
 }
