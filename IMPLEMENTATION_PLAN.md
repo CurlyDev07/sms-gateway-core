@@ -1,7 +1,7 @@
 # SMS Gateway Core – Implementation Plan (Revised)
 
-**Last Updated:** 2026-04-07 (Phase 4 Dashboard + UX Checkpoint)
-**Status:** Phase 2 Complete (Locked) — Phase 4 In Progress (backend/API complete; core dashboard/operator pages implemented)
+**Last Updated:** 2026-04-08 (Phase 4 Backend/API Closure + Dashboard Checkpoint)
+**Status:** Phase 2 Complete (Locked) — Phase 4 In Progress (backend/API complete incl. rebalance + bulk send; core dashboard/operator pages implemented)
 **Alignment:** Validated against all 9 locked docs with phase-boundary corrections
 
 ---
@@ -1074,10 +1074,10 @@ php artisan queue:restart
 
 **Goal:** Expose minimum-safe operator visibility and control surfaces via tenant-authenticated API, then deliver core operator dashboard pages using those existing APIs.
 
-**Status:** IN PROGRESS — backend/API complete; core dashboard/operator pages implemented; Phase 4 not locked
-**Checkpoint Validation:** full suite green (196 passed)
+**Status:** IN PROGRESS — backend/API complete (incl. rebalance + bulk send); core dashboard/operator pages implemented; Phase 4 not locked
+**Checkpoint Validation:** full suite green (205 passed)
 
-### 7.0 Phase 4 Checkpoint (2026-04-07)
+### 7.0 Phase 4 Checkpoint (2026-04-08)
 
 #### Read-Only Visibility (Complete)
 
@@ -1096,7 +1096,9 @@ php artisan queue:restart
 | `POST /api/admin/sim/{id}/disable-assignments` | `SimAdminController` | direct `$sim->update()` |
 | `POST /api/admin/migrate-single-customer` | `MigrationController` | `SimMigrationService::migrateSingleCustomer()` |
 | `POST /api/admin/migrate-bulk` | `MigrationController` | `SimMigrationService::migrateBulk()` |
+| `POST /api/admin/rebalance` | `MigrationController` | `SimMigrationService::rebalanceSafeAssignments()` |
 | `POST /api/admin/sim/{id}/rebuild-queue` | `SimAdminController` | `QueueRebuildService::rebuildSimQueue()` |
+| `POST /api/messages/bulk` | `GatewayOutboundController` | same intake rules as `/api/messages/send`, processed per item |
 
 #### Dashboard/UI (Complete in Current Checkpoint)
 

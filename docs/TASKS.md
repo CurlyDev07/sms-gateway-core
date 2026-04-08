@@ -1,6 +1,6 @@
 # TASKS
 
-Last Updated: 2026-04-07 (Phase 4 dashboard + UX checkpoint)
+Last Updated: 2026-04-08 (Phase 4 backend/API closure + dashboard checkpoint)
 
 ---
 
@@ -578,7 +578,7 @@ Completed in current Phase 2 slice:
 # PHASE 4 — MONITORING + OPERATOR TOOLS
 
 Phase 4 Status: IN PROGRESS
-Phase 4 Checkpoint (2026-04-07): backend/API + core dashboard surfaces complete — 196 passed
+Phase 4 Checkpoint (2026-04-08): backend/API + core dashboard surfaces complete (rebalance + bulk send included) — 205 passed
 
 ## TASK 017 — HEALTH CHECK COMMAND + SCHEDULER
 Status: DONE (backend/service layer — Phase 0/2)
@@ -611,8 +611,9 @@ Status: DONE (Phase 4 — API surfaces complete)
 Completed:
 - `POST /api/admin/migrate-single-customer` — single-customer migration via `SimMigrationService::migrateSingleCustomer()`; tenant-scoped; returns `assignments_moved` + `messages_moved`
 - `POST /api/admin/migrate-bulk` — bulk migration via `SimMigrationService::migrateBulk()`; tenant-scoped; same result shape
+- `POST /api/admin/rebalance` — conservative tenant-scoped rebalance using existing migration/assignment logic; explicit `from_sim_id`/`to_sim_id`; returns moved counts
 - `POST /api/admin/sim/{id}/rebuild-queue` — per-SIM Redis queue rebuild from DB truth via `QueueRebuildService`; returns 409 if lock already held
-- all three endpoints fully tested; CLI commands remain available alongside API
+- all four endpoints fully tested; CLI commands remain available alongside API
 
 ---
 
@@ -626,6 +627,7 @@ Completed in current Phase 4 slices:
 - `/dashboard/sims/{id}` SIM detail/control page (existing admin APIs only)
 - `/dashboard/migration` migration workflow page (existing migration/assignment APIs only)
 - `/dashboard/messages/status` message status lookup page
+- `POST /api/messages/bulk` implemented (minimal tenant-authenticated blasting endpoint with per-item outcomes)
 - dashboard UX polish pass:
   - shared credential persistence across dashboard pages
   - consistent cross-page navigation

@@ -1,6 +1,36 @@
 # CHANGELOG
 
-Last Updated: 2026-04-07
+Last Updated: 2026-04-08
+
+---
+
+## [2026-04-08] Phase 4 Checkpoint — Rebalance + Bulk Send API Closure (In Progress)
+
+### Summary
+Phase 4 remains IN PROGRESS. This checkpoint closes the remaining active API stubs by implementing tenant-safe rebalance and minimal bulk/blasting intake while preserving existing transport and tenancy rules.
+
+### Implemented This Checkpoint
+
+#### API Surface Completion
+- `POST /api/admin/rebalance` implemented via conservative tenant-scoped rebalance flow
+  - requires explicit `from_sim_id` and `to_sim_id`
+  - moves only eligible/safe assignment state through existing migration service logic
+- `POST /api/messages/bulk` implemented as minimal tenant-authenticated bulk intake
+  - accepts `messages[]` payload
+  - reuses existing single-send intake semantics per item
+  - returns per-item result rows (success/failure, message id, error details)
+
+#### Focused Validation
+- feature coverage updated for `/api/messages/bulk` mixed outcomes and per-item validation behavior
+- full suite: 205 passed
+
+### Status
+- Phase 4 IN PROGRESS
+- Phase 4 backend/API surfaces: complete for current scope
+- Core dashboard/operator UI surfaces: implemented
+- Phase 4 remains open for broader monitoring/analytics/error-tracking depth
+- Phase 2 remains locked
+- Phase 3 scope remains absorbed into Phase 2 (already locked)
 
 ---
 

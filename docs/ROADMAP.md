@@ -3,19 +3,19 @@
 ---
 
 ## CURRENT PHASE
-Phase 4 – IN PROGRESS (backend/API + core dashboard operator surfaces implemented)
+Phase 4 – IN PROGRESS (backend/API + dashboard surfaces implemented; rebalance + bulk send endpoints now live)
 
 ### Phase Status
 - Phase 0: COMPLETE (Locked)
 - Phase 1: COMPLETE (Locked)
 - Phase 2: COMPLETE (Locked)
 - Phase 3: COMPLETE (absorbed into Phase 2 — see Phase 3 section)
-- Phase 4: IN PROGRESS — backend/API control surfaces complete; core dashboard operator surfaces implemented
+- Phase 4: IN PROGRESS — backend/API control surfaces complete (including rebalance + bulk send); core dashboard operator surfaces implemented
 - Phase 1 lock result: manual migration baseline + failover/reassign hardening complete
 - Phase 2 lock result: Redis transport + rebuild + retry + worker/controller/event wiring + Laravel-side Python integration + errorLayer-aware retry policy + live smoke-test proven + last_success_at bug fix + bootstrap seeders + Python API authentication + SimHealthService validation — all complete and locked
 - Phase 2 lock validation: full suite green (120 passed)
 - Phase 2 explicit deferral: per-modem send lock is Python-owned hardware-safe execution behavior; deferred outside Phase 2 lock scope
-- Phase 4 checkpoint validation: full suite green (196 passed)
+- Phase 4 checkpoint validation: full suite green (205 passed)
 
 ---
 
@@ -168,8 +168,8 @@ See Phase 4 for the active next scope.
 
 ## PHASE 4 — MONITORING + CONTROL SURFACES
 
-### Phase 4 Checkpoint (2026-04-07) — Backend + Core Dashboard Slice Complete
-Backend/API surfaces and core dashboard/operator pages are implemented and tested (196 passed). Phase 4 remains in progress.
+### Phase 4 Checkpoint (2026-04-08) — Backend/API Closure + Core Dashboard Slice Complete
+Backend/API surfaces (including rebalance + bulk send) and core dashboard/operator pages are implemented and tested (205 passed). Phase 4 remains in progress.
 
 #### Completed (Backend + Frontend)
 - `GET /api/sims` — SIM list with health, queue depth, assignment flags ✓
@@ -180,7 +180,9 @@ Backend/API surfaces and core dashboard/operator pages are implemented and teste
 - `POST /api/admin/sim/{id}/disable-assignments` — disable new assignments ✓
 - `POST /api/admin/migrate-single-customer` — single-customer migration ✓
 - `POST /api/admin/migrate-bulk` — bulk SIM migration ✓
+- `POST /api/admin/rebalance` — conservative tenant-safe rebalance ✓
 - `POST /api/admin/sim/{id}/rebuild-queue` — per-SIM queue rebuild trigger ✓
+- `POST /api/messages/bulk` — minimal tenant-authenticated bulk/blasting intake with per-item results ✓
 - `/dashboard` — operator home/navigation page ✓
 - `/dashboard/sims` — SIM fleet visibility page ✓
 - `/dashboard/assignments` — assignment visibility page ✓
