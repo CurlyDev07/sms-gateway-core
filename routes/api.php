@@ -54,7 +54,5 @@ Route::middleware(['api.client', 'tenant.resolve'])->group(function () {
     Route::post('/admin/migrate-single-customer', [MigrationController::class, 'migrateSingleCustomer']);
     Route::post('/admin/migrate-bulk', [MigrationController::class, 'migrateBulk']);
 
-    Route::post('/admin/rebalance', function () {
-        return response()->json(['ok' => false, 'error' => 'not_implemented'], 501);
-    });
+    Route::post('/admin/rebalance', [MigrationController::class, 'rebalance']);
 });

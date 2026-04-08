@@ -116,4 +116,61 @@ class MigrationController extends Controller
             'result' => $result,
         ]);
     }
+
+    /**
+     * Rebalance safe-to-migrate sticky assignments from one tenant SIM to another.
+     *
+     * Conservative behavior:
+     * - requires explicit source/destination SIM IDs
+     * - only moves assignment rows eligible for migration
+     * - only moves pending/queued outbound rows for moved customers
+     *
+     * @param \Illuminate\Http\Request $request
+     * @param \App\Services\SimMigrationService $service
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function rebalance(Request $request, SimMigrationService $service): JsonResponse
+    {
+        $companyId = TenantContext::companyId($request);
+
+        if ($companyId === null) {
+            return response()->json([
+                'ok'    => false,
+                'error' => 'forbidden',
+            ], 403);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'from_sim_id' => ['required', 'integer', 'min:1'],
+            'to_sim_id'   => ['required', 'integer', 'min:1'],
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'ok'      => false,
+                'error'   => 'validation_failed',
+                'details' => $validator->errors()->toArray(),
+            ], 422);
+        }
+
+        $validated = $validator->validated();
+
+        try {
+            $result = $service->rebalanceSafeAssignments(
+                $companyId,
+                (int) $validated['from_sim_id'],
+                (int) $validated['to_sim_id']
+            );
+        } catch (InvalidArgumentException $e) {
+            return response()->json([
+                'ok'    => false,
+                'error' => $e->getMessage(),
+            ], 422);
+        }
+
+        return response()->json([
+            'ok'     => true,
+            'result' => $result,
+        ]);
+    }
 }
