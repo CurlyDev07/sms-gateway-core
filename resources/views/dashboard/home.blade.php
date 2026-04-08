@@ -144,8 +144,7 @@
 </div>
 
 <div class="note">
-    Linked pages use tenant API credentials (<code>X-API-KEY</code> and <code>X-API-SECRET</code>) that are auto-filled from saved browser state.
+    Linked pages run on your authenticated dashboard session and no longer require browser-side API key/secret entry.
 </div>
-@include('dashboard.partials.credential-bootstrap')
 </body>
 </html>

@@ -1,12 +1,17 @@
 <?php
 
 use App\Http\Controllers\AssignmentDashboardPageController;
+use App\Http\Controllers\AssignmentController;
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\DashboardHomePageController;
+use App\Http\Controllers\MessageStatusController;
 use App\Http\Controllers\MigrationDashboardPageController;
+use App\Http\Controllers\MigrationController;
 use App\Http\Controllers\MessageStatusDashboardPageController;
+use App\Http\Controllers\SimAdminController;
 use App\Http\Controllers\SimDetailControlPageController;
 use App\Http\Controllers\SimFleetStatusPageController;
+use App\Http\Controllers\SimController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -55,3 +60,24 @@ Route::middleware('auth')->group(function () {
         ->whereNumber('id')
         ->name('dashboard.sims.show');
 });
+
+Route::middleware(['auth', 'dashboard.tenant'])
+    ->prefix('dashboard/api')
+    ->group(function () {
+        Route::get('/sims', [SimController::class, 'index']);
+
+        Route::get('/assignments', [AssignmentController::class, 'index']);
+        Route::post('/assignments/set', [AssignmentController::class, 'set']);
+        Route::post('/assignments/mark-safe', [AssignmentController::class, 'markSafe']);
+
+        Route::get('/messages/status', [MessageStatusController::class, 'show']);
+
+        Route::post('/admin/sim/{id}/status', [SimAdminController::class, 'setStatus']);
+        Route::post('/admin/sim/{id}/enable-assignments', [SimAdminController::class, 'enableAssignments']);
+        Route::post('/admin/sim/{id}/disable-assignments', [SimAdminController::class, 'disableAssignments']);
+        Route::post('/admin/sim/{id}/rebuild-queue', [SimAdminController::class, 'rebuildQueue']);
+
+        Route::post('/admin/migrate-single-customer', [MigrationController::class, 'migrateSingleCustomer']);
+        Route::post('/admin/migrate-bulk', [MigrationController::class, 'migrateBulk']);
+        Route::post('/admin/rebalance', [MigrationController::class, 'rebalance']);
+    });

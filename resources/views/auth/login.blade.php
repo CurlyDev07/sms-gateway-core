@@ -81,8 +81,8 @@
 <div class="container">
     <h1>Dashboard Login</h1>
     <p class="muted">
-        Sign in with your Laravel user account. Dashboard API credentials are optional and can be supplied once here
-        to auto-fill dashboard pages after login.
+        Sign in with your Laravel user account. Dashboard API credentials are optional when your environment has one
+        active tenant API client; provide them here when tenant selection is needed.
     </p>
 
     @if ($errors->any())

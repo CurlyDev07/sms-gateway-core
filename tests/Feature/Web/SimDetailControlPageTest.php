@@ -21,7 +21,7 @@ class SimDetailControlPageTest extends TestCase
             ->assertSee('SIM ID:')
             ->assertSee('123')
             ->assertSee('Migration')
-            ->assertSee('GET /api/sims')
+            ->assertSee('GET /dashboard/api/sims')
             ->assertSee('Set Active')
             ->assertSee('Set Paused')
             ->assertSee('Set Blocked')

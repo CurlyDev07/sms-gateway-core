@@ -35,7 +35,7 @@ class DashboardUxPolishTest extends TestCase
         }
     }
 
-    public function test_credentialed_pages_include_clear_saved_credentials_action(): void
+    public function test_dashboard_pages_do_not_prompt_for_raw_api_credentials(): void
     {
         $this->actingAs(User::factory()->create());
 
@@ -51,7 +51,9 @@ class DashboardUxPolishTest extends TestCase
             $response = $this->get($path);
 
             $response->assertOk()
-                ->assertSee('Clear Saved Credentials');
+                ->assertDontSee('X-API-KEY')
+                ->assertDontSee('X-API-SECRET')
+                ->assertDontSee('Clear Saved Credentials');
         }
     }
 }

@@ -18,7 +18,7 @@ class MigrationDashboardPageTest extends TestCase
 
         $response->assertOk()
             ->assertSee('Migration Tools')
-            ->assertSee('GET /api/assignments')
+            ->assertSee('GET /dashboard/api/assignments')
             ->assertSee('Mark Safe')
             ->assertSee('Set Assignment')
             ->assertSee('Migrate Single Customer')

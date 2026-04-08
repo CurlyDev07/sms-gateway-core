@@ -18,10 +18,8 @@ class AssignmentsDashboardPageTest extends TestCase
 
         $response->assertOk()
             ->assertSee('Assignments Status')
-            ->assertSee('GET /api/assignments')
+            ->assertSee('GET /dashboard/api/assignments')
             ->assertSee('Migration')
-            ->assertSee('X-API-KEY')
-            ->assertSee('X-API-SECRET')
             ->assertSee('customer_phone (optional)')
             ->assertSee('sim_id (optional)')
             ->assertSee('Safe To Migrate');

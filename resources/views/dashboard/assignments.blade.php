@@ -140,19 +140,10 @@
     </form>
 </div>
 <p class="muted">
-    Read-only assignment visibility page powered by <code>GET /api/assignments</code>.
-    Provide tenant API credentials (X-API-KEY / X-API-SECRET) and optional filters to load data.
+    Read-only assignment visibility page powered by <code>GET /dashboard/api/assignments</code> using your authenticated dashboard session.
 </p>
 
 <div class="controls">
-    <label title="API key used to identify your tenant account. Example: key_live_xxx">
-        X-API-KEY
-        <input id="apiKey" type="text" placeholder="Enter API key">
-    </label>
-    <label title="API secret paired with your API key. Keep this private.">
-        X-API-SECRET
-        <input id="apiSecret" type="password" placeholder="Enter API secret">
-    </label>
     <label title="Optional filter: show assignments for one customer phone only.">
         customer_phone (optional)
         <input id="customerPhone" type="text" placeholder="e.g. 09171234567">
@@ -162,7 +153,6 @@
         <input id="simId" type="number" min="1" step="1" placeholder="e.g. 1">
     </label>
     <button id="loadButton" type="button" title="Fetch assignment records using current optional filters.">Load Assignments</button>
-    <button id="clearCredentialsButton" class="button-secondary" type="button" title="Remove saved API credentials from this browser only.">Clear Saved Credentials</button>
 </div>
 
 <div id="status" class="status muted">No data loaded yet.</div>
@@ -196,19 +186,14 @@
     </table>
 </div>
 
-@include('dashboard.partials.credential-bootstrap')
 <script>
     (() => {
-        const apiPath = '/api/assignments';
+        const apiPath = '/dashboard/api/assignments';
         const loadButton = document.getElementById('loadButton');
-        const clearCredentialsButton = document.getElementById('clearCredentialsButton');
-        const apiKeyInput = document.getElementById('apiKey');
-        const apiSecretInput = document.getElementById('apiSecret');
         const customerPhoneInput = document.getElementById('customerPhone');
         const simIdInput = document.getElementById('simId');
         const statusEl = document.getElementById('status');
         const rowsEl = document.getElementById('assignmentRows');
-        const credentialsStorageKey = 'gateway_dashboard_credentials_v1';
 
         const escapeHtml = (value) => {
             return String(value)
@@ -220,32 +205,6 @@
         };
 
         const boolText = (value) => value ? 'true' : 'false';
-
-        const saveCredentials = () => {
-            localStorage.setItem(credentialsStorageKey, JSON.stringify({
-                api_key: apiKeyInput.value.trim(),
-                api_secret: apiSecretInput.value.trim()
-            }));
-        };
-
-        const hydrateCredentials = () => {
-            const raw = localStorage.getItem(credentialsStorageKey);
-            if (!raw) {
-                return;
-            }
-
-            try {
-                const parsed = JSON.parse(raw);
-                if (typeof parsed.api_key === 'string') {
-                    apiKeyInput.value = parsed.api_key;
-                }
-                if (typeof parsed.api_secret === 'string') {
-                    apiSecretInput.value = parsed.api_secret;
-                }
-            } catch (_) {
-                localStorage.removeItem(credentialsStorageKey);
-            }
-        };
 
         const setStatus = (text, type = 'muted') => {
             statusEl.className = `status ${type}`;
@@ -288,17 +247,8 @@
         };
 
         loadButton.addEventListener('click', async () => {
-            const apiKey = apiKeyInput.value.trim();
-            const apiSecret = apiSecretInput.value.trim();
             const customerPhone = customerPhoneInput.value.trim();
             const simId = simIdInput.value.trim();
-
-            if (!apiKey || !apiSecret) {
-                setStatus('Both X-API-KEY and X-API-SECRET are required.', 'error');
-                return;
-            }
-
-            saveCredentials();
             const query = new URLSearchParams();
             if (customerPhone) {
                 query.set('customer_phone', customerPhone);
@@ -314,9 +264,7 @@
                 const response = await fetch(url, {
                     method: 'GET',
                     headers: {
-                        'Accept': 'application/json',
-                        'X-API-KEY': apiKey,
-                        'X-API-SECRET': apiSecret
+                        'Accept': 'application/json'
                     }
                 });
 
@@ -342,15 +290,6 @@
                 renderRows([]);
             }
         });
-
-        clearCredentialsButton.addEventListener('click', () => {
-            localStorage.removeItem(credentialsStorageKey);
-            apiKeyInput.value = '';
-            apiSecretInput.value = '';
-            setStatus('Saved credentials cleared for this browser.', 'muted');
-        });
-
-        hydrateCredentials();
     })();
 </script>
 </body>

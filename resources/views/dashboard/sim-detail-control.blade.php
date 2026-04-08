@@ -141,20 +141,11 @@
 </div>
 <p class="muted">
     SIM ID: <strong id="simIdText">{{ $simId }}</strong>.
-    Read/Control page powered by <code>GET /api/sims</code> plus existing admin SIM control endpoints.
+    Read/Control page powered by <code>GET /dashboard/api/sims</code> plus existing admin SIM control endpoints.
 </p>
 
 <div class="controls">
-    <label title="API key used to identify your tenant account. Example: key_live_xxx">
-        X-API-KEY
-        <input id="apiKey" type="text" placeholder="Enter API key">
-    </label>
-    <label title="API secret paired with your API key. Keep this private.">
-        X-API-SECRET
-        <input id="apiSecret" type="password" placeholder="Enter API secret">
-    </label>
     <button id="loadButton" type="button" title="Load live SIM status, health, and queue depth.">Load SIM</button>
-    <button id="clearCredentialsButton" class="button-secondary" type="button" title="Remove saved API credentials from this browser only.">Clear Saved Credentials</button>
 </div>
 
 <div id="status" class="status muted">No SIM data loaded yet.</div>
@@ -192,74 +183,36 @@
     </div>
 </div>
 
-@include('dashboard.partials.credential-bootstrap')
 <script>
     (() => {
         const simId = Number(@json($simId));
-        const apiSimsPath = '/api/sims';
+        const apiSimsPath = '/dashboard/api/sims';
+        const csrfToken = @json(csrf_token());
 
         const loadButton = document.getElementById('loadButton');
-        const clearCredentialsButton = document.getElementById('clearCredentialsButton');
         const setActiveButton = document.getElementById('setActiveButton');
         const setPausedButton = document.getElementById('setPausedButton');
         const setBlockedButton = document.getElementById('setBlockedButton');
         const enableAssignmentsButton = document.getElementById('enableAssignmentsButton');
         const disableAssignmentsButton = document.getElementById('disableAssignmentsButton');
         const rebuildQueueButton = document.getElementById('rebuildQueueButton');
-
-        const apiKeyInput = document.getElementById('apiKey');
-        const apiSecretInput = document.getElementById('apiSecret');
         const statusEl = document.getElementById('status');
-        const credentialsStorageKey = 'gateway_dashboard_credentials_v1';
 
         const boolText = (value) => value ? 'true' : 'false';
-
-        const saveCredentials = () => {
-            localStorage.setItem(credentialsStorageKey, JSON.stringify({
-                api_key: apiKeyInput.value.trim(),
-                api_secret: apiSecretInput.value.trim()
-            }));
-        };
-
-        const hydrateCredentials = () => {
-            const raw = localStorage.getItem(credentialsStorageKey);
-            if (!raw) {
-                return;
-            }
-
-            try {
-                const parsed = JSON.parse(raw);
-                if (typeof parsed.api_key === 'string') {
-                    apiKeyInput.value = parsed.api_key;
-                }
-                if (typeof parsed.api_secret === 'string') {
-                    apiSecretInput.value = parsed.api_secret;
-                }
-            } catch (_) {
-                localStorage.removeItem(credentialsStorageKey);
-            }
-        };
 
         const setStatus = (text, type = 'muted') => {
             statusEl.className = `status ${type}`;
             statusEl.textContent = text;
         };
 
-        const getHeaders = () => {
-            const apiKey = apiKeyInput.value.trim();
-            const apiSecret = apiSecretInput.value.trim();
+        const defaultHeaders = {
+            'Accept': 'application/json'
+        };
 
-            if (!apiKey || !apiSecret) {
-                setStatus('Both X-API-KEY and X-API-SECRET are required.', 'error');
-                return null;
-            }
-
-            return {
-                'Accept': 'application/json',
-                'Content-Type': 'application/json',
-                'X-API-KEY': apiKey,
-                'X-API-SECRET': apiSecret
-            };
+        const postHeaders = {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': csrfToken
         };
 
         const setField = (id, value) => {
@@ -298,13 +251,6 @@
         };
 
         const loadSim = async ({silent = false} = {}) => {
-            const headers = getHeaders();
-            if (!headers) {
-                return { ok: false, error: 'missing_credentials' };
-            }
-
-            saveCredentials();
-
             if (!silent) {
                 setStatus('Loading SIM details...', 'muted');
             }
@@ -312,7 +258,7 @@
             try {
                 const response = await fetch(apiSimsPath, {
                     method: 'GET',
-                    headers
+                    headers: defaultHeaders
                 });
 
                 const payload = await response.json();
@@ -353,17 +299,12 @@
         };
 
         const callAction = async (path, payload = null, actionLabel = 'Action') => {
-            const headers = getHeaders();
-            if (!headers) {
-                return;
-            }
-
             setStatus(`${actionLabel} in progress...`, 'muted');
 
             try {
                 const response = await fetch(path, {
                     method: 'POST',
-                    headers,
+                    headers: postHeaders,
                     body: payload ? JSON.stringify(payload) : '{}'
                 });
 
@@ -399,11 +340,11 @@
         loadButton.addEventListener('click', loadSim);
 
         setActiveButton.addEventListener('click', () => {
-            callAction(`/api/admin/sim/${simId}/status`, { operator_status: 'active' }, 'Set Active');
+            callAction(`/dashboard/api/admin/sim/${simId}/status`, { operator_status: 'active' }, 'Set Active');
         });
 
         setPausedButton.addEventListener('click', () => {
-            callAction(`/api/admin/sim/${simId}/status`, { operator_status: 'paused' }, 'Set Paused');
+            callAction(`/dashboard/api/admin/sim/${simId}/status`, { operator_status: 'paused' }, 'Set Paused');
         });
 
         setBlockedButton.addEventListener('click', () => {
@@ -411,15 +352,15 @@
                 return;
             }
 
-            callAction(`/api/admin/sim/${simId}/status`, { operator_status: 'blocked' }, 'Set Blocked');
+            callAction(`/dashboard/api/admin/sim/${simId}/status`, { operator_status: 'blocked' }, 'Set Blocked');
         });
 
         enableAssignmentsButton.addEventListener('click', () => {
-            callAction(`/api/admin/sim/${simId}/enable-assignments`, null, 'Enable Assignments');
+            callAction(`/dashboard/api/admin/sim/${simId}/enable-assignments`, null, 'Enable Assignments');
         });
 
         disableAssignmentsButton.addEventListener('click', () => {
-            callAction(`/api/admin/sim/${simId}/disable-assignments`, null, 'Disable Assignments');
+            callAction(`/dashboard/api/admin/sim/${simId}/disable-assignments`, null, 'Disable Assignments');
         });
 
         rebuildQueueButton.addEventListener('click', () => {
@@ -427,17 +368,8 @@
                 return;
             }
 
-            callAction(`/api/admin/sim/${simId}/rebuild-queue`, null, 'Rebuild Queue');
+            callAction(`/dashboard/api/admin/sim/${simId}/rebuild-queue`, null, 'Rebuild Queue');
         });
-
-        clearCredentialsButton.addEventListener('click', () => {
-            localStorage.removeItem(credentialsStorageKey);
-            apiKeyInput.value = '';
-            apiSecretInput.value = '';
-            setStatus('Saved credentials cleared for this browser.', 'muted');
-        });
-
-        hydrateCredentials();
     })();
 </script>
 </body>

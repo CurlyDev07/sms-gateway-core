@@ -18,9 +18,7 @@ class MessageStatusDashboardPageTest extends TestCase
 
         $response->assertOk()
             ->assertSee('Message Status Lookup')
-            ->assertSee('GET /api/messages/status')
-            ->assertSee('X-API-KEY')
-            ->assertSee('X-API-SECRET')
+            ->assertSee('GET /dashboard/api/messages/status')
             ->assertSee('client_message_id (required)')
             ->assertSee('sim_id (optional)')
             ->assertSee('Lookup Status')

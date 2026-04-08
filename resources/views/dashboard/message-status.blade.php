@@ -140,19 +140,11 @@
     </form>
 </div>
 <p class="muted">
-    Read-only lookup page powered by <code>GET /api/messages/status</code>.
-    Enter tenant API credentials and a required <code>client_message_id</code>.
+    Read-only lookup page powered by <code>GET /dashboard/api/messages/status</code>.
+    Enter a required <code>client_message_id</code>.
 </p>
 
 <div class="controls">
-    <label>
-        X-API-KEY
-        <input id="apiKey" type="text" placeholder="Enter API key">
-    </label>
-    <label>
-        X-API-SECRET
-        <input id="apiSecret" type="password" placeholder="Enter API secret">
-    </label>
     <label>
         client_message_id (required)
         <input id="clientMessageId" type="text" placeholder="e.g. ref-abc-001">
@@ -162,7 +154,6 @@
         <input id="simId" type="number" min="1" step="1" placeholder="e.g. 1">
     </label>
     <button id="lookupButton" type="button">Lookup Status</button>
-    <button id="clearCredentialsButton" class="button-secondary" type="button">Clear Saved Credentials</button>
 </div>
 
 <div id="status" class="status muted">No data loaded yet.</div>
@@ -194,19 +185,14 @@
     </table>
 </div>
 
-@include('dashboard.partials.credential-bootstrap')
 <script>
     (() => {
-        const apiPath = '/api/messages/status';
+        const apiPath = '/dashboard/api/messages/status';
         const lookupButton = document.getElementById('lookupButton');
-        const clearCredentialsButton = document.getElementById('clearCredentialsButton');
-        const apiKeyInput = document.getElementById('apiKey');
-        const apiSecretInput = document.getElementById('apiSecret');
         const clientMessageIdInput = document.getElementById('clientMessageId');
         const simIdInput = document.getElementById('simId');
         const statusEl = document.getElementById('status');
         const rowsEl = document.getElementById('messageRows');
-        const credentialsStorageKey = 'gateway_dashboard_credentials_v1';
 
         const escapeHtml = (value) => {
             return String(value)
@@ -220,32 +206,6 @@
         const setStatus = (text, type = 'muted') => {
             statusEl.className = `status ${type}`;
             statusEl.textContent = text;
-        };
-
-        const saveCredentials = () => {
-            localStorage.setItem(credentialsStorageKey, JSON.stringify({
-                api_key: apiKeyInput.value.trim(),
-                api_secret: apiSecretInput.value.trim()
-            }));
-        };
-
-        const hydrateCredentials = () => {
-            const raw = localStorage.getItem(credentialsStorageKey);
-            if (!raw) {
-                return;
-            }
-
-            try {
-                const parsed = JSON.parse(raw);
-                if (typeof parsed.api_key === 'string') {
-                    apiKeyInput.value = parsed.api_key;
-                }
-                if (typeof parsed.api_secret === 'string') {
-                    apiSecretInput.value = parsed.api_secret;
-                }
-            } catch (_) {
-                localStorage.removeItem(credentialsStorageKey);
-            }
         };
 
         const formatField = (value) => {
@@ -278,22 +238,14 @@
         };
 
         lookupButton.addEventListener('click', async () => {
-            const apiKey = apiKeyInput.value.trim();
-            const apiSecret = apiSecretInput.value.trim();
             const clientMessageId = clientMessageIdInput.value.trim();
             const simId = simIdInput.value.trim();
-
-            if (!apiKey || !apiSecret) {
-                setStatus('Both X-API-KEY and X-API-SECRET are required.', 'error');
-                return;
-            }
 
             if (!clientMessageId) {
                 setStatus('client_message_id is required.', 'error');
                 return;
             }
 
-            saveCredentials();
             const query = new URLSearchParams();
             query.set('client_message_id', clientMessageId);
             if (simId) {
@@ -306,9 +258,7 @@
                 const response = await fetch(`${apiPath}?${query.toString()}`, {
                     method: 'GET',
                     headers: {
-                        'Accept': 'application/json',
-                        'X-API-KEY': apiKey,
-                        'X-API-SECRET': apiSecret
+                        'Accept': 'application/json'
                     }
                 });
 
@@ -334,15 +284,6 @@
                 renderRows([]);
             }
         });
-
-        clearCredentialsButton.addEventListener('click', () => {
-            localStorage.removeItem(credentialsStorageKey);
-            apiKeyInput.value = '';
-            apiSecretInput.value = '';
-            setStatus('Saved credentials cleared for this browser.', 'muted');
-        });
-
-        hydrateCredentials();
     })();
 </script>
 </body>

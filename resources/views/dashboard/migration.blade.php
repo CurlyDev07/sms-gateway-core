@@ -152,21 +152,13 @@
 </div>
 <p class="muted">
     Operator workflow page using existing assignment and migration APIs only.
-    Core lookup endpoint: <code>GET /api/assignments</code>.
+    Core lookup endpoint: <code>GET /dashboard/api/assignments</code>.
     Use this page to inspect assignments, mark safe, set assignment, migrate single customer, or bulk migrate.
 </p>
 
 <div class="panel">
-    <h2>Credentials & Lookup</h2>
+    <h2>Lookup</h2>
     <div class="controls">
-        <label title="API key used to identify your tenant account. Example: key_live_xxx">
-            X-API-KEY
-            <input id="apiKey" type="text" placeholder="Enter API key">
-        </label>
-        <label title="API secret paired with your API key. Keep this private.">
-            X-API-SECRET
-            <input id="apiSecret" type="password" placeholder="Enter API secret">
-        </label>
         <label title="Optional filter for assignment lookup by customer phone.">
             customer_phone (filter)
             <input id="filterCustomerPhone" type="text" placeholder="e.g. 09171234567">
@@ -176,7 +168,6 @@
             <input id="filterSimId" type="number" min="1" step="1" placeholder="e.g. 1">
         </label>
         <button id="loadAssignmentsButton" type="button" title="Load assignments using optional filters above.">Load Assignments</button>
-        <button id="clearCredentialsButton" class="button-secondary" type="button" title="Remove saved API credentials from this browser only.">Clear Saved Credentials</button>
     </div>
 </div>
 
@@ -263,14 +254,12 @@
     </table>
 </div>
 
-@include('dashboard.partials.credential-bootstrap')
 <script>
     (() => {
         const statusEl = document.getElementById('status');
         const rowsEl = document.getElementById('assignmentRows');
+        const csrfToken = @json(csrf_token());
 
-        const apiKeyInput = document.getElementById('apiKey');
-        const apiSecretInput = document.getElementById('apiSecret');
         const filterCustomerPhoneInput = document.getElementById('filterCustomerPhone');
         const filterSimIdInput = document.getElementById('filterSimId');
 
@@ -284,12 +273,10 @@
         const bulkToSimIdInput = document.getElementById('bulkToSimId');
 
         const loadAssignmentsButton = document.getElementById('loadAssignmentsButton');
-        const clearCredentialsButton = document.getElementById('clearCredentialsButton');
         const markSafeButton = document.getElementById('markSafeButton');
         const setAssignmentButton = document.getElementById('setAssignmentButton');
         const migrateSingleButton = document.getElementById('migrateSingleButton');
         const migrateBulkButton = document.getElementById('migrateBulkButton');
-        const credentialsStorageKey = 'gateway_dashboard_credentials_v1';
 
         const escapeHtml = (value) => {
             return String(value)
@@ -302,54 +289,16 @@
 
         const boolText = (value) => value ? 'true' : 'false';
 
-        const saveCredentials = () => {
-            localStorage.setItem(credentialsStorageKey, JSON.stringify({
-                api_key: apiKeyInput.value.trim(),
-                api_secret: apiSecretInput.value.trim()
-            }));
-        };
-
-        const hydrateCredentials = () => {
-            const raw = localStorage.getItem(credentialsStorageKey);
-            if (!raw) {
-                return;
-            }
-
-            try {
-                const parsed = JSON.parse(raw);
-                if (typeof parsed.api_key === 'string') {
-                    apiKeyInput.value = parsed.api_key;
-                }
-                if (typeof parsed.api_secret === 'string') {
-                    apiSecretInput.value = parsed.api_secret;
-                }
-            } catch (_) {
-                localStorage.removeItem(credentialsStorageKey);
-            }
-        };
-
         const setStatus = (text, type = 'muted') => {
             statusEl.className = `status ${type}`;
             statusEl.textContent = text;
         };
 
-        const getHeaders = () => {
-            const apiKey = apiKeyInput.value.trim();
-            const apiSecret = apiSecretInput.value.trim();
-
-            if (!apiKey || !apiSecret) {
-                setStatus('Both X-API-KEY and X-API-SECRET are required.', 'error');
-                return null;
-            }
-
-            saveCredentials();
-            return {
-                'Accept': 'application/json',
-                'Content-Type': 'application/json',
-                'X-API-KEY': apiKey,
-                'X-API-SECRET': apiSecret
-            };
-        };
+        const getHeaders = () => ({
+            'Accept': 'application/json',
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': csrfToken
+        });
 
         const renderAssignments = (assignments) => {
             if (!Array.isArray(assignments) || assignments.length === 0) {
@@ -387,11 +336,6 @@
         };
 
         const loadAssignments = async ({silent = false} = {}) => {
-            const headers = getHeaders();
-            if (!headers) {
-                return false;
-            }
-
             const customerPhone = filterCustomerPhoneInput.value.trim();
             const simId = filterSimIdInput.value.trim();
             const query = new URLSearchParams();
@@ -404,7 +348,7 @@
                 query.set('sim_id', simId);
             }
 
-            const url = query.toString() ? `/api/assignments?${query.toString()}` : '/api/assignments';
+            const url = query.toString() ? `/dashboard/api/assignments?${query.toString()}` : '/dashboard/api/assignments';
 
             if (!silent) {
                 setStatus('Loading assignments...', 'muted');
@@ -413,7 +357,9 @@
             try {
                 const response = await fetch(url, {
                     method: 'GET',
-                    headers
+                    headers: {
+                        'Accept': 'application/json'
+                    }
                 });
 
                 const payload = await response.json();
@@ -444,9 +390,6 @@
 
         const postAction = async (url, body, label) => {
             const headers = getHeaders();
-            if (!headers) {
-                return false;
-            }
 
             setStatus(`${label} in progress...`, 'muted');
 
@@ -492,7 +435,7 @@
                 return;
             }
 
-            await postAction('/api/assignments/mark-safe', { customer_phone: customerPhone }, 'Mark Safe');
+            await postAction('/dashboard/api/assignments/mark-safe', { customer_phone: customerPhone }, 'Mark Safe');
         });
 
         setAssignmentButton.addEventListener('click', async () => {
@@ -504,7 +447,7 @@
                 return;
             }
 
-            await postAction('/api/assignments/set', {
+            await postAction('/dashboard/api/assignments/set', {
                 customer_phone: customerPhone,
                 sim_id: Number(simId)
             }, 'Set Assignment');
@@ -524,7 +467,7 @@
                 return;
             }
 
-            await postAction('/api/admin/migrate-single-customer', {
+            await postAction('/dashboard/api/admin/migrate-single-customer', {
                 customer_phone: customerPhone,
                 from_sim_id: Number(fromSimId),
                 to_sim_id: Number(toSimId)
@@ -544,20 +487,11 @@
                 return;
             }
 
-            await postAction('/api/admin/migrate-bulk', {
+            await postAction('/dashboard/api/admin/migrate-bulk', {
                 from_sim_id: Number(fromSimId),
                 to_sim_id: Number(toSimId)
             }, 'Bulk Migrate');
         });
-
-        clearCredentialsButton.addEventListener('click', () => {
-            localStorage.removeItem(credentialsStorageKey);
-            apiKeyInput.value = '';
-            apiSecretInput.value = '';
-            setStatus('Saved credentials cleared for this browser.', 'muted');
-        });
-
-        hydrateCredentials();
     })();
 </script>
 </body>
