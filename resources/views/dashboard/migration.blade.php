@@ -151,6 +151,7 @@
         <button type="submit" class="logout-button">Logout</button>
     </form>
 </div>
+@include('dashboard.partials.operator-context')
 <p class="muted">
     Operator workflow page using existing assignment and migration APIs only.
     Core lookup endpoint: <code>GET /dashboard/api/assignments</code>.

@@ -109,6 +109,8 @@
 </head>
 <body>
 <div class="container">
+    @include('dashboard.partials.operator-context')
+
     <h1>Change Password</h1>
     <p class="muted">
         Update your dashboard password. You must enter your current password to continue.

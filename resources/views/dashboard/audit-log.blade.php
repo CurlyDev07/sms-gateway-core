@@ -143,6 +143,7 @@
         <button type="submit" class="logout-button">Logout</button>
     </form>
 </div>
+@include('dashboard.partials.operator-context')
 <p class="muted">
     Read-only tenant-local operator activity history powered by <code>GET /dashboard/api/audit-logs</code>.
 </p>

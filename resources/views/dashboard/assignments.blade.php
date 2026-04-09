@@ -140,6 +140,7 @@
         <button type="submit" class="logout-button">Logout</button>
     </form>
 </div>
+@include('dashboard.partials.operator-context')
 <p class="muted">
     Read-only assignment visibility page powered by <code>GET /dashboard/api/assignments</code> using your authenticated dashboard session.
 </p>

@@ -112,6 +112,7 @@
         <button type="submit" class="logout-button">Logout</button>
     </form>
 </div>
+@include('dashboard.partials.operator-context')
 <p class="muted">
     Entry point for operator tools. Choose a page below to inspect fleet state, assignments,
     migration flows, or message delivery status.

@@ -140,6 +140,7 @@
         <button type="submit" class="logout-button">Logout</button>
     </form>
 </div>
+@include('dashboard.partials.operator-context')
 <p class="muted">
     Read-only lookup page powered by <code>GET /dashboard/api/messages/status</code>.
     Enter a required <code>client_message_id</code>.

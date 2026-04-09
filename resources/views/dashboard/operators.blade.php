@@ -164,6 +164,7 @@
         <button type="submit" class="logout-button">Logout</button>
     </form>
 </div>
+@include('dashboard.partials.operator-context')
 <p class="muted">
     Tenant-local operator list powered by <code>GET /dashboard/api/operators</code>.
     Operator creation, role updates, activation toggles, and temporary-password resets are owner-only in this first RBAC management slice.

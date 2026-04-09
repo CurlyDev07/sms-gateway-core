@@ -140,6 +140,7 @@
         <button type="submit" class="logout-button">Logout</button>
     </form>
 </div>
+@include('dashboard.partials.operator-context')
 <p class="muted">
     SIM ID: <strong id="simIdText">{{ $simId }}</strong>.
     Read/Control page powered by <code>GET /dashboard/api/sims</code> plus existing admin SIM control endpoints.

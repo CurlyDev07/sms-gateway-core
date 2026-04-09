@@ -87,6 +87,8 @@
 </head>
 <body>
 <div class="container">
+    @include('dashboard.partials.operator-context')
+
     <h1>Change Temporary Password</h1>
     <p class="muted">
         Your account is using a temporary password. Set a new password before continuing to the dashboard.

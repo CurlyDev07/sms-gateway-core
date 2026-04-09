@@ -92,6 +92,7 @@
         <button type="submit" class="logout-button">Logout</button>
     </form>
 </div>
+@include('dashboard.partials.operator-context')
 
 <p class="muted">
     Read-only profile/account details for your current dashboard session.
