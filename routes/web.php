@@ -50,6 +50,11 @@ Route::middleware(['auth', 'dashboard.password.changed'])->group(function () {
         ->name('dashboard.password.change.show');
     Route::post('/dashboard/password/change', [ForcePasswordChangeController::class, 'update'])
         ->name('dashboard.password.change.update');
+
+    Route::get('/dashboard/password', [ForcePasswordChangeController::class, 'showSelfService'])
+        ->name('dashboard.password.self.show');
+    Route::post('/dashboard/password', [ForcePasswordChangeController::class, 'updateSelfService'])
+        ->name('dashboard.password.self.update');
 });
 
 Route::middleware(['auth', 'dashboard.password.changed'])->group(function () {

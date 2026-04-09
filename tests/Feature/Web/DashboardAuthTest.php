@@ -47,6 +47,23 @@ class DashboardAuthTest extends TestCase
             ->assertSee('Gateway Dashboard');
     }
 
+    public function test_authenticated_operator_can_open_self_service_password_change_page(): void
+    {
+        $company = $this->createCompany();
+
+        $user = User::factory()->create([
+            'company_id' => $company->id,
+            'must_change_password' => false,
+            'password' => Hash::make('secret-pass-123'),
+        ]);
+
+        $this->actingAs($user)
+            ->get('/dashboard/password')
+            ->assertOk()
+            ->assertSee('Change Password')
+            ->assertSee('Current Password');
+    }
+
     public function test_user_with_temporary_password_is_redirected_to_password_change_after_login(): void
     {
         $company = $this->createCompany();
@@ -110,6 +127,82 @@ class DashboardAuthTest extends TestCase
             'email' => $user->email,
             'password' => 'new-dashboard-pass-123',
         ])->assertRedirect('/dashboard');
+    }
+
+    public function test_temporary_password_user_is_redirected_to_forced_page_when_opening_self_service_password_page(): void
+    {
+        $company = $this->createCompany();
+
+        $user = User::factory()->create([
+            'company_id' => $company->id,
+            'must_change_password' => true,
+            'password' => Hash::make('temp-pass-123'),
+        ]);
+
+        $this->actingAs($user)
+            ->get('/dashboard/password')
+            ->assertRedirect('/dashboard/password/change');
+    }
+
+    public function test_authenticated_operator_can_change_own_password_from_self_service_page(): void
+    {
+        $company = $this->createCompany();
+
+        $user = User::factory()->create([
+            'company_id' => $company->id,
+            'must_change_password' => false,
+            'password' => Hash::make('old-pass-123'),
+        ]);
+
+        $this->actingAs($user)
+            ->post('/dashboard/password', [
+                'current_password' => 'old-pass-123',
+                'password' => 'new-pass-123',
+                'password_confirmation' => 'new-pass-123',
+            ])
+            ->assertRedirect('/dashboard/password')
+            ->assertSessionHas('status', 'Password updated successfully.');
+
+        $this->assertTrue(Hash::check('new-pass-123', (string) $user->fresh()->password));
+        $this->assertFalse((bool) $user->fresh()->must_change_password);
+
+        $this->post('/logout')->assertRedirect('/login');
+
+        $this->from('/login')
+            ->post('/login', [
+                'email' => $user->email,
+                'password' => 'old-pass-123',
+            ])
+            ->assertRedirect('/login')
+            ->assertSessionHasErrors('email');
+
+        $this->post('/login', [
+            'email' => $user->email,
+            'password' => 'new-pass-123',
+        ])->assertRedirect('/dashboard');
+    }
+
+    public function test_self_service_password_change_rejects_incorrect_current_password(): void
+    {
+        $company = $this->createCompany();
+
+        $user = User::factory()->create([
+            'company_id' => $company->id,
+            'must_change_password' => false,
+            'password' => Hash::make('old-pass-123'),
+        ]);
+
+        $this->actingAs($user)
+            ->from('/dashboard/password')
+            ->post('/dashboard/password', [
+                'current_password' => 'wrong-old-pass',
+                'password' => 'new-pass-123',
+                'password_confirmation' => 'new-pass-123',
+            ])
+            ->assertRedirect('/dashboard/password')
+            ->assertSessionHasErrors('current_password');
+
+        $this->assertTrue(Hash::check('old-pass-123', (string) $user->fresh()->password));
     }
 
     public function test_invalid_login_is_rejected(): void

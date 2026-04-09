@@ -105,6 +105,7 @@
     <a href="/dashboard/messages/status">Message Status</a>
     <a href="/dashboard/operators">Operators</a>
     <a href="/dashboard/audit">Audit Log</a>
+    <a href="/dashboard/password">Change Password</a>
     <form method="POST" action="{{ route('logout') }}" style="display:inline;">
         @csrf
         <button type="submit" class="logout-button">Logout</button>
@@ -150,6 +151,12 @@
         <h2>Audit Log</h2>
         <p>Review tenant-local operator activity history for dashboard control actions.</p>
         <a href="/dashboard/audit">Open Audit Log</a>
+    </section>
+
+    <section class="card">
+        <h2>Change Password</h2>
+        <p>Update your own dashboard password using your current password.</p>
+        <a href="/dashboard/password">Open Password Change</a>
     </section>
 </div>
 

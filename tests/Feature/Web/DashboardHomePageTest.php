@@ -24,11 +24,13 @@ class DashboardHomePageTest extends TestCase
             ->assertSee('Message Status')
             ->assertSee('Operators')
             ->assertSee('Audit Log')
+            ->assertSee('Change Password')
             ->assertSee('/dashboard/sims')
             ->assertSee('/dashboard/assignments')
             ->assertSee('/dashboard/migration')
             ->assertSee('/dashboard/messages/status')
             ->assertSee('/dashboard/operators')
-            ->assertSee('/dashboard/audit');
+            ->assertSee('/dashboard/audit')
+            ->assertSee('/dashboard/password');
     }
 }
