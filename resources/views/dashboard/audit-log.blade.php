@@ -65,7 +65,7 @@
         }
 
         input {
-            width: 130px;
+            width: 160px;
             padding: 8px;
             border: 1px solid #d1d5db;
             border-radius: 4px;
@@ -152,6 +152,22 @@
         limit
         <input id="limitInput" type="number" min="1" max="200" value="100">
     </label>
+    <label>
+        action
+        <input id="actionInput" type="text" placeholder="e.g. sim.status_updated">
+    </label>
+    <label>
+        actor_user_id
+        <input id="actorUserIdInput" type="number" min="1" placeholder="e.g. 12">
+    </label>
+    <label>
+        date_from
+        <input id="dateFromInput" type="date">
+    </label>
+    <label>
+        date_to
+        <input id="dateToInput" type="date">
+    </label>
     <button id="loadButton" type="button">Load Audit Logs</button>
 </div>
 
@@ -184,6 +200,10 @@
         const path = '/dashboard/api/audit-logs';
         const loadButton = document.getElementById('loadButton');
         const limitInput = document.getElementById('limitInput');
+        const actionInput = document.getElementById('actionInput');
+        const actorUserIdInput = document.getElementById('actorUserIdInput');
+        const dateFromInput = document.getElementById('dateFromInput');
+        const dateToInput = document.getElementById('dateToInput');
         const statusEl = document.getElementById('status');
         const rowsEl = document.getElementById('rows');
 
@@ -231,10 +251,43 @@
                 return;
             }
 
+            const action = String(actionInput.value || '').trim();
+            const actorUserIdRaw = String(actorUserIdInput.value || '').trim();
+            const dateFrom = String(dateFromInput.value || '').trim();
+            const dateTo = String(dateToInput.value || '').trim();
+
+            if (actorUserIdRaw !== '') {
+                const actorUserId = Number(actorUserIdRaw);
+                if (!Number.isInteger(actorUserId) || actorUserId < 1) {
+                    setStatus('actor_user_id must be a positive integer.', 'error');
+                    return;
+                }
+            }
+
+            if (dateFrom !== '' && dateTo !== '' && dateFrom > dateTo) {
+                setStatus('date_to must be on or after date_from.', 'error');
+                return;
+            }
+
+            const query = new URLSearchParams();
+            query.set('limit', String(rawLimit));
+            if (action !== '') {
+                query.set('action', action);
+            }
+            if (actorUserIdRaw !== '') {
+                query.set('actor_user_id', actorUserIdRaw);
+            }
+            if (dateFrom !== '') {
+                query.set('date_from', dateFrom);
+            }
+            if (dateTo !== '') {
+                query.set('date_to', dateTo);
+            }
+
             setStatus('Loading audit logs...', 'muted');
 
             try {
-                const response = await fetch(`${path}?limit=${rawLimit}`, {
+                const response = await fetch(`${path}?${query.toString()}`, {
                     method: 'GET',
                     headers: {
                         'Accept': 'application/json',
