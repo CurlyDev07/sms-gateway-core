@@ -245,6 +245,141 @@ class DashboardOperatorManagementTest extends TestCase
             ]);
     }
 
+    public function test_owner_can_reset_operator_password_within_tenant(): void
+    {
+        $company = $this->createCompany();
+
+        $owner = User::factory()->create([
+            'company_id' => $company->id,
+            'operator_role' => 'owner',
+            'password' => Hash::make('owner-pass-123'),
+        ]);
+
+        $target = User::factory()->create([
+            'company_id' => $company->id,
+            'operator_role' => 'support',
+            'must_change_password' => false,
+            'password' => Hash::make('target-old-pass-123'),
+        ]);
+
+        $oldHash = (string) $target->password;
+
+        $response = $this->actingAs($owner)
+            ->postJson('/dashboard/api/operators/'.$target->id.'/reset-password');
+
+        $response->assertOk()
+            ->assertJsonPath('ok', true)
+            ->assertJsonPath('operator.id', $target->id)
+            ->assertJsonPath('operator.company_id', $company->id)
+            ->assertJsonPath('operator.email', $target->email)
+            ->assertJsonPath('note', 'save_temporary_password_now');
+
+        $temporaryPassword = (string) $response->json('temporary_password');
+        $this->assertNotSame('', $temporaryPassword);
+
+        $target->refresh();
+        $this->assertTrue((bool) $target->must_change_password);
+        $this->assertNotSame($oldHash, (string) $target->password);
+        $this->assertTrue(Hash::check($temporaryPassword, (string) $target->password));
+
+        $this->post('/logout')->assertRedirect('/login');
+
+        $this->post('/login', [
+            'email' => $target->email,
+            'password' => $temporaryPassword,
+        ])->assertRedirect('/dashboard/password/change');
+    }
+
+    public function test_owner_cannot_reset_own_password(): void
+    {
+        $company = $this->createCompany();
+
+        $owner = User::factory()->create([
+            'company_id' => $company->id,
+            'operator_role' => 'owner',
+            'must_change_password' => false,
+            'password' => Hash::make('owner-pass-123'),
+        ]);
+
+        $oldHash = (string) $owner->password;
+
+        $this->actingAs($owner)
+            ->postJson('/dashboard/api/operators/'.$owner->id.'/reset-password')
+            ->assertStatus(422)
+            ->assertJsonPath('ok', false)
+            ->assertJsonPath('error', 'cannot_reset_own_password');
+
+        $owner->refresh();
+        $this->assertFalse((bool) $owner->must_change_password);
+        $this->assertSame($oldHash, (string) $owner->password);
+    }
+
+    public function test_owner_cannot_reset_cross_tenant_operator_password(): void
+    {
+        $companyA = $this->createCompany();
+        $companyB = $this->createCompany();
+
+        $owner = User::factory()->create([
+            'company_id' => $companyA->id,
+            'operator_role' => 'owner',
+        ]);
+
+        $otherTenantUser = User::factory()->create([
+            'company_id' => $companyB->id,
+            'operator_role' => 'support',
+        ]);
+
+        $this->actingAs($owner)
+            ->postJson('/dashboard/api/operators/'.$otherTenantUser->id.'/reset-password')
+            ->assertStatus(404)
+            ->assertJsonPath('ok', false)
+            ->assertJsonPath('error', 'operator_not_found');
+    }
+
+    public function test_admin_cannot_reset_operator_password(): void
+    {
+        $company = $this->createCompany();
+
+        $admin = User::factory()->create([
+            'company_id' => $company->id,
+            'operator_role' => 'admin',
+        ]);
+
+        $target = User::factory()->create([
+            'company_id' => $company->id,
+            'operator_role' => 'support',
+        ]);
+
+        $this->actingAs($admin)
+            ->postJson('/dashboard/api/operators/'.$target->id.'/reset-password')
+            ->assertStatus(403)
+            ->assertJsonPath('ok', false)
+            ->assertJsonPath('error', 'forbidden')
+            ->assertJsonPath('message', 'insufficient_operator_role');
+    }
+
+    public function test_support_cannot_reset_operator_password(): void
+    {
+        $company = $this->createCompany();
+
+        $support = User::factory()->create([
+            'company_id' => $company->id,
+            'operator_role' => 'support',
+        ]);
+
+        $target = User::factory()->create([
+            'company_id' => $company->id,
+            'operator_role' => 'admin',
+        ]);
+
+        $this->actingAs($support)
+            ->postJson('/dashboard/api/operators/'.$target->id.'/reset-password')
+            ->assertStatus(403)
+            ->assertJsonPath('ok', false)
+            ->assertJsonPath('error', 'forbidden')
+            ->assertJsonPath('message', 'insufficient_operator_role');
+    }
+
     public function test_admin_cannot_update_operator_roles(): void
     {
         $company = $this->createCompany();

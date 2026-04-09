@@ -99,6 +99,8 @@ Route::middleware(['auth', 'dashboard.password.changed', 'dashboard.tenant'])
 
         Route::middleware('dashboard.operator.owner')->group(function () {
             Route::post('/operators', [DashboardOperatorController::class, 'store']);
+            Route::post('/operators/{id}/reset-password', [DashboardOperatorController::class, 'resetPassword'])
+                ->whereNumber('id');
             Route::post('/operators/{id}/role', [DashboardOperatorController::class, 'updateRole'])
                 ->whereNumber('id');
         });

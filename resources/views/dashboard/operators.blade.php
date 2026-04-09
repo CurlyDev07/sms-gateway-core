@@ -165,7 +165,7 @@
 </div>
 <p class="muted">
     Tenant-local operator list powered by <code>GET /dashboard/api/operators</code>.
-    Operator creation and role updates are owner-only in this first RBAC management slice.
+    Operator creation, role updates, and temporary-password resets are owner-only in this first RBAC management slice.
 </p>
 
 <div class="controls">
@@ -221,6 +221,7 @@
         const listPath = '/dashboard/api/operators';
         const rolePathBase = '/dashboard/api/operators';
         const createPath = '/dashboard/api/operators';
+        const resetPathBase = '/dashboard/api/operators';
         const csrfToken = @json(csrf_token());
 
         const loadButton = document.getElementById('loadButton');
@@ -298,8 +299,11 @@
 
                 const disabled = isSelf ? 'disabled' : '';
                 const actionContent = isSelf
-                    ? '<span class="action-note">You cannot change your own role.</span>'
-                    : `<button type="button" class="button-secondary save-role" data-operator-id="${operatorId}">Save Role</button>`;
+                    ? '<span class="action-note">You cannot change or reset your own account here.</span>'
+                    : `
+                        <button type="button" class="button-secondary save-role" data-operator-id="${operatorId}">Save Role</button>
+                        <button type="button" class="button-secondary reset-password" data-operator-id="${operatorId}" data-operator-email="${escapeHtml(operator.email ?? '')}">Reset Password</button>
+                    `;
 
                 return `
                     <tr>
@@ -328,6 +332,14 @@
 
                     const operatorRole = String(selectEl.value || '').trim();
                     await updateRole(operatorId, operatorRole);
+                });
+            });
+
+            rowsEl.querySelectorAll('.reset-password').forEach((button) => {
+                button.addEventListener('click', async () => {
+                    const operatorId = Number(button.getAttribute('data-operator-id'));
+                    const operatorEmail = String(button.getAttribute('data-operator-email') || '').trim();
+                    await resetPassword(operatorId, operatorEmail);
                 });
             });
         };
@@ -498,6 +510,56 @@
                 setStatus(`Operator created successfully.${refreshSuffix}`, 'ok');
             } catch (error) {
                 setStatus(`Create failed: ${error.message}`, 'error');
+            }
+        };
+
+        const resetPassword = async (operatorId, operatorEmail) => {
+            if (!state.canManageRoles) {
+                setStatus('Password reset requires owner role.', 'error');
+                return;
+            }
+
+            const confirmMessage = `Generate a new temporary password for ${operatorEmail || `operator ${operatorId}`}?`;
+            if (!window.confirm(confirmMessage)) {
+                return;
+            }
+
+            hideCreateResult();
+            setStatus(`Resetting password for operator ${operatorId}...`, 'muted');
+
+            try {
+                const response = await fetch(`${resetPathBase}/${operatorId}/reset-password`, {
+                    method: 'POST',
+                    headers: {
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': csrfToken,
+                    },
+                    body: JSON.stringify({}),
+                });
+
+                let payload = null;
+                try {
+                    payload = await response.json();
+                } catch (_) {
+                    payload = null;
+                }
+
+                if (!response.ok || !payload || payload.ok !== true) {
+                    const error = payload && payload.error ? payload.error : `HTTP ${response.status}`;
+                    setStatus(`Reset failed: ${error}`, 'error');
+                    return;
+                }
+
+                const temporaryPassword = payload.temporary_password || '';
+                const targetEmail = payload.operator && payload.operator.email ? payload.operator.email : operatorEmail;
+                showCreateResult(`Temporary password for ${targetEmail}: ${temporaryPassword} (shown once, copy now).`);
+
+                const refreshed = await loadOperators({silent: true});
+                const refreshSuffix = refreshed ? ' Operator list refreshed.' : ' Reset applied but list refresh failed.';
+                setStatus(`Password reset completed.${refreshSuffix}`, 'ok');
+            } catch (error) {
+                setStatus(`Reset failed: ${error.message}`, 'error');
             }
         };
 

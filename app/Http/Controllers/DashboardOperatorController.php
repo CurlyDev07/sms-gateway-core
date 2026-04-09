@@ -127,6 +127,78 @@ class DashboardOperatorController extends Controller
     }
 
     /**
+     * Regenerate a temporary password for a tenant-local operator.
+     *
+     * Owner-only endpoint.
+     *
+     * @param \Illuminate\Http\Request $request
+     * @param int $id
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function resetPassword(Request $request, int $id): JsonResponse
+    {
+        $companyId = TenantContext::companyId($request);
+
+        if ($companyId === null) {
+            return response()->json([
+                'ok' => false,
+                'error' => 'forbidden',
+            ], 403);
+        }
+
+        /** @var \App\Models\User|null $actor */
+        $actor = $request->user();
+
+        if ($actor === null || (string) $actor->operator_role !== User::ROLE_OWNER) {
+            return response()->json([
+                'ok' => false,
+                'error' => 'forbidden',
+                'message' => 'insufficient_operator_role',
+            ], 403);
+        }
+
+        $target = User::query()
+            ->where('company_id', $companyId)
+            ->where('id', $id)
+            ->first();
+
+        if ($target === null) {
+            return response()->json([
+                'ok' => false,
+                'error' => 'operator_not_found',
+            ], 404);
+        }
+
+        if ((int) $actor->id === (int) $target->id) {
+            return response()->json([
+                'ok' => false,
+                'error' => 'cannot_reset_own_password',
+            ], 422);
+        }
+
+        $temporaryPassword = Str::random(16);
+
+        $target->update([
+            'password' => Hash::make($temporaryPassword),
+            'must_change_password' => true,
+        ]);
+        $target->refresh();
+
+        return response()->json([
+            'ok' => true,
+            'operator' => [
+                'id' => $target->id,
+                'name' => $target->name,
+                'email' => $target->email,
+                'company_id' => $target->company_id,
+                'operator_role' => $target->operator_role,
+            ],
+            'temporary_password' => $temporaryPassword,
+            'note' => 'save_temporary_password_now',
+        ]);
+    }
+
+    /**
      * Update a tenant-local operator role.
      *
      * Owner-only endpoint.
