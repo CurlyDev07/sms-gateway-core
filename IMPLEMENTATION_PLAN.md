@@ -1,7 +1,7 @@
 # SMS Gateway Core – Implementation Plan (Revised)
 
-**Last Updated:** 2026-04-08 (Phase 4 Complete and Locked)
-**Status:** Phase 0/1/2/4 Complete (Locked) — Phase 5 Not Started
+**Last Updated:** 2026-04-09 (Phase 5A status realignment checkpoint)
+**Status:** Phase 0/1/2/4 Complete (Locked) — Phase 5A In Progress (Near Completion), Phase 5B Not Started
 **Alignment:** Validated against all 9 locked docs with phase-boundary corrections
 
 ---
@@ -1134,6 +1134,45 @@ UX polish included:
 - deeper error-tracking stack
 - non-essential future UI polish iterations
 - scale-oriented operator tooling
+
+---
+
+### 7.1 PHASE 5A — DASHBOARD / AUTH / OPERATOR SYSTEM (Current)
+
+**Status:** IN PROGRESS (near completion)
+**Validation:** full suite green (267 passed)
+
+Implemented in repo:
+- dashboard login/logout and session-protected dashboard routes
+- server-side `/dashboard/api/*` bridge (browser no longer sends raw gateway API secrets)
+- tenant binding from `users.company_id`
+- dashboard RBAC (`owner`, `admin`, `support`) with write/owner middleware guards
+- tenant-local operator management:
+  - list + filter/sort/search
+  - owner-only operator creation
+  - owner-only role update
+  - owner-only temporary-password reset/regeneration
+  - owner-only activation/deactivation
+- forced first-login temporary-password change + self-service password change
+- read-only account page
+- tenant-local operator audit log (record + read API/page + filters/search)
+- shared dashboard layout + tenant/operator identity banner + nav/page-title polish
+
+Current boundary:
+- this track is dashboard/session-human-operator scope only
+- machine `/api/*` API-client authentication remains unchanged
+- no Phase 5A lock claim in this checkpoint (status-only realignment)
+
+### 7.2 PHASE 5B — SCALE / INFRASTRUCTURE / THROUGHPUT (Future)
+
+**Status:** NOT STARTED
+
+Planned scope:
+- worker scale-out
+- Redis throughput and queue optimization at scale
+- multi-node Laravel worker deployment
+- Python execution node scale-out
+- load/performance validation under higher volume targets
 
 ---
 

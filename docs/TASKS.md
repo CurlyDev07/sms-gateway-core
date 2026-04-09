@@ -1,6 +1,6 @@
 # TASKS
 
-Last Updated: 2026-04-08 (Phase 4 complete and locked)
+Last Updated: 2026-04-09 (Phase 5A status realignment)
 
 ---
 
@@ -646,7 +646,75 @@ Deferred beyond Phase 4 (later backlog):
 
 ---
 
-# PHASE 5 — SCALE PATH
+# PHASE 5A — DASHBOARD / AUTH / OPERATOR SYSTEM
+
+Phase 5A Status: IN PROGRESS (near completion)
+Phase 5A Validation: full suite green (267 passed)
+
+## TASK 024 — DASHBOARD SESSION AUTH + TENANT BINDING
+Status: DONE (Phase 5A)
+
+Completed:
+- login/logout for dashboard operators
+- dashboard routes protected by web session auth
+- forced temporary-password change guard
+- `/dashboard/api/*` session-authenticated bridge
+- tenant binding from `users.company_id` (`ResolveDashboardTenant`)
+
+---
+
+## TASK 025 — DASHBOARD RBAC + OPERATOR MANAGEMENT
+Status: DONE (Phase 5A)
+
+Completed:
+- RBAC roles: `owner`, `admin`, `support`
+- dashboard write endpoints role-gated (support read-only)
+- tenant-local operators page/API
+- owner-only operator creation
+- owner-only operator role update
+- owner-only operator temporary-password reset/regeneration
+- owner-only operator activation/deactivation
+- safety guards:
+  - no self-deactivation
+  - last owner protection
+  - last active owner protection
+
+---
+
+## TASK 026 — OPERATOR PASSWORD + ACCOUNT FLOWS
+Status: DONE (Phase 5A)
+
+Completed:
+- forced first-login password change for temporary passwords
+- self-service password change for authenticated operators
+- read-only My Account page
+
+---
+
+## TASK 027 — TENANT-LOCAL AUDIT + DASHBOARD UX HARDENING
+Status: DONE (Phase 5A)
+
+Completed:
+- operator audit log storage + model + service
+- dashboard audit page/API (tenant-local, read-only)
+- audit filters: `action`, `actor_user_id`, `date_from`, `date_to`
+- audit text search (action/target_type)
+- shared dashboard layout + identity context banner
+- layout/nav/page-title polish
+- operator list filter/sort/search
+
+---
+
+## TASK 028 — PHASE 5A LOCK/CHECKPOINT CLOSURE
+Status: IN PROGRESS
+
+Remaining:
+- finalize Phase 5A lock boundary wording in docs
+- decide lock vs additional checkpoint based on scope-only review
+
+---
+
+# PHASE 5B — SCALE PATH
 
 ## TASK 021 — WORKER SCALE-OUT
 Status: FUTURE

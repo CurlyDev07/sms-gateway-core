@@ -1,6 +1,54 @@
 # CHANGELOG
 
-Last Updated: 2026-04-08
+Last Updated: 2026-04-09
+
+---
+
+## [2026-04-09] Phase 5A Checkpoint — Dashboard/Auth/Operator System Realigned (In Progress)
+
+### Summary
+Phase 5 is now split into two explicit tracks for accuracy:
+- Phase 5A: Dashboard/Auth/Operator System (current execution track)
+- Phase 5B: Scale/Infrastructure/Throughput (future track)
+
+This checkpoint records current repo reality for Phase 5A without marking lock/complete yet.
+
+### Implemented Phase 5A Scope (Current Reality)
+- dashboard session authentication:
+  - `/login`, `/logout`
+  - login-protected `/dashboard*` routes
+- session-based server-side dashboard bridge:
+  - `/dashboard/api/*` (no browser-side raw API secret dependency)
+- explicit tenant binding via `users.company_id`
+- dashboard RBAC with `owner|admin|support`
+- operator management:
+  - tenant-local operator listing
+  - owner-only operator creation
+  - owner-only role update
+  - owner-only temporary-password reset/regeneration
+  - owner-only activation/deactivation
+- temporary password safety flows:
+  - forced first-login password change (`must_change_password`)
+  - self-service password change for authenticated operators
+- read-only My Account page
+- tenant-local operator audit trail:
+  - write action logging for dashboard/session control paths
+  - audit log page + API
+  - filters (`action`, `actor_user_id`, `date_from`, `date_to`) + text search
+- shared dashboard layout + UX hardening:
+  - shared layout/nav/page-title conventions
+  - tenant/operator identity context banner
+  - operator list filter/sort/search
+
+### Validation
+- full suite green: 267 passed
+
+### Status
+- Phase 4 COMPLETE (Locked)
+- Phase 5A IN PROGRESS (near completion)
+- Phase 5B NOT STARTED (future scale path)
+- Phase 2 remains locked
+- Phase 3 scope remains absorbed into Phase 2
 
 ---
 
