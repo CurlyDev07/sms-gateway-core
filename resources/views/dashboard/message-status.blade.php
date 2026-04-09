@@ -1,6 +1,7 @@
 @extends('dashboard.layouts.app')
 
 @section('title', 'Message Status Lookup')
+@section('page_title', 'Message Status Lookup')
 @section('page_heading', 'Message Status Lookup')
 
 @push('styles')

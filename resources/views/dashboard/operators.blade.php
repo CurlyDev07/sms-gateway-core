@@ -1,6 +1,7 @@
 @extends('dashboard.layouts.app')
 
 @section('title', 'Operator Management')
+@section('page_title', 'Operator Management')
 @section('page_heading', 'Operator Management')
 
 @push('styles')

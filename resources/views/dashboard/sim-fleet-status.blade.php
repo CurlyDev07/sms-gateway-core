@@ -1,6 +1,7 @@
 @extends('dashboard.layouts.app')
 
 @section('title', 'SIM Fleet Status')
+@section('page_title', 'SIM Fleet Status')
 @section('page_heading', 'SIM Fleet Status')
 
 @push('styles')

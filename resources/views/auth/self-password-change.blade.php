@@ -1,6 +1,7 @@
 @extends('dashboard.layouts.app')
 
 @section('title', 'Change Password')
+@section('page_title', 'Change Password')
 @section('page_heading', 'Change Password')
 
 @push('styles')

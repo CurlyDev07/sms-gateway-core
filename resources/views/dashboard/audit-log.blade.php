@@ -1,6 +1,7 @@
 @extends('dashboard.layouts.app')
 
 @section('title', 'Audit Log')
+@section('page_title', 'Audit Log')
 @section('page_heading', 'Audit Log')
 
 @push('styles')

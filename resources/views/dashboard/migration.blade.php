@@ -1,6 +1,7 @@
 @extends('dashboard.layouts.app')
 
 @section('title', 'Migration Tools')
+@section('page_title', 'Migration Tools')
 @section('page_heading', 'Migration Tools')
 
 @push('styles')

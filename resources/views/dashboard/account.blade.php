@@ -1,6 +1,7 @@
 @extends('dashboard.layouts.app')
 
 @section('title', 'My Account')
+@section('page_title', 'My Account')
 @section('page_heading', 'My Account')
 
 @push('styles')

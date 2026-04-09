@@ -1,6 +1,7 @@
 @extends('dashboard.layouts.app')
 
 @section('title', 'Assignments Status')
+@section('page_title', 'Assignments Status')
 @section('page_heading', 'Assignments Status')
 
 @push('styles')

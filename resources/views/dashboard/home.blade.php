@@ -1,6 +1,7 @@
 @extends('dashboard.layouts.app')
 
 @section('title', 'Gateway Dashboard')
+@section('page_title', 'Gateway Dashboard')
 @section('page_heading', 'Gateway Dashboard')
 
 @push('styles')

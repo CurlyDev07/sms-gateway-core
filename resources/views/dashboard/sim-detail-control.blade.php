@@ -1,6 +1,7 @@
 @extends('dashboard.layouts.app')
 
 @section('title', 'SIM Detail / Control')
+@section('page_title', 'SIM Detail / Control')
 @section('page_heading', 'SIM Detail / Control')
 
 @push('styles')

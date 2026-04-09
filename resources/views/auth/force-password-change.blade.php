@@ -1,6 +1,7 @@
 @extends('dashboard.layouts.app')
 
 @section('title', 'Change Temporary Password')
+@section('page_title', 'Change Temporary Password')
 @section('page_heading', 'Change Temporary Password')
 @section('show_nav', '0')
 
