@@ -3,7 +3,7 @@
 ---
 
 ## CURRENT PHASE
-Phase 6 – IN PROGRESS (Phase 6.1 Foundation)
+Phase 6 – IN PROGRESS (Phase 6.2 Send Execution Bridge)
 
 ### Phase Status
 - Phase 0: COMPLETE (Locked)
@@ -13,14 +13,14 @@ Phase 6 – IN PROGRESS (Phase 6.1 Foundation)
 - Phase 4: COMPLETE (Locked) — tenant-safe operator API + core dashboard/operator surfaces implemented
 - Phase 5A: IN PROGRESS (near completion) — dashboard/auth/operator system
 - Phase 5B: NOT STARTED — scale/infrastructure/throughput path
-- Phase 6: IN PROGRESS — Python Runtime Integration & Live Modem Fleet (Phase 6.1 foundation active)
+- Phase 6: IN PROGRESS — Python Runtime Integration & Live Modem Fleet (Phase 6.1 foundation + Phase 6.2 send bridge active)
 - Phase 1 lock result: manual migration baseline + failover/reassign hardening complete
 - Phase 2 lock result: Redis transport + rebuild + retry + worker/controller/event wiring + Laravel-side Python integration + errorLayer-aware retry policy + live smoke-test proven + last_success_at bug fix + bootstrap seeders + Python API authentication + SimHealthService validation — all complete and locked
 - Phase 2 lock validation: full suite green (120 passed)
 - Phase 2 explicit deferral: per-modem send lock is Python-owned hardware-safe execution behavior; deferred outside Phase 2 lock scope
 - Phase 4 lock validation: full suite green (205 passed)
 - Phase 5A checkpoint validation: full suite green (267 passed)
-- Phase 6.1 current validation: full suite green (276 passed)
+- Phase 6.2 current validation: full suite green (286 passed)
 
 ---
 
@@ -258,10 +258,22 @@ Status: IN PROGRESS
 - read-only dashboard/runtime inspection surface added (page + dashboard API)
 - tenant-filtered modem discovery visibility in Laravel (tenant SIM IMSI matching)
 
+### Phase 6.2 Send Execution Bridge (Implemented Checkpoint)
+- existing Python send contract reused via Laravel runtime integration path
+- structured Laravel→Python send execution bridge implemented
+- send-path failure normalization added in Laravel runtime client/sender integration
+- explicit runtime failure classes surfaced:
+  - `runtime_unreachable`
+  - `runtime_timeout`
+  - `invalid_response`
+- runtime diagnostics persisted to `outbound_messages.metadata`
+- controlled dashboard send-test surface added for manual verification
+
 ### Phase 6 Follow-Up (Open)
-- real send-execution runtime integration hardening (beyond health/discovery foundation)
-- deeper runtime/live-fleet behavior surfacing and operational hardening
+- broader real-world runtime/fleet validation and operational hardening
+- deeper send-path hardening and recovery maturity beyond current bridge baseline
 - broader monitoring/analytics depth for runtime operations
+- future scaling/performance work remains outside this slice (see Phase 5B)
 
 ---
 

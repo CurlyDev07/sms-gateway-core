@@ -1,6 +1,36 @@
 # CHANGELOG
 
-Last Updated: 2026-04-09
+Last Updated: 2026-04-10
+
+---
+
+## [2026-04-10] Phase 6.2 Checkpoint — Structured Laravel→Python Send Execution Bridge (In Progress)
+
+### Summary
+Phase 6 remains active as the runtime/hardware integration track. This checkpoint records Phase 6.2 progress: the first structured Laravel→Python send execution bridge built on top of the Phase 6.1 runtime foundation.
+
+### Implemented Phase 6.2 Progress (Current Reality)
+- Python send contract was reused from existing runtime integration (`/send`)
+- Laravel now has a structured runtime send path through the runtime client/service layer
+- `PythonRuntimeClient` now normalizes send-path runtime failures
+- `PythonApiSmsSender` now routes send execution through `PythonRuntimeClient`
+- runtime diagnostics are persisted into `outbound_messages.metadata` for execution traceability
+- controlled dashboard/manual verification surface added for runtime send-test execution
+- explicit runtime failure classes now include:
+  - `runtime_unreachable`
+  - `runtime_timeout`
+  - `invalid_response`
+
+### Validation
+- full suite green: 286 passed
+
+### Status
+- Phase 4 COMPLETE (Locked)
+- Phase 5A IN PROGRESS (near completion)
+- Phase 5B NOT STARTED (future scale path)
+- Phase 6 IN PROGRESS (Phase 6.1 + 6.2 checkpoints implemented)
+- Python runtime remains external to this Laravel repo
+- deeper runtime hardening, broader real-world fleet validation, and scale/perf work remain open
 
 ---
 

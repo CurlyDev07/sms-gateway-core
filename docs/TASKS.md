@@ -1,6 +1,6 @@
 # TASKS
 
-Last Updated: 2026-04-09 (Phase 6.1 status checkpoint)
+Last Updated: 2026-04-10 (Phase 6.2 status checkpoint)
 
 ---
 
@@ -757,8 +757,8 @@ Validate:
 
 # PHASE 6 — PYTHON RUNTIME INTEGRATION & LIVE MODEM FLEET
 
-Phase 6 Status: IN PROGRESS (Phase 6.1 foundation implemented; Phase 6 remains open)
-Current Validation Baseline: full suite green (276 passed)
+Phase 6 Status: IN PROGRESS (Phase 6.1 foundation + Phase 6.2 send bridge implemented; Phase 6 remains open)
+Current Validation Baseline: full suite green (286 passed)
 
 ## TASK 029 — PHASE 6.1 LARAVEL ↔ PYTHON RUNTIME CONTRACT FOUNDATION
 Status: DONE (Current Phase 6 slice)
@@ -781,21 +781,43 @@ Boundary of this task:
 
 ---
 
-## TASK 030 — PHASE 6 SEND EXECUTION INTEGRATION HARDENING
-Status: OPEN
+## TASK 030 — PHASE 6.2 STRUCTURED SEND EXECUTION BRIDGE
+Status: DONE (Current Phase 6 slice)
 
-Goal:
-- implement and validate deeper runtime send-execution integration on top of the Phase 6.1 foundation
-- keep Laravel/Python transport boundary intact
+Completed:
+- existing Python send contract reused through Laravel runtime integration
+- structured Laravel→Python send execution bridge implemented
+- runtime send-path error normalization added in Laravel
+- `PythonApiSmsSender` routed through runtime client send path
+- runtime diagnostics persisted into `outbound_messages.metadata`
+- controlled dashboard send-test surface added for manual verification
+- explicit runtime failure classes covered:
+  - `runtime_unreachable`
+  - `runtime_timeout`
+  - `invalid_response`
+
+Boundary of this task:
+- does not claim full production send hardening completed
+- does not redesign retry/queue/scaling behavior
+- does not claim full live fleet/hardware maturity completion
 
 ---
 
-## TASK 031 — PHASE 6 LIVE FLEET / RUNTIME HARDENING FOLLOW-UPS
+## TASK 031 — PHASE 6 LIVE FLEET VALIDATION / RUNTIME HARDENING FOLLOW-UPS
 Status: OPEN
 
 Goal:
-- extend runtime visibility and diagnostics beyond foundation health/discovery
-- add safer live fleet/runtime behavior hardening for operations
+- perform broader real-world runtime/fleet validation on top of Phase 6.1/6.2 baseline
+- deepen runtime/send-path hardening and operational recovery behavior
+
+---
+
+## TASK 032 — PHASE 6 DEEPER SEND-PATH MATURITY + LATER SCALE HANDOFF
+Status: OPEN
+
+Goal:
+- complete deeper send-path maturity work needed beyond current structured bridge
+- hand off future scaling/performance concerns to Phase 5B-aligned scale path
 
 ---
 

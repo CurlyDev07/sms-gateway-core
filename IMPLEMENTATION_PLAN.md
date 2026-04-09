@@ -1,7 +1,7 @@
 # SMS Gateway Core – Implementation Plan (Revised)
 
-**Last Updated:** 2026-04-09 (Phase 6.1 runtime foundation checkpoint)
-**Status:** Phase 0/1/2/4 Complete (Locked) — Phase 5A In Progress (Near Completion), Phase 5B Not Started, Phase 6 In Progress (6.1 Foundation)
+**Last Updated:** 2026-04-10 (Phase 6.2 send execution bridge checkpoint)
+**Status:** Phase 0/1/2/4 Complete (Locked) — Phase 5A In Progress (Near Completion), Phase 5B Not Started, Phase 6 In Progress (6.1 + 6.2)
 **Alignment:** Validated against all 9 locked docs with phase-boundary corrections
 
 ---
@@ -1178,8 +1178,8 @@ Planned scope:
 
 ### 7.3 PHASE 6 — PYTHON RUNTIME INTEGRATION & LIVE MODEM FLEET (Current Runtime Track)
 
-**Status:** IN PROGRESS (Phase 6.1 foundation implemented; Phase 6 remains open)
-**Validation:** current full suite green (276 passed)
+**Status:** IN PROGRESS (Phase 6.1 + 6.2 implemented checkpoints; Phase 6 remains open)
+**Validation:** current full suite green (286 passed)
 
 Phase 6.1 foundation implemented in current repo:
 - Python runtime service remains external to this Laravel repo
@@ -1192,13 +1192,24 @@ Phase 6.1 foundation implemented in current repo:
   - dashboard API endpoint
 - modem discovery visibility is tenant-filtered in Laravel by matching tenant SIM IMSI values
 
-Phase 6.1 boundary:
-- foundation slice only (runtime health + modem discovery/list)
-- does not claim full runtime send-execution completion
-- does not include broader scale-path hardening (Phase 5B/later work)
+Phase 6.2 send-execution bridge implemented in current repo:
+- structured Laravel→Python send execution bridge added on top of existing `/send` runtime contract
+- send path now flows through runtime client normalization
+- normalized runtime failure classes include:
+  - `runtime_unreachable`
+  - `runtime_timeout`
+  - `invalid_response`
+- runtime diagnostics are persisted to `outbound_messages.metadata`
+- controlled dashboard send-test surface added for manual runtime verification
+
+Current Phase 6 boundary:
+- Phase 6.1/6.2 provide runtime health/discovery + first structured send bridge
+- Python runtime remains external to this Laravel repo
+- this does not claim full production send hardening/real-world fleet maturity completion
+- this does not include broader scale-path hardening (Phase 5B/later work)
 
 Open follow-up for later Phase 6 slices:
-- real send-execution runtime integration and deeper live-fleet behavior hardening
+- deeper runtime/send-path hardening and broader live-fleet validation
 
 ---
 
