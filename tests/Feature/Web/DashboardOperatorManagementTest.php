@@ -91,9 +91,59 @@ class DashboardOperatorManagementTest extends TestCase
             ->assertJsonPath('operators.0.company_id', $companyA->id)
             ->assertJsonPath('operators.0.operator_role', 'support')
             ->assertJsonPath('operators.0.is_active', true)
+            ->assertJsonPath('meta.filters.search', null)
             ->assertJsonPath('meta.filters.operator_role', 'support')
             ->assertJsonPath('meta.filters.is_active', 1)
             ->assertJsonPath('meta.filters.sort_by', 'id')
+            ->assertJsonPath('meta.filters.sort_dir', 'asc');
+    }
+
+    public function test_operator_list_supports_search_by_name_or_email_with_tenant_scope(): void
+    {
+        $companyA = $this->createCompany();
+        $companyB = $this->createCompany();
+
+        $owner = User::factory()->create([
+            'company_id' => $companyA->id,
+            'operator_role' => 'owner',
+        ]);
+
+        $nameMatch = User::factory()->create([
+            'company_id' => $companyA->id,
+            'name' => 'Jane Ops',
+            'email' => 'ops-jane@example.com',
+            'operator_role' => 'support',
+            'is_active' => true,
+        ]);
+
+        User::factory()->create([
+            'company_id' => $companyA->id,
+            'name' => 'Other User',
+            'email' => 'other@example.com',
+            'operator_role' => 'support',
+            'is_active' => true,
+        ]);
+
+        User::factory()->create([
+            'company_id' => $companyB->id,
+            'name' => 'Jane Cross Tenant',
+            'email' => 'cross-jane@example.com',
+            'operator_role' => 'support',
+            'is_active' => true,
+        ]);
+
+        $this->actingAs($owner)
+            ->getJson('/dashboard/api/operators?search=jane&operator_role=support&is_active=1&sort_by=name&sort_dir=asc')
+            ->assertOk()
+            ->assertJsonPath('ok', true)
+            ->assertJsonCount(1, 'operators')
+            ->assertJsonPath('operators.0.id', $nameMatch->id)
+            ->assertJsonPath('operators.0.company_id', $companyA->id)
+            ->assertJsonPath('operators.0.name', 'Jane Ops')
+            ->assertJsonPath('meta.filters.search', 'jane')
+            ->assertJsonPath('meta.filters.operator_role', 'support')
+            ->assertJsonPath('meta.filters.is_active', 1)
+            ->assertJsonPath('meta.filters.sort_by', 'name')
             ->assertJsonPath('meta.filters.sort_dir', 'asc');
     }
 
@@ -150,6 +200,25 @@ class DashboardOperatorManagementTest extends TestCase
             ->assertJsonPath('error', 'validation_failed')
             ->assertJsonStructure([
                 'details' => ['sort_by'],
+            ]);
+    }
+
+    public function test_operator_list_rejects_search_longer_than_255_chars(): void
+    {
+        $company = $this->createCompany();
+
+        $owner = User::factory()->create([
+            'company_id' => $company->id,
+            'operator_role' => 'owner',
+        ]);
+
+        $this->actingAs($owner)
+            ->getJson('/dashboard/api/operators?search='.str_repeat('a', 256))
+            ->assertStatus(422)
+            ->assertJsonPath('ok', false)
+            ->assertJsonPath('error', 'validation_failed')
+            ->assertJsonStructure([
+                'details' => ['search'],
             ]);
     }
 

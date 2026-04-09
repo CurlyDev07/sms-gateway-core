@@ -159,6 +159,10 @@
 
 <div class="controls">
     <label>
+        search_name_or_email
+        <input id="searchText" type="text" placeholder="e.g. jane or jane@example.com">
+    </label>
+    <label>
         filter_role
         <select id="filterRole">
             <option value="" selected>all</option>
@@ -251,6 +255,7 @@
 
         const loadButton = document.getElementById('loadButton');
         const createPanel = document.getElementById('createPanel');
+        const searchTextInput = document.getElementById('searchText');
         const filterRoleInput = document.getElementById('filterRole');
         const filterActiveInput = document.getElementById('filterActive');
         const sortByInput = document.getElementById('sortBy');
@@ -392,10 +397,15 @@
 
         const buildListUrl = () => {
             const params = new URLSearchParams();
+            const searchText = String(searchTextInput.value || '').trim();
             const operatorRole = String(filterRoleInput.value || '').trim();
             const isActive = String(filterActiveInput.value || '').trim();
             const sortBy = String(sortByInput.value || '').trim();
             const sortDir = String(sortDirInput.value || '').trim();
+
+            if (searchText !== '') {
+                params.set('search', searchText);
+            }
 
             if (operatorRole !== '') {
                 params.set('operator_role', operatorRole);
@@ -702,6 +712,7 @@
         });
 
         clearFiltersButton.addEventListener('click', () => {
+            searchTextInput.value = '';
             filterRoleInput.value = '';
             filterActiveInput.value = '';
             sortByInput.value = 'id';

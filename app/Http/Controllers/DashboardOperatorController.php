@@ -118,6 +118,7 @@ class DashboardOperatorController extends Controller
         $actor = $request->user();
 
         $validator = Validator::make($request->query(), [
+            'search' => ['nullable', 'string', 'max:255'],
             'operator_role' => ['nullable', 'string', 'in:owner,admin,support'],
             'is_active' => ['nullable', 'integer', 'in:0,1'],
             'sort_by' => ['nullable', 'string', 'in:id,name,email'],
@@ -138,6 +139,15 @@ class DashboardOperatorController extends Controller
 
         $query = User::query()
             ->where('company_id', $companyId);
+
+        if (isset($validated['search']) && trim((string) $validated['search']) !== '') {
+            $search = trim((string) $validated['search']);
+            $query->where(function ($searchQuery) use ($search): void {
+                $searchQuery
+                    ->where('name', 'like', '%'.$search.'%')
+                    ->orWhere('email', 'like', '%'.$search.'%');
+            });
+        }
 
         if (isset($validated['operator_role'])) {
             $query->where('operator_role', (string) $validated['operator_role']);
@@ -168,6 +178,7 @@ class DashboardOperatorController extends Controller
                 'current_user_role' => $actor !== null ? $actor->operator_role : null,
                 'can_manage_roles' => $actor !== null && (string) $actor->operator_role === User::ROLE_OWNER,
                 'filters' => [
+                    'search' => $validated['search'] ?? null,
                     'operator_role' => $validated['operator_role'] ?? null,
                     'is_active' => isset($validated['is_active']) ? (int) $validated['is_active'] : null,
                     'sort_by' => $sortBy,
