@@ -1,6 +1,6 @@
 # TASKS
 
-Last Updated: 2026-04-09 (Phase 5A status realignment)
+Last Updated: 2026-04-09 (Phase 6.1 status checkpoint)
 
 ---
 
@@ -649,7 +649,7 @@ Deferred beyond Phase 4 (later backlog):
 # PHASE 5A — DASHBOARD / AUTH / OPERATOR SYSTEM
 
 Phase 5A Status: IN PROGRESS (near completion)
-Phase 5A Validation: full suite green (267 passed)
+Phase 5A Checkpoint Validation: full suite green (267 passed)
 
 ## TASK 024 — DASHBOARD SESSION AUTH + TENANT BINDING
 Status: DONE (Phase 5A)
@@ -752,6 +752,50 @@ Validate:
 - retry pressure
 - operator controls
 - migration safety
+
+---
+
+# PHASE 6 — PYTHON RUNTIME INTEGRATION & LIVE MODEM FLEET
+
+Phase 6 Status: IN PROGRESS (Phase 6.1 foundation implemented; Phase 6 remains open)
+Current Validation Baseline: full suite green (276 passed)
+
+## TASK 029 — PHASE 6.1 LARAVEL ↔ PYTHON RUNTIME CONTRACT FOUNDATION
+Status: DONE (Current Phase 6 slice)
+
+Completed:
+- Python runtime remains external to this Laravel repo
+- dedicated Laravel runtime client/service added for Python API calls
+- runtime contract foundation integrated:
+  - `GET /health`
+  - `GET /modems/discover`
+- read-only dashboard runtime inspection surface added:
+  - dashboard page
+  - dashboard API endpoint
+- tenant-filtered modem discovery visibility implemented in Laravel using tenant SIM IMSI matching
+
+Boundary of this task:
+- foundation slice only (health + discovery/list)
+- no full runtime send-execution implementation in this task
+- no broader scaling/hardening changes in this task
+
+---
+
+## TASK 030 — PHASE 6 SEND EXECUTION INTEGRATION HARDENING
+Status: OPEN
+
+Goal:
+- implement and validate deeper runtime send-execution integration on top of the Phase 6.1 foundation
+- keep Laravel/Python transport boundary intact
+
+---
+
+## TASK 031 — PHASE 6 LIVE FLEET / RUNTIME HARDENING FOLLOW-UPS
+Status: OPEN
+
+Goal:
+- extend runtime visibility and diagnostics beyond foundation health/discovery
+- add safer live fleet/runtime behavior hardening for operations
 
 ---
 

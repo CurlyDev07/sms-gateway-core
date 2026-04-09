@@ -4,6 +4,34 @@ Last Updated: 2026-04-09
 
 ---
 
+## [2026-04-09] Phase 6.1 Checkpoint — Python Runtime Health/Discovery Foundation (In Progress)
+
+### Summary
+Phase 6 is now active as the runtime/hardware integration track. This checkpoint records the Phase 6.1 foundation slice only: Laravel runtime connectivity to the external Python service for health/discovery visibility.
+
+### Implemented Phase 6.1 Foundation (Current Reality)
+- Python runtime remains external to this Laravel repo (no Python runtime implementation moved into Laravel)
+- Laravel now has a dedicated Python runtime client/service for contract-based runtime calls
+- current Laravel↔Python runtime contract foundation uses:
+  - `GET /health`
+  - `GET /modems/discover`
+- read-only runtime inspection surface added in Laravel:
+  - dashboard page
+  - dashboard API endpoint
+- discovery visibility is tenant-filtered in Laravel via tenant SIM IMSI matching
+
+### Validation
+- full suite green: 276 passed
+
+### Status
+- Phase 4 COMPLETE (Locked)
+- Phase 5A IN PROGRESS (near completion)
+- Phase 5B NOT STARTED (future scale path)
+- Phase 6 IN PROGRESS (Phase 6.1 foundation checkpoint only)
+- Phase 6 real send-execution runtime work is not complete in this slice
+
+---
+
 ## [2026-04-09] Phase 5A Checkpoint — Dashboard/Auth/Operator System Realigned (In Progress)
 
 ### Summary

@@ -1,7 +1,7 @@
 # SMS Gateway Core – Implementation Plan (Revised)
 
-**Last Updated:** 2026-04-09 (Phase 5A status realignment checkpoint)
-**Status:** Phase 0/1/2/4 Complete (Locked) — Phase 5A In Progress (Near Completion), Phase 5B Not Started
+**Last Updated:** 2026-04-09 (Phase 6.1 runtime foundation checkpoint)
+**Status:** Phase 0/1/2/4 Complete (Locked) — Phase 5A In Progress (Near Completion), Phase 5B Not Started, Phase 6 In Progress (6.1 Foundation)
 **Alignment:** Validated against all 9 locked docs with phase-boundary corrections
 
 ---
@@ -1140,7 +1140,7 @@ UX polish included:
 ### 7.1 PHASE 5A — DASHBOARD / AUTH / OPERATOR SYSTEM (Current)
 
 **Status:** IN PROGRESS (near completion)
-**Validation:** full suite green (267 passed)
+**Validation:** checkpoint full suite green (267 passed)
 
 Implemented in repo:
 - dashboard login/logout and session-protected dashboard routes
@@ -1173,6 +1173,32 @@ Planned scope:
 - multi-node Laravel worker deployment
 - Python execution node scale-out
 - load/performance validation under higher volume targets
+
+---
+
+### 7.3 PHASE 6 — PYTHON RUNTIME INTEGRATION & LIVE MODEM FLEET (Current Runtime Track)
+
+**Status:** IN PROGRESS (Phase 6.1 foundation implemented; Phase 6 remains open)
+**Validation:** current full suite green (276 passed)
+
+Phase 6.1 foundation implemented in current repo:
+- Python runtime service remains external to this Laravel repo
+- Laravel now has a dedicated runtime client/service for Python API calls
+- current contract endpoints used by Laravel:
+  - `/health`
+  - `/modems/discover`
+- read-only Laravel runtime inspection surface added:
+  - dashboard page
+  - dashboard API endpoint
+- modem discovery visibility is tenant-filtered in Laravel by matching tenant SIM IMSI values
+
+Phase 6.1 boundary:
+- foundation slice only (runtime health + modem discovery/list)
+- does not claim full runtime send-execution completion
+- does not include broader scale-path hardening (Phase 5B/later work)
+
+Open follow-up for later Phase 6 slices:
+- real send-execution runtime integration and deeper live-fleet behavior hardening
 
 ---
 

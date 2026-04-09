@@ -3,7 +3,7 @@
 ---
 
 ## CURRENT PHASE
-Phase 5A – IN PROGRESS (Near Completion)
+Phase 6 – IN PROGRESS (Phase 6.1 Foundation)
 
 ### Phase Status
 - Phase 0: COMPLETE (Locked)
@@ -13,12 +13,14 @@ Phase 5A – IN PROGRESS (Near Completion)
 - Phase 4: COMPLETE (Locked) — tenant-safe operator API + core dashboard/operator surfaces implemented
 - Phase 5A: IN PROGRESS (near completion) — dashboard/auth/operator system
 - Phase 5B: NOT STARTED — scale/infrastructure/throughput path
+- Phase 6: IN PROGRESS — Python Runtime Integration & Live Modem Fleet (Phase 6.1 foundation active)
 - Phase 1 lock result: manual migration baseline + failover/reassign hardening complete
 - Phase 2 lock result: Redis transport + rebuild + retry + worker/controller/event wiring + Laravel-side Python integration + errorLayer-aware retry policy + live smoke-test proven + last_success_at bug fix + bootstrap seeders + Python API authentication + SimHealthService validation — all complete and locked
 - Phase 2 lock validation: full suite green (120 passed)
 - Phase 2 explicit deferral: per-modem send lock is Python-owned hardware-safe execution behavior; deferred outside Phase 2 lock scope
 - Phase 4 lock validation: full suite green (205 passed)
-- Phase 5A current validation: full suite green (267 passed)
+- Phase 5A checkpoint validation: full suite green (267 passed)
+- Phase 6.1 current validation: full suite green (276 passed)
 
 ---
 
@@ -245,17 +247,21 @@ Important:
 
 ---
 
-## PHASE 6 — ADVANCED OPERATIONS (LATER BACKLOG)
-- Alerting system (SIM stuck, no success, queue growth, modem issues)
-- performance analytics:
-  - send rate
-  - retry rate
-  - failure rate
-  - queue depth by SIM
-- operator runbooks
-- recovery tooling
-- migration tooling
-- queue repair tooling
+## PHASE 6 — PYTHON RUNTIME INTEGRATION & LIVE MODEM FLEET
+Status: IN PROGRESS
+
+### Phase 6.1 Foundation (Implemented Checkpoint)
+- Laravel runtime client/service for Python API calls
+- runtime contract foundation in use:
+  - `GET /health`
+  - `GET /modems/discover`
+- read-only dashboard/runtime inspection surface added (page + dashboard API)
+- tenant-filtered modem discovery visibility in Laravel (tenant SIM IMSI matching)
+
+### Phase 6 Follow-Up (Open)
+- real send-execution runtime integration hardening (beyond health/discovery foundation)
+- deeper runtime/live-fleet behavior surfacing and operational hardening
+- broader monitoring/analytics depth for runtime operations
 
 ---
 
