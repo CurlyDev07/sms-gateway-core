@@ -14,6 +14,8 @@ use App\Http\Controllers\MigrationDashboardPageController;
 use App\Http\Controllers\MigrationController;
 use App\Http\Controllers\MessageStatusDashboardPageController;
 use App\Http\Controllers\OperatorDashboardPageController;
+use App\Http\Controllers\PythonRuntimeController;
+use App\Http\Controllers\PythonRuntimeDashboardPageController;
 use App\Http\Controllers\SimAdminController;
 use App\Http\Controllers\SimDetailControlPageController;
 use App\Http\Controllers\SimFleetStatusPageController;
@@ -74,6 +76,9 @@ Route::middleware(['auth', 'dashboard.password.changed'])->group(function () {
     Route::get('/dashboard/messages/status', [MessageStatusDashboardPageController::class, 'index'])
         ->name('dashboard.messages.status.index');
 
+    Route::get('/dashboard/runtime/python', [PythonRuntimeDashboardPageController::class, 'index'])
+        ->name('dashboard.runtime.python.index');
+
     Route::get('/dashboard/account', [AccountDashboardPageController::class, 'index'])
         ->name('dashboard.account.index');
 
@@ -95,6 +100,7 @@ Route::middleware(['auth', 'dashboard.password.changed', 'dashboard.tenant'])
 
         Route::get('/assignments', [AssignmentController::class, 'index']);
         Route::get('/messages/status', [MessageStatusController::class, 'show']);
+        Route::get('/runtime/python', [PythonRuntimeController::class, 'show']);
         Route::get('/operators', [DashboardOperatorController::class, 'index']);
         Route::get('/audit-logs', [DashboardAuditLogController::class, 'index']);
 

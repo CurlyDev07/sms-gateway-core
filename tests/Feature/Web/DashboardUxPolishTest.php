@@ -20,6 +20,7 @@ class DashboardUxPolishTest extends TestCase
             '/dashboard/assignments',
             '/dashboard/migration',
             '/dashboard/messages/status',
+            '/dashboard/runtime/python',
             '/dashboard/operators',
             '/dashboard/sims/1',
         ];
@@ -33,6 +34,7 @@ class DashboardUxPolishTest extends TestCase
                 ->assertSee('Assignments')
                 ->assertSee('Migration')
                 ->assertSee('Message Status')
+                ->assertSee('Python Runtime')
                 ->assertSee('Operators');
         }
     }
@@ -46,6 +48,7 @@ class DashboardUxPolishTest extends TestCase
             '/dashboard/assignments',
             '/dashboard/migration',
             '/dashboard/messages/status',
+            '/dashboard/runtime/python',
             '/dashboard/operators',
             '/dashboard/sims/1',
         ];

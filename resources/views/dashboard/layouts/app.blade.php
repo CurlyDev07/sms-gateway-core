@@ -112,6 +112,11 @@
             'patterns' => ['dashboard.messages.status.*'],
         ],
         [
+            'label' => 'Python Runtime',
+            'href' => '/dashboard/runtime/python',
+            'patterns' => ['dashboard.runtime.python.*'],
+        ],
+        [
             'label' => 'Operators',
             'href' => '/dashboard/operators',
             'patterns' => ['dashboard.operators.*'],

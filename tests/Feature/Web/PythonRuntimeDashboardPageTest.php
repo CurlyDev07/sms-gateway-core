@@ -1,0 +1,26 @@
+<?php
+
+namespace Tests\Feature\Web;
+
+use App\Models\User;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\TestCase;
+
+class PythonRuntimeDashboardPageTest extends TestCase
+{
+    use RefreshDatabase;
+
+    public function test_python_runtime_dashboard_page_renders_runtime_shell(): void
+    {
+        $this->actingAs(User::factory()->create());
+
+        $response = $this->get('/dashboard/runtime/python');
+
+        $response->assertOk()
+            ->assertSee('Python Runtime')
+            ->assertSee('GET /dashboard/api/runtime/python')
+            ->assertSee('Check Python Runtime')
+            ->assertSee('Discovered Total')
+            ->assertSee('Tenant Visible');
+    }
+}

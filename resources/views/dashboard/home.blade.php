@@ -89,6 +89,12 @@
     </section>
 
     <section class="card">
+        <h2>Python Runtime</h2>
+        <p>Verify Python runtime connectivity and tenant-visible modem discovery output.</p>
+        <a href="/dashboard/runtime/python">Open Python Runtime</a>
+    </section>
+
+    <section class="card">
         <h2>My Account</h2>
         <p>View your tenant-bound operator account details.</p>
         <a href="/dashboard/account">Open My Account</a>
