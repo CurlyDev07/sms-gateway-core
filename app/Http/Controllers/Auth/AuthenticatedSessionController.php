@@ -68,6 +68,18 @@ class AuthenticatedSessionController extends Controller
                 ]);
         }
 
+        if (!(bool) ($user->is_active ?? true)) {
+            Auth::logout();
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
+
+            return back()
+                ->withInput($request->except('password'))
+                ->withErrors([
+                    'email' => 'Your operator account is deactivated. Contact your tenant owner.',
+                ]);
+        }
+
         if ((bool) ($user->must_change_password ?? false)) {
             return redirect()->route('dashboard.password.change.show');
         }

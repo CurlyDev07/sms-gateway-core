@@ -4,6 +4,7 @@ namespace App\Http\Middleware;
 
 use Closure;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 
 class EnsureDashboardPasswordChanged
 {
@@ -17,6 +18,22 @@ class EnsureDashboardPasswordChanged
     public function handle(Request $request, Closure $next)
     {
         $user = $request->user();
+
+        if ($user !== null && !(bool) ($user->is_active ?? true)) {
+            Auth::guard('web')->logout();
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
+
+            if ($request->expectsJson() || $request->is('dashboard/api/*')) {
+                return response()->json([
+                    'ok' => false,
+                    'error' => 'operator_inactive',
+                    'message' => 'operator_account_is_deactivated',
+                ], 403);
+            }
+
+            return redirect()->route('login');
+        }
 
         if ($user === null || !(bool) ($user->must_change_password ?? false)) {
             return $next($request);

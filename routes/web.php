@@ -43,7 +43,7 @@ Route::post('/logout', [AuthenticatedSessionController::class, 'destroy'])
     ->middleware('auth')
     ->name('logout');
 
-Route::middleware('auth')->group(function () {
+Route::middleware(['auth', 'dashboard.password.changed'])->group(function () {
     Route::get('/dashboard/password/change', [ForcePasswordChangeController::class, 'show'])
         ->name('dashboard.password.change.show');
     Route::post('/dashboard/password/change', [ForcePasswordChangeController::class, 'update'])
@@ -102,6 +102,8 @@ Route::middleware(['auth', 'dashboard.password.changed', 'dashboard.tenant'])
             Route::post('/operators/{id}/reset-password', [DashboardOperatorController::class, 'resetPassword'])
                 ->whereNumber('id');
             Route::post('/operators/{id}/role', [DashboardOperatorController::class, 'updateRole'])
+                ->whereNumber('id');
+            Route::post('/operators/{id}/activation', [DashboardOperatorController::class, 'updateActivation'])
                 ->whereNumber('id');
         });
     });

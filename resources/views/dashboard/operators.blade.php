@@ -107,7 +107,7 @@
         table {
             border-collapse: collapse;
             width: 100%;
-            min-width: 900px;
+            min-width: 980px;
             font-size: 13px;
         }
 
@@ -165,7 +165,7 @@
 </div>
 <p class="muted">
     Tenant-local operator list powered by <code>GET /dashboard/api/operators</code>.
-    Operator creation, role updates, and temporary-password resets are owner-only in this first RBAC management slice.
+    Operator creation, role updates, activation toggles, and temporary-password resets are owner-only in this first RBAC management slice.
 </p>
 
 <div class="controls">
@@ -205,12 +205,13 @@
             <th>Email</th>
             <th>Company ID</th>
             <th>Operator Role</th>
+            <th>Active</th>
             <th>Action</th>
         </tr>
         </thead>
         <tbody id="operatorRows">
         <tr>
-            <td colspan="6" class="muted">No operator rows loaded.</td>
+            <td colspan="7" class="muted">No operator rows loaded.</td>
         </tr>
         </tbody>
     </table>
@@ -222,6 +223,7 @@
         const rolePathBase = '/dashboard/api/operators';
         const createPath = '/dashboard/api/operators';
         const resetPathBase = '/dashboard/api/operators';
+        const activationPathBase = '/dashboard/api/operators';
         const csrfToken = @json(csrf_token());
 
         const loadButton = document.getElementById('loadButton');
@@ -271,13 +273,14 @@
             const operators = state.operators;
 
             if (!Array.isArray(operators) || operators.length === 0) {
-                rowsEl.innerHTML = '<tr><td colspan="6" class="muted">No operators found for this tenant.</td></tr>';
+                rowsEl.innerHTML = '<tr><td colspan="7" class="muted">No operators found for this tenant.</td></tr>';
                 return;
             }
 
             rowsEl.innerHTML = operators.map((operator) => {
                 const operatorId = Number(operator.id);
                 const isSelf = Number.isFinite(operatorId) && Number(state.currentUserId) === operatorId;
+                const isActive = Boolean(operator.is_active);
 
                 if (!state.canManageRoles) {
                     return `
@@ -287,6 +290,7 @@
                             <td>${escapeHtml(operator.email ?? '')}</td>
                             <td>${escapeHtml(operator.company_id ?? '')}</td>
                             <td>${escapeHtml(operator.operator_role ?? '')}</td>
+                            <td>${isActive ? 'yes' : 'no'}</td>
                             <td><span class="action-note">Read-only</span></td>
                         </tr>
                     `;
@@ -302,6 +306,7 @@
                     ? '<span class="action-note">You cannot change or reset your own account here.</span>'
                     : `
                         <button type="button" class="button-secondary save-role" data-operator-id="${operatorId}">Save Role</button>
+                        <button type="button" class="button-secondary toggle-activation" data-operator-id="${operatorId}" data-operator-email="${escapeHtml(operator.email ?? '')}" data-operator-active="${isActive ? '1' : '0'}">${isActive ? 'Deactivate' : 'Activate'}</button>
                         <button type="button" class="button-secondary reset-password" data-operator-id="${operatorId}" data-operator-email="${escapeHtml(operator.email ?? '')}">Reset Password</button>
                     `;
 
@@ -316,6 +321,7 @@
                                 ${options}
                             </select>
                         </td>
+                        <td>${isActive ? 'yes' : 'no'}</td>
                         <td>${actionContent}</td>
                     </tr>
                 `;
@@ -340,6 +346,15 @@
                     const operatorId = Number(button.getAttribute('data-operator-id'));
                     const operatorEmail = String(button.getAttribute('data-operator-email') || '').trim();
                     await resetPassword(operatorId, operatorEmail);
+                });
+            });
+
+            rowsEl.querySelectorAll('.toggle-activation').forEach((button) => {
+                button.addEventListener('click', async () => {
+                    const operatorId = Number(button.getAttribute('data-operator-id'));
+                    const operatorEmail = String(button.getAttribute('data-operator-email') || '').trim();
+                    const isActive = String(button.getAttribute('data-operator-active') || '0') === '1';
+                    await updateActivation(operatorId, !isActive, operatorEmail);
                 });
             });
         };
@@ -560,6 +575,58 @@
                 setStatus(`Password reset completed.${refreshSuffix}`, 'ok');
             } catch (error) {
                 setStatus(`Reset failed: ${error.message}`, 'error');
+            }
+        };
+
+        const updateActivation = async (operatorId, isActive, operatorEmail) => {
+            if (!state.canManageRoles) {
+                setStatus('Activation update requires owner role.', 'error');
+                return;
+            }
+
+            const actionWord = isActive ? 'activate' : 'deactivate';
+            const confirmMessage = `Do you want to ${actionWord} ${operatorEmail || `operator ${operatorId}`}?`;
+            if (!window.confirm(confirmMessage)) {
+                return;
+            }
+
+            hideCreateResult();
+            setStatus(`Applying activation change for operator ${operatorId}...`, 'muted');
+
+            try {
+                const response = await fetch(`${activationPathBase}/${operatorId}/activation`, {
+                    method: 'POST',
+                    headers: {
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': csrfToken,
+                    },
+                    body: JSON.stringify({
+                        is_active: isActive,
+                    }),
+                });
+
+                let payload = null;
+                try {
+                    payload = await response.json();
+                } catch (_) {
+                    payload = null;
+                }
+
+                if (!response.ok || !payload || payload.ok !== true) {
+                    const error = payload && payload.error ? payload.error : `HTTP ${response.status}`;
+                    setStatus(`Activation update failed: ${error}`, 'error');
+                    return;
+                }
+
+                const noChange = Boolean(payload.no_change);
+                const refreshed = await loadOperators({silent: true});
+                const refreshSuffix = refreshed ? ' Operator list refreshed.' : ' Update applied but list refresh failed.';
+                const successText = noChange ? 'No activation change needed.' : `Operator ${actionWord}d successfully.`;
+
+                setStatus(`${successText}${refreshSuffix}`, 'ok');
+            } catch (error) {
+                setStatus(`Activation update failed: ${error.message}`, 'error');
             }
         };
 

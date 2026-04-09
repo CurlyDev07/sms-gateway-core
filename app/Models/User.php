@@ -37,6 +37,7 @@ class User extends Authenticatable
         'must_change_password',
         'company_id',
         'operator_role',
+        'is_active',
     ];
 
     /**
@@ -58,6 +59,7 @@ class User extends Authenticatable
         'email_verified_at' => 'datetime',
         'must_change_password' => 'boolean',
         'company_id' => 'integer',
+        'is_active' => 'boolean',
     ];
 
     /**

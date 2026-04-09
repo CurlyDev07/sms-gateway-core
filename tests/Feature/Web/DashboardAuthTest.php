@@ -128,6 +128,27 @@ class DashboardAuthTest extends TestCase
         $this->assertGuest();
     }
 
+    public function test_deactivated_user_cannot_login(): void
+    {
+        $company = $this->createCompany();
+
+        $user = User::factory()->create([
+            'company_id' => $company->id,
+            'is_active' => false,
+            'password' => Hash::make('secret-pass-123'),
+        ]);
+
+        $this->from('/login')
+            ->post('/login', [
+                'email' => $user->email,
+                'password' => 'secret-pass-123',
+            ])
+            ->assertRedirect('/login')
+            ->assertSessionHasErrors('email');
+
+        $this->assertGuest();
+    }
+
     public function test_login_without_tenant_binding_is_rejected(): void
     {
         $user = User::factory()->create([
@@ -155,5 +176,28 @@ class DashboardAuthTest extends TestCase
             ->assertRedirect('/login');
 
         $this->assertGuest();
+    }
+
+    public function test_inactive_operator_is_forced_out_of_dashboard_routes(): void
+    {
+        $company = $this->createCompany();
+
+        $user = User::factory()->create([
+            'company_id' => $company->id,
+            'is_active' => false,
+        ]);
+
+        $this->actingAs($user)
+            ->get('/dashboard')
+            ->assertRedirect('/login');
+
+        $this->assertGuest();
+
+        $this->actingAs($user)
+            ->getJson('/dashboard/api/operators')
+            ->assertStatus(403)
+            ->assertJsonPath('ok', false)
+            ->assertJsonPath('error', 'operator_inactive')
+            ->assertJsonPath('message', 'operator_account_is_deactivated');
     }
 }
