@@ -1,10 +1,10 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Message Status Lookup</title>
-    <style>
+@extends('dashboard.layouts.app')
+
+@section('title', 'Message Status Lookup')
+@section('page_heading', 'Message Status Lookup')
+
+@push('styles')
+<style>
         body {
             font-family: Arial, sans-serif;
             margin: 24px;
@@ -125,22 +125,9 @@
             z-index: 1;
         }
     </style>
-</head>
-<body>
-<h1>Message Status Lookup</h1>
-<div class="links">
-    <a href="/dashboard">Dashboard Home</a>
-    <a href="/dashboard/sims">SIM Fleet</a>
-    <a href="/dashboard/assignments">Assignments</a>
-    <a href="/dashboard/migration">Migration</a>
-    <a href="/dashboard/messages/status">Message Status</a>
-    <a href="/dashboard/operators">Operators</a>
-    <form method="POST" action="{{ route('logout') }}" style="display:inline;">
-        @csrf
-        <button type="submit" class="logout-button">Logout</button>
-    </form>
-</div>
-@include('dashboard.partials.operator-context')
+@endpush
+
+@section('content')
 <p class="muted">
     Read-only lookup page powered by <code>GET /dashboard/api/messages/status</code>.
     Enter a required <code>client_message_id</code>.
@@ -288,5 +275,4 @@
         });
     })();
 </script>
-</body>
-</html>
+@endsection

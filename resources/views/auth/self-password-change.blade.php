@@ -1,10 +1,10 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Change Password</title>
-    <style>
+@extends('dashboard.layouts.app')
+
+@section('title', 'Change Password')
+@section('page_heading', 'Change Password')
+
+@push('styles')
+<style>
         body {
             font-family: Arial, sans-serif;
             margin: 24px;
@@ -106,12 +106,10 @@
             text-decoration: underline;
         }
     </style>
-</head>
-<body>
-<div class="container">
-    @include('dashboard.partials.operator-context')
+@endpush
 
-    <h1>Change Password</h1>
+@section('content')
+<div class="container">
     <p class="muted">
         Update your dashboard password. You must enter your current password to continue.
     </p>
@@ -157,5 +155,4 @@
         <button type="submit">Logout</button>
     </form>
 </div>
-</body>
-</html>
+@endsection

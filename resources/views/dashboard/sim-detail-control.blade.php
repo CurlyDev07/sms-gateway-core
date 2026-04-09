@@ -1,10 +1,10 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>SIM Detail / Control</title>
-    <style>
+@extends('dashboard.layouts.app')
+
+@section('title', 'SIM Detail / Control')
+@section('page_heading', 'SIM Detail / Control')
+
+@push('styles')
+<style>
         body {
             font-family: Arial, sans-serif;
             margin: 24px;
@@ -125,22 +125,9 @@
             margin-right: 6px;
         }
     </style>
-</head>
-<body>
-<h1>SIM Detail / Control</h1>
-<div class="links">
-    <a href="/dashboard">Dashboard Home</a>
-    <a href="/dashboard/sims">SIM Fleet</a>
-    <a href="/dashboard/assignments">Assignments</a>
-    <a href="/dashboard/migration">Migration</a>
-    <a href="/dashboard/messages/status">Message Status</a>
-    <a href="/dashboard/operators">Operators</a>
-    <form method="POST" action="{{ route('logout') }}" style="display:inline;">
-        @csrf
-        <button type="submit" class="logout-button">Logout</button>
-    </form>
-</div>
-@include('dashboard.partials.operator-context')
+@endpush
+
+@section('content')
 <p class="muted">
     SIM ID: <strong id="simIdText">{{ $simId }}</strong>.
     Read/Control page powered by <code>GET /dashboard/api/sims</code> plus existing admin SIM control endpoints.
@@ -374,5 +361,4 @@
         });
     })();
 </script>
-</body>
-</html>
+@endsection

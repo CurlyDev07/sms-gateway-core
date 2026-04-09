@@ -1,10 +1,11 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Change Temporary Password</title>
-    <style>
+@extends('dashboard.layouts.app')
+
+@section('title', 'Change Temporary Password')
+@section('page_heading', 'Change Temporary Password')
+@section('show_nav', '0')
+
+@push('styles')
+<style>
         body {
             font-family: Arial, sans-serif;
             margin: 24px;
@@ -84,12 +85,10 @@
             text-decoration: underline;
         }
     </style>
-</head>
-<body>
-<div class="container">
-    @include('dashboard.partials.operator-context')
+@endpush
 
-    <h1>Change Temporary Password</h1>
+@section('content')
+<div class="container">
     <p class="muted">
         Your account is using a temporary password. Set a new password before continuing to the dashboard.
     </p>
@@ -123,5 +122,4 @@
         <button type="submit">Logout</button>
     </form>
 </div>
-</body>
-</html>
+@endsection

@@ -1,118 +1,62 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Gateway Dashboard</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 24px;
-            color: #1f2937;
-        }
+@extends('dashboard.layouts.app')
 
-        h1 {
-            margin: 0 0 8px 0;
-            font-size: 24px;
-        }
+@section('title', 'Gateway Dashboard')
+@section('page_heading', 'Gateway Dashboard')
 
-        .links {
-            margin-bottom: 12px;
-            font-size: 14px;
-        }
+@push('styles')
+<style>
+    .muted {
+        color: #6b7280;
+        margin-bottom: 16px;
+        max-width: 900px;
+    }
 
-        .links a {
-            color: #1d4ed8;
-            text-decoration: none;
-            margin-right: 12px;
-        }
+    .grid {
+        display: grid;
+        gap: 12px;
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+        margin-bottom: 16px;
+    }
 
-        .links a:hover {
-            text-decoration: underline;
-        }
+    .card {
+        border: 1px solid #e5e7eb;
+        border-radius: 6px;
+        padding: 14px;
+    }
 
-        .links .logout-button {
-            border: none;
-            background: none;
-            color: #1d4ed8;
-            padding: 0;
-            cursor: pointer;
-            font-size: 14px;
-            margin-left: 12px;
-        }
+    .card h2 {
+        margin: 0 0 8px 0;
+        font-size: 18px;
+    }
 
-        .links .logout-button:hover {
-            text-decoration: underline;
-        }
+    .card p {
+        margin: 0 0 12px 0;
+        font-size: 14px;
+        color: #4b5563;
+    }
 
-        .muted {
-            color: #6b7280;
-            margin-bottom: 16px;
-            max-width: 900px;
-        }
+    .card a {
+        color: #1d4ed8;
+        text-decoration: none;
+        font-size: 14px;
+    }
 
-        .grid {
-            display: grid;
-            gap: 12px;
-            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-            margin-bottom: 16px;
-        }
+    .card a:hover {
+        text-decoration: underline;
+    }
 
-        .card {
-            border: 1px solid #e5e7eb;
-            border-radius: 6px;
-            padding: 14px;
-        }
+    .note {
+        border: 1px solid #e5e7eb;
+        border-radius: 6px;
+        padding: 12px;
+        font-size: 14px;
+        color: #374151;
+        margin-bottom: 10px;
+    }
+</style>
+@endpush
 
-        .card h2 {
-            margin: 0 0 8px 0;
-            font-size: 18px;
-        }
-
-        .card p {
-            margin: 0 0 12px 0;
-            font-size: 14px;
-            color: #4b5563;
-        }
-
-        .card a {
-            color: #1d4ed8;
-            text-decoration: none;
-            font-size: 14px;
-        }
-
-        .card a:hover {
-            text-decoration: underline;
-        }
-
-        .note {
-            border: 1px solid #e5e7eb;
-            border-radius: 6px;
-            padding: 12px;
-            font-size: 14px;
-            color: #374151;
-            margin-bottom: 10px;
-        }
-    </style>
-</head>
-<body>
-<h1>Gateway Dashboard</h1>
-<div class="links">
-    <a href="/dashboard">Dashboard Home</a>
-    <a href="/dashboard/sims">SIM Fleet</a>
-    <a href="/dashboard/assignments">Assignments</a>
-    <a href="/dashboard/migration">Migration</a>
-    <a href="/dashboard/messages/status">Message Status</a>
-    <a href="/dashboard/account">My Account</a>
-    <a href="/dashboard/operators">Operators</a>
-    <a href="/dashboard/audit">Audit Log</a>
-    <a href="/dashboard/password">Change Password</a>
-    <form method="POST" action="{{ route('logout') }}" style="display:inline;">
-        @csrf
-        <button type="submit" class="logout-button">Logout</button>
-    </form>
-</div>
-@include('dashboard.partials.operator-context')
+@section('content')
 <p class="muted">
     Entry point for operator tools. Choose a page below to inspect fleet state, assignments,
     migration flows, or message delivery status.
@@ -175,5 +119,4 @@
 <div class="note">
     Linked pages run on your authenticated dashboard session and no longer require browser-side API key/secret entry.
 </div>
-</body>
-</html>
+@endsection

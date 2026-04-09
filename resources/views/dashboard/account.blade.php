@@ -1,10 +1,10 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>My Account</title>
-    <style>
+@extends('dashboard.layouts.app')
+
+@section('title', 'My Account')
+@section('page_heading', 'My Account')
+
+@push('styles')
+<style>
         body {
             font-family: Arial, sans-serif;
             margin: 24px;
@@ -74,26 +74,9 @@
             font-weight: 600;
         }
     </style>
-</head>
-<body>
-<h1>My Account</h1>
-<div class="links">
-    <a href="/dashboard">Dashboard Home</a>
-    <a href="/dashboard/sims">SIM Fleet</a>
-    <a href="/dashboard/assignments">Assignments</a>
-    <a href="/dashboard/migration">Migration</a>
-    <a href="/dashboard/messages/status">Message Status</a>
-    <a href="/dashboard/operators">Operators</a>
-    <a href="/dashboard/audit">Audit Log</a>
-    <a href="/dashboard/account">My Account</a>
-    <a href="/dashboard/password">Change Password</a>
-    <form method="POST" action="{{ route('logout') }}" style="display:inline;">
-        @csrf
-        <button type="submit" class="logout-button">Logout</button>
-    </form>
-</div>
-@include('dashboard.partials.operator-context')
+@endpush
 
+@section('content')
 <p class="muted">
     Read-only profile/account details for your current dashboard session.
 </p>
@@ -124,5 +107,4 @@
         <div>{{ $user->is_active ? 'yes' : 'no' }}</div>
     </div>
 </section>
-</body>
-</html>
+@endsection
