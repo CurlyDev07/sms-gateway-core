@@ -121,6 +121,58 @@ class DashboardAuditLogTest extends TestCase
             ->assertJsonPath('logs.0.target_id', 11);
     }
 
+    public function test_support_can_search_audit_logs_by_action_or_target_type_within_tenant(): void
+    {
+        $companyA = $this->createCompany();
+        $companyB = $this->createCompany();
+
+        $support = User::factory()->create([
+            'company_id' => $companyA->id,
+            'operator_role' => 'support',
+        ]);
+        $otherTenantUser = User::factory()->create([
+            'company_id' => $companyB->id,
+            'operator_role' => 'owner',
+        ]);
+
+        OperatorAuditLog::query()->create([
+            'company_id' => $companyA->id,
+            'actor_user_id' => $support->id,
+            'action' => 'assignment.set',
+            'target_type' => 'customer_sim_assignment',
+            'target_id' => 901,
+            'metadata' => [],
+        ]);
+
+        $targetMatch = OperatorAuditLog::query()->create([
+            'company_id' => $companyA->id,
+            'actor_user_id' => $support->id,
+            'action' => 'migration.bulk',
+            'target_type' => 'sim',
+            'target_id' => 902,
+            'metadata' => [],
+        ]);
+
+        OperatorAuditLog::query()->create([
+            'company_id' => $companyB->id,
+            'actor_user_id' => $otherTenantUser->id,
+            'action' => 'migration.bulk',
+            'target_type' => 'sim',
+            'target_id' => 903,
+            'metadata' => [],
+        ]);
+
+        $this->actingAs($support)
+            ->getJson('/dashboard/api/audit-logs?search=migration&action=migration.bulk')
+            ->assertOk()
+            ->assertJsonPath('ok', true)
+            ->assertJsonCount(1, 'logs')
+            ->assertJsonPath('logs.0.id', $targetMatch->id)
+            ->assertJsonPath('logs.0.company_id', $companyA->id)
+            ->assertJsonPath('logs.0.action', 'migration.bulk')
+            ->assertJsonPath('logs.0.target_type', 'sim');
+    }
+
     public function test_support_can_filter_audit_logs_by_inclusive_date_range(): void
     {
         $company = $this->createCompany();
@@ -192,6 +244,24 @@ class DashboardAuditLogTest extends TestCase
             ->assertJsonPath('ok', false)
             ->assertJsonPath('error', 'validation_failed')
             ->assertJsonPath('details.date_to.0', 'date_to must be on or after date_from.');
+    }
+
+    public function test_audit_log_filters_reject_search_longer_than_255_chars(): void
+    {
+        $company = $this->createCompany();
+        $support = User::factory()->create([
+            'company_id' => $company->id,
+            'operator_role' => 'support',
+        ]);
+
+        $this->actingAs($support)
+            ->getJson('/dashboard/api/audit-logs?search='.str_repeat('x', 256))
+            ->assertStatus(422)
+            ->assertJsonPath('ok', false)
+            ->assertJsonPath('error', 'validation_failed')
+            ->assertJsonStructure([
+                'details' => ['search'],
+            ]);
     }
 
     public function test_operator_creation_writes_audit_log_entry(): void

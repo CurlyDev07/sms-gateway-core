@@ -141,6 +141,10 @@
         <input id="limitInput" type="number" min="1" max="200" value="100">
     </label>
     <label>
+        search
+        <input id="searchInput" type="text" placeholder="action or target type">
+    </label>
+    <label>
         action
         <input id="actionInput" type="text" placeholder="e.g. sim.status_updated">
     </label>
@@ -188,6 +192,7 @@
         const path = '/dashboard/api/audit-logs';
         const loadButton = document.getElementById('loadButton');
         const limitInput = document.getElementById('limitInput');
+        const searchInput = document.getElementById('searchInput');
         const actionInput = document.getElementById('actionInput');
         const actorUserIdInput = document.getElementById('actorUserIdInput');
         const dateFromInput = document.getElementById('dateFromInput');
@@ -239,10 +244,16 @@
                 return;
             }
 
+            const search = String(searchInput.value || '').trim();
             const action = String(actionInput.value || '').trim();
             const actorUserIdRaw = String(actorUserIdInput.value || '').trim();
             const dateFrom = String(dateFromInput.value || '').trim();
             const dateTo = String(dateToInput.value || '').trim();
+
+            if (search.length > 255) {
+                setStatus('search must be 255 characters or less.', 'error');
+                return;
+            }
 
             if (actorUserIdRaw !== '') {
                 const actorUserId = Number(actorUserIdRaw);
@@ -259,6 +270,9 @@
 
             const query = new URLSearchParams();
             query.set('limit', String(rawLimit));
+            if (search !== '') {
+                query.set('search', search);
+            }
             if (action !== '') {
                 query.set('action', action);
             }

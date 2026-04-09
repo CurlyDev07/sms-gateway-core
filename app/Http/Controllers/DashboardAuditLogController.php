@@ -32,6 +32,7 @@ class DashboardAuditLogController extends Controller
 
         $validator = Validator::make($request->query(), [
             'limit' => ['nullable', 'integer', 'min:1', 'max:200'],
+            'search' => ['nullable', 'string', 'max:255'],
             'action' => ['nullable', 'string', 'max:120'],
             'actor_user_id' => ['nullable', 'integer', 'min:1'],
             'date_from' => ['nullable', 'date_format:Y-m-d'],
@@ -60,6 +61,15 @@ class DashboardAuditLogController extends Controller
 
         $query = OperatorAuditLog::query()
             ->where('company_id', $companyId);
+
+        if (isset($validated['search']) && trim((string) $validated['search']) !== '') {
+            $search = trim((string) $validated['search']);
+            $query->where(function ($searchQuery) use ($search): void {
+                $searchQuery
+                    ->where('action', 'like', '%'.$search.'%')
+                    ->orWhere('target_type', 'like', '%'.$search.'%');
+            });
+        }
 
         if (isset($validated['action']) && $validated['action'] !== '') {
             $query->where('action', (string) $validated['action']);
