@@ -64,6 +64,7 @@ class DashboardOperatorController extends Controller
             'email' => (string) $validated['email'],
             'company_id' => $companyId,
             'operator_role' => (string) $validated['operator_role'],
+            'must_change_password' => true,
             'password' => Hash::make($temporaryPassword),
         ]);
 

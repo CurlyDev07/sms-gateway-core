@@ -68,6 +68,10 @@ class AuthenticatedSessionController extends Controller
                 ]);
         }
 
+        if ((bool) ($user->must_change_password ?? false)) {
+            return redirect()->route('dashboard.password.change.show');
+        }
+
         return redirect()->intended(RouteServiceProvider::HOME);
     }
 

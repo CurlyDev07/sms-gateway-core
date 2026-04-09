@@ -111,6 +111,7 @@ class DashboardOperatorManagementTest extends TestCase
 
         $this->assertSame($company->id, (int) $createdUser->company_id);
         $this->assertSame('admin', (string) $createdUser->operator_role);
+        $this->assertTrue((bool) $createdUser->must_change_password);
         $this->assertTrue(Hash::check($temporaryPassword, (string) $createdUser->password));
 
         $this->post('/logout')->assertRedirect('/login');
@@ -118,9 +119,15 @@ class DashboardOperatorManagementTest extends TestCase
         $this->post('/login', [
             'email' => $createdUser->email,
             'password' => $temporaryPassword,
+        ])->assertRedirect('/dashboard/password/change');
+
+        $this->post('/dashboard/password/change', [
+            'password' => 'new-operator-pass-123',
+            'password_confirmation' => 'new-operator-pass-123',
         ])->assertRedirect('/dashboard');
 
         $this->assertAuthenticatedAs($createdUser->fresh());
+        $this->assertFalse((bool) $createdUser->fresh()->must_change_password);
     }
 
     public function test_owner_create_operator_ignores_cross_tenant_company_input_and_binds_to_actor_tenant(): void

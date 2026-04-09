@@ -3,6 +3,7 @@
 use App\Http\Controllers\AssignmentDashboardPageController;
 use App\Http\Controllers\AssignmentController;
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
+use App\Http\Controllers\Auth\ForcePasswordChangeController;
 use App\Http\Controllers\DashboardHomePageController;
 use App\Http\Controllers\DashboardOperatorController;
 use App\Http\Controllers\MessageStatusController;
@@ -43,6 +44,13 @@ Route::post('/logout', [AuthenticatedSessionController::class, 'destroy'])
     ->name('logout');
 
 Route::middleware('auth')->group(function () {
+    Route::get('/dashboard/password/change', [ForcePasswordChangeController::class, 'show'])
+        ->name('dashboard.password.change.show');
+    Route::post('/dashboard/password/change', [ForcePasswordChangeController::class, 'update'])
+        ->name('dashboard.password.change.update');
+});
+
+Route::middleware(['auth', 'dashboard.password.changed'])->group(function () {
     Route::get('/dashboard', [DashboardHomePageController::class, 'index'])
         ->name('dashboard.home');
 
@@ -66,7 +74,7 @@ Route::middleware('auth')->group(function () {
         ->name('dashboard.sims.show');
 });
 
-Route::middleware(['auth', 'dashboard.tenant'])
+Route::middleware(['auth', 'dashboard.password.changed', 'dashboard.tenant'])
     ->prefix('dashboard/api')
     ->group(function () {
         Route::get('/sims', [SimController::class, 'index']);

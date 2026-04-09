@@ -65,6 +65,7 @@ class Kernel extends HttpKernel
         'api.client' => \App\Http\Middleware\AuthenticateApiClient::class,
         'tenant.resolve' => \App\Http\Middleware\ResolveTenant::class,
         'dashboard.tenant' => \App\Http\Middleware\ResolveDashboardTenant::class,
+        'dashboard.password.changed' => \App\Http\Middleware\EnsureDashboardPasswordChanged::class,
         'dashboard.operator.write' => \App\Http\Middleware\EnsureDashboardOperatorCanWrite::class,
         'dashboard.operator.owner' => \App\Http\Middleware\EnsureDashboardOperatorIsOwner::class,
         'verified' => \Illuminate\Auth\Middleware\EnsureEmailIsVerified::class,
