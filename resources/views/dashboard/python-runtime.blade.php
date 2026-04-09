@@ -75,6 +75,59 @@
     .table-wrap {
         overflow-x: auto;
         border: 1px solid #e5e7eb;
+        margin-top: 12px;
+    }
+
+    .send-panel {
+        border: 1px solid #e5e7eb;
+        border-radius: 6px;
+        padding: 12px;
+        margin-top: 12px;
+    }
+
+    .send-panel h2 {
+        margin: 0 0 10px 0;
+        font-size: 16px;
+    }
+
+    .send-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 10px;
+    }
+
+    .send-grid label {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        font-size: 13px;
+    }
+
+    .send-grid input,
+    .send-grid textarea {
+        padding: 8px;
+        border: 1px solid #d1d5db;
+        border-radius: 4px;
+        font-family: inherit;
+        font-size: 13px;
+    }
+
+    .send-grid textarea {
+        min-height: 80px;
+        resize: vertical;
+    }
+
+    .send-actions {
+        margin-top: 10px;
+        display: flex;
+        gap: 8px;
+        align-items: center;
+    }
+
+    .send-result {
+        margin-top: 8px;
+        font-size: 13px;
+        min-height: 18px;
     }
 
     table {
@@ -146,6 +199,39 @@
     </section>
 </div>
 
+<section class="send-panel">
+    <h2>Direct Runtime Send Test</h2>
+    <p class="muted">
+        Controlled verification path using <code>POST /dashboard/api/runtime/python/send-test</code>.
+        This directly calls Python send and persists the result on one outbound row.
+    </p>
+
+    <div class="send-grid">
+        <label>
+            SIM ID
+            <input id="sendSimId" type="number" min="1" placeholder="e.g. 1">
+        </label>
+        <label>
+            Customer Phone
+            <input id="sendCustomerPhone" type="text" placeholder="e.g. 09171234567">
+        </label>
+        <label>
+            Client Message ID (optional)
+            <input id="sendClientMessageId" type="text" placeholder="e.g. runtime-test-001">
+        </label>
+        <label style="grid-column: 1 / -1;">
+            Message
+            <textarea id="sendMessage" placeholder="Type a test SMS message"></textarea>
+        </label>
+    </div>
+
+    <div class="send-actions">
+        <button id="sendTestButton" type="button">Send Runtime Test SMS</button>
+    </div>
+
+    <div id="sendStatus" class="send-result muted">No send test executed yet.</div>
+</section>
+
 <div class="table-wrap">
     <table>
         <thead>
@@ -172,9 +258,18 @@
 <script>
     (() => {
         const apiPath = '/dashboard/api/runtime/python';
+        const sendApiPath = '/dashboard/api/runtime/python/send-test';
+        const csrfToken = @json(csrf_token());
         const refreshButton = document.getElementById('refreshButton');
+        const sendTestButton = document.getElementById('sendTestButton');
         const statusEl = document.getElementById('status');
+        const sendStatusEl = document.getElementById('sendStatus');
         const modemRowsEl = document.getElementById('modemRows');
+
+        const sendSimIdEl = document.getElementById('sendSimId');
+        const sendCustomerPhoneEl = document.getElementById('sendCustomerPhone');
+        const sendClientMessageIdEl = document.getElementById('sendClientMessageId');
+        const sendMessageEl = document.getElementById('sendMessage');
 
         const healthReachableEl = document.getElementById('healthReachable');
         const healthHttpStatusEl = document.getElementById('healthHttpStatus');
@@ -220,6 +315,11 @@
         const setStatus = (text, type = 'muted') => {
             statusEl.className = `status ${type}`;
             statusEl.textContent = text;
+        };
+
+        const setSendStatus = (text, type = 'muted') => {
+            sendStatusEl.className = `send-result ${type}`;
+            sendStatusEl.textContent = text;
         };
 
         const renderSummary = (payload) => {
@@ -292,6 +392,77 @@
                 }
             } catch (error) {
                 setStatus(`Runtime check failed: ${error.message}`, 'error');
+            }
+        });
+
+        sendTestButton.addEventListener('click', async () => {
+            const simId = Number(sendSimIdEl.value || 0);
+            const customerPhone = (sendCustomerPhoneEl.value || '').trim();
+            const clientMessageId = (sendClientMessageIdEl.value || '').trim();
+            const message = (sendMessageEl.value || '').trim();
+
+            if (!Number.isInteger(simId) || simId < 1) {
+                setSendStatus('Send test failed: SIM ID is required.', 'error');
+                return;
+            }
+
+            if (customerPhone === '') {
+                setSendStatus('Send test failed: Customer Phone is required.', 'error');
+                return;
+            }
+
+            if (message === '') {
+                setSendStatus('Send test failed: Message is required.', 'error');
+                return;
+            }
+
+            setSendStatus('Executing runtime send test...', 'muted');
+
+            try {
+                const response = await fetch(sendApiPath, {
+                    method: 'POST',
+                    headers: {
+                        Accept: 'application/json',
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': csrfToken
+                    },
+                    body: JSON.stringify({
+                        sim_id: simId,
+                        customer_phone: customerPhone,
+                        client_message_id: clientMessageId === '' ? null : clientMessageId,
+                        message
+                    })
+                });
+
+                let payload = null;
+                try {
+                    payload = await response.json();
+                } catch (_) {
+                    payload = null;
+                }
+
+                if (!payload) {
+                    setSendStatus(`Send test failed: HTTP ${response.status}`, 'error');
+                    return;
+                }
+
+                if (payload.ok === true) {
+                    const result = payload.result || {};
+                    setSendStatus(
+                        `Send test success. message_id=${asText(result.message_id)} status=${asText(result.status)} provider_message_id=${asText(result.provider_message_id)}`,
+                        'ok'
+                    );
+                    return;
+                }
+
+                const result = payload.result || {};
+                const error = payload.error || 'runtime_send_failed';
+                setSendStatus(
+                    `Send test failed (${error}). message_id=${asText(result.message_id)} error=${asText(result.error)} error_layer=${asText(result.error_layer)}`,
+                    'error'
+                );
+            } catch (error) {
+                setSendStatus(`Send test failed: ${error.message}`, 'error');
             }
         });
     })();

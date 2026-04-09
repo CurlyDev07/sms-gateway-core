@@ -19,7 +19,9 @@ class PythonRuntimeDashboardPageTest extends TestCase
         $response->assertOk()
             ->assertSee('Python Runtime')
             ->assertSee('GET /dashboard/api/runtime/python')
+            ->assertSee('POST /dashboard/api/runtime/python/send-test')
             ->assertSee('Check Python Runtime')
+            ->assertSee('Send Runtime Test SMS')
             ->assertSee('Discovered Total')
             ->assertSee('Tenant Visible');
     }

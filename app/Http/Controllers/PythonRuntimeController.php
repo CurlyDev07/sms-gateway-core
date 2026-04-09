@@ -3,10 +3,15 @@
 namespace App\Http\Controllers;
 
 use App\Models\Sim;
+use App\Services\OperatorAuditLogService;
 use App\Services\PythonRuntimeClient;
+use App\Services\PythonRuntimeSendExecutionService;
 use App\Support\TenantContext;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Validator;
+use InvalidArgumentException;
+use Throwable;
 
 class PythonRuntimeController extends Controller
 {
@@ -75,6 +80,96 @@ class PythonRuntimeController extends Controller
                 'tenant_imsi_mapped' => count($tenantImsis),
             ],
         ]);
+    }
+
+    /**
+     * Execute a direct runtime send-test for one tenant-owned SIM.
+     *
+     * @param \Illuminate\Http\Request $request
+     * @param \App\Services\PythonRuntimeSendExecutionService $executionService
+     * @param \App\Services\OperatorAuditLogService $auditLogService
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function sendTest(
+        Request $request,
+        PythonRuntimeSendExecutionService $executionService,
+        OperatorAuditLogService $auditLogService
+    ): JsonResponse {
+        $companyId = TenantContext::companyId($request);
+
+        if ($companyId === null) {
+            return response()->json([
+                'ok' => false,
+                'error' => 'forbidden',
+            ], 403);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'sim_id' => ['required', 'integer', 'min:1'],
+            'customer_phone' => ['required', 'string', 'max:30'],
+            'message' => ['required', 'string'],
+            'client_message_id' => ['nullable', 'string', 'max:255'],
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'ok' => false,
+                'error' => 'validation_failed',
+                'details' => $validator->errors()->toArray(),
+            ], 422);
+        }
+
+        $validated = $validator->validated();
+
+        try {
+            $result = $executionService->executeForTenant(
+                (int) $companyId,
+                (int) $validated['sim_id'],
+                trim((string) $validated['customer_phone']),
+                (string) $validated['message'],
+                isset($validated['client_message_id']) ? (string) $validated['client_message_id'] : null
+            );
+        } catch (InvalidArgumentException $e) {
+            return response()->json([
+                'ok' => false,
+                'error' => $e->getMessage(),
+            ], 422);
+        } catch (Throwable $e) {
+            return response()->json([
+                'ok' => false,
+                'error' => 'runtime_send_test_exception',
+                'details' => [
+                    'exception' => $e->getMessage(),
+                ],
+            ], 500);
+        }
+
+        $auditLogService->record(
+            $request,
+            'runtime.python_send_test',
+            'sim',
+            (int) $result['sim_id'],
+            [
+                'message_id' => (int) $result['message_id'],
+                'status' => (string) $result['status'],
+                'success' => (bool) $result['success'],
+                'error' => $result['error'],
+                'error_layer' => $result['error_layer'],
+            ]
+        );
+
+        if ($result['success'] === true) {
+            return response()->json([
+                'ok' => true,
+                'result' => $result,
+            ], 200);
+        }
+
+        return response()->json([
+            'ok' => false,
+            'error' => 'runtime_send_failed',
+            'result' => $result,
+        ], 502);
     }
 
     /**

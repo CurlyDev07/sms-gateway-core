@@ -107,6 +107,7 @@ Route::middleware(['auth', 'dashboard.password.changed', 'dashboard.tenant'])
         Route::middleware('dashboard.operator.write')->group(function () {
             Route::post('/assignments/set', [AssignmentController::class, 'set']);
             Route::post('/assignments/mark-safe', [AssignmentController::class, 'markSafe']);
+            Route::post('/runtime/python/send-test', [PythonRuntimeController::class, 'sendTest']);
 
             Route::post('/admin/sim/{id}/status', [SimAdminController::class, 'setStatus']);
             Route::post('/admin/sim/{id}/enable-assignments', [SimAdminController::class, 'enableAssignments']);

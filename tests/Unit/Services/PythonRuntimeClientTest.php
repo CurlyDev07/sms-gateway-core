@@ -19,6 +19,7 @@ class PythonRuntimeClientTest extends TestCase
         config()->set('sms.python_api_url', 'http://python-engine.test');
         config()->set('sms.python_api_health_path', '/health');
         config()->set('sms.python_api_discover_path', '/modems/discover');
+        config()->set('sms.python_api_send_path', '/send');
         config()->set('sms.python_api_timeout_seconds', 35);
         config()->set('sms.python_api_token', '');
 
@@ -106,5 +107,89 @@ class PythonRuntimeClientTest extends TestCase
                 && $request->hasHeader('X-Gateway-Token')
                 && $request->header('X-Gateway-Token')[0] === 'test-gateway-token';
         });
+    }
+
+    public function test_send_returns_structured_success_payload(): void
+    {
+        Http::fake([
+            'http://python-engine.test/send' => Http::response([
+                'success' => true,
+                'message_id' => 'py-msg-901',
+                'raw' => [
+                    'device_id' => 'modem-a',
+                ],
+            ], 200),
+        ]);
+
+        $result = $this->client->send([
+            'sim_id' => '515031234567890',
+            'to' => '09171234567',
+            'message' => 'hello',
+            'client_message_id' => 'runtime-send-1',
+        ]);
+
+        $this->assertTrue($result['ok']);
+        $this->assertSame(200, $result['status']);
+        $this->assertNull($result['error']);
+        $this->assertTrue($result['send_success']);
+        $this->assertNull($result['send_error']);
+        $this->assertSame('py-msg-901', $result['data']['message_id']);
+    }
+
+    public function test_send_returns_runtime_unreachable_when_connection_fails(): void
+    {
+        Http::fake(function () {
+            throw new ConnectionException('connection refused');
+        });
+
+        $result = $this->client->send([
+            'sim_id' => '515031234567890',
+            'to' => '09171234567',
+            'message' => 'hello',
+        ]);
+
+        $this->assertFalse($result['ok']);
+        $this->assertNull($result['status']);
+        $this->assertSame('runtime_unreachable', $result['error']);
+        $this->assertNull($result['send_success']);
+    }
+
+    public function test_send_returns_runtime_timeout_when_connection_times_out(): void
+    {
+        Http::fake(function () {
+            throw new ConnectionException('cURL error 28: Operation timed out');
+        });
+
+        $result = $this->client->send([
+            'sim_id' => '515031234567890',
+            'to' => '09171234567',
+            'message' => 'hello',
+        ]);
+
+        $this->assertFalse($result['ok']);
+        $this->assertNull($result['status']);
+        $this->assertSame('runtime_timeout', $result['error']);
+        $this->assertNull($result['send_success']);
+    }
+
+    public function test_send_returns_invalid_response_when_success_field_is_missing(): void
+    {
+        Http::fake([
+            'http://python-engine.test/send' => Http::response([
+                'status' => 'ok',
+                'message_id' => 'py-msg-902',
+            ], 200),
+        ]);
+
+        $result = $this->client->send([
+            'sim_id' => '515031234567890',
+            'to' => '09171234567',
+            'message' => 'hello',
+        ]);
+
+        $this->assertFalse($result['ok']);
+        $this->assertSame(200, $result['status']);
+        $this->assertSame('invalid_response', $result['error']);
+        $this->assertNull($result['send_success']);
     }
 }

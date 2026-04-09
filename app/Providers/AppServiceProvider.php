@@ -21,10 +21,10 @@ class AppServiceProvider extends ServiceProvider
 
             switch ($driver) {
                 case 'queue':
-                    return new QueueSmsSender();
+                    return $this->app->make(QueueSmsSender::class);
                 case 'python':
                 default:
-                    return new PythonApiSmsSender();
+                    return $this->app->make(PythonApiSmsSender::class);
             }
         });
     }

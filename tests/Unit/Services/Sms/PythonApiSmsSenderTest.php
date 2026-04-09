@@ -97,7 +97,24 @@ class PythonApiSmsSenderTest extends TestCase
         $result = $this->sender->send((int) $sim->id, '09171234567', 'Hello');
 
         $this->assertFalse($result->success);
-        $this->assertSame('NETWORK_ERROR', $result->error);
+        $this->assertSame('RUNTIME_UNREACHABLE', $result->error);
+        $this->assertSame('transport', $result->errorLayer);
+    }
+
+    /** @test */
+    public function it_returns_runtime_timeout_when_python_send_times_out(): void
+    {
+        Http::fake(function () {
+            throw new ConnectionException('cURL error 28: Operation timed out');
+        });
+
+        $company = $this->createCompany();
+        $sim = $this->createSim($company, ['imsi' => '515031234567890']);
+
+        $result = $this->sender->send((int) $sim->id, '09171234567', 'Hello');
+
+        $this->assertFalse($result->success);
+        $this->assertSame('RUNTIME_TIMEOUT', $result->error);
         $this->assertSame('transport', $result->errorLayer);
     }
 
@@ -211,5 +228,24 @@ class PythonApiSmsSenderTest extends TestCase
             'detail' => 'send timeout',
         ], $result->raw);
     }
-}
 
+    /** @test */
+    public function it_returns_invalid_response_when_python_success_flag_is_missing(): void
+    {
+        Http::fake([
+            'http://python-engine.test/send' => Http::response([
+                'status' => 'ok',
+                'message_id' => 'py-msg-666',
+            ], 200),
+        ]);
+
+        $company = $this->createCompany();
+        $sim = $this->createSim($company, ['imsi' => '515031234567890']);
+
+        $result = $this->sender->send((int) $sim->id, '09171234567', 'Hello');
+
+        $this->assertFalse($result->success);
+        $this->assertSame('INVALID_RESPONSE', $result->error);
+        $this->assertSame('python_api', $result->errorLayer);
+    }
+}

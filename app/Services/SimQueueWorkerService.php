@@ -130,7 +130,7 @@ class SimQueueWorkerService
             $isSuccess = (bool) $result->success;
 
             if ($isSuccess) {
-                $this->markMessageSent($sim, $message);
+                $this->markMessageSent($sim, $message, $result);
 
                 Log::info('SIM worker send success', [
                     'sim_id' => $sim->id,
@@ -195,17 +195,20 @@ class SimQueueWorkerService
      *
      * @param \App\Models\Sim $sim
      * @param \App\Models\OutboundMessage $message
+     * @param \App\DTO\SmsSendResult $result
      * @return void
      */
-    protected function markMessageSent(Sim $sim, OutboundMessage $message): void
+    protected function markMessageSent(Sim $sim, OutboundMessage $message, SmsSendResult $result): void
     {
-        DB::transaction(function () use ($sim, $message) {
+        DB::transaction(function () use ($sim, $message, $result) {
             $message = OutboundMessage::query()->lockForUpdate()->find($message->id);
             $sim = Sim::query()->lockForUpdate()->find($sim->id);
 
             if ($message === null || $sim === null) {
                 return;
             }
+
+            $metadata = $this->mergeRuntimeMetadata($message->metadata, $result, 'worker_send_success');
 
             $message->update([
                 'status' => 'sent',
@@ -214,6 +217,7 @@ class SimQueueWorkerService
                 'failed_at' => null,
                 'failure_reason' => null,
                 'locked_at' => null,
+                'metadata' => $metadata,
             ]);
 
             $this->simStateService->markSendSuccess($sim, $message->message_type);
@@ -262,6 +266,9 @@ class SimQueueWorkerService
             if ($lockedMessage === null) {
                 return;
             }
+
+            $lockedMessage->metadata = $this->mergeRuntimeMetadata($lockedMessage->metadata, $result, 'worker_send_failure');
+            $lockedMessage->save();
 
             if ($result->errorLayer === 'network') {
                 $this->outboundRetryService->handlePermanentFailure(
@@ -315,5 +322,28 @@ class SimQueueWorkerService
     protected function sleepSeconds(int $seconds): void
     {
         sleep(max(1, $seconds));
+    }
+
+    /**
+     * @param mixed $existing
+     * @param \App\DTO\SmsSendResult $result
+     * @param string $source
+     * @return array<string,mixed>
+     */
+    protected function mergeRuntimeMetadata($existing, SmsSendResult $result, string $source): array
+    {
+        $metadata = is_array($existing) ? $existing : [];
+
+        $metadata['python_runtime'] = [
+            'source' => $source,
+            'processed_at' => now()->toIso8601String(),
+            'success' => (bool) $result->success,
+            'provider_message_id' => $result->providerMessageId,
+            'error' => $result->error,
+            'error_layer' => $result->errorLayer,
+            'raw' => $result->raw,
+        ];
+
+        return $metadata;
     }
 }
