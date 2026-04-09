@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AssignmentDashboardPageController;
 use App\Http\Controllers\AssignmentController;
+use App\Http\Controllers\AccountDashboardPageController;
 use App\Http\Controllers\AuditLogDashboardPageController;
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\Auth\ForcePasswordChangeController;
@@ -72,6 +73,9 @@ Route::middleware(['auth', 'dashboard.password.changed'])->group(function () {
 
     Route::get('/dashboard/messages/status', [MessageStatusDashboardPageController::class, 'index'])
         ->name('dashboard.messages.status.index');
+
+    Route::get('/dashboard/account', [AccountDashboardPageController::class, 'index'])
+        ->name('dashboard.account.index');
 
     Route::get('/dashboard/operators', [OperatorDashboardPageController::class, 'index'])
         ->name('dashboard.operators.index');

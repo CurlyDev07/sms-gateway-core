@@ -22,6 +22,7 @@ class DashboardHomePageTest extends TestCase
             ->assertSee('Assignments')
             ->assertSee('Migration')
             ->assertSee('Message Status')
+            ->assertSee('My Account')
             ->assertSee('Operators')
             ->assertSee('Audit Log')
             ->assertSee('Change Password')
@@ -29,6 +30,7 @@ class DashboardHomePageTest extends TestCase
             ->assertSee('/dashboard/assignments')
             ->assertSee('/dashboard/migration')
             ->assertSee('/dashboard/messages/status')
+            ->assertSee('/dashboard/account')
             ->assertSee('/dashboard/operators')
             ->assertSee('/dashboard/audit')
             ->assertSee('/dashboard/password');

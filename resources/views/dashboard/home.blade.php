@@ -103,6 +103,7 @@
     <a href="/dashboard/assignments">Assignments</a>
     <a href="/dashboard/migration">Migration</a>
     <a href="/dashboard/messages/status">Message Status</a>
+    <a href="/dashboard/account">My Account</a>
     <a href="/dashboard/operators">Operators</a>
     <a href="/dashboard/audit">Audit Log</a>
     <a href="/dashboard/password">Change Password</a>
@@ -139,6 +140,12 @@
         <h2>Message Status</h2>
         <p>Look up delivery state by client_message_id with optional SIM filter.</p>
         <a href="/dashboard/messages/status">Open Message Status Lookup</a>
+    </section>
+
+    <section class="card">
+        <h2>My Account</h2>
+        <p>View your tenant-bound operator account details.</p>
+        <a href="/dashboard/account">Open My Account</a>
     </section>
 
     <section class="card">
