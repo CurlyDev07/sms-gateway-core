@@ -47,6 +47,112 @@ class DashboardOperatorManagementTest extends TestCase
         $this->assertSame($companyA->id, $ownerA->company_id);
     }
 
+    public function test_operator_list_supports_role_and_active_filters_within_tenant_scope(): void
+    {
+        $companyA = $this->createCompany();
+        $companyB = $this->createCompany();
+
+        $owner = User::factory()->create([
+            'company_id' => $companyA->id,
+            'operator_role' => 'owner',
+            'is_active' => true,
+        ]);
+
+        $target = User::factory()->create([
+            'company_id' => $companyA->id,
+            'operator_role' => 'support',
+            'is_active' => true,
+        ]);
+
+        User::factory()->create([
+            'company_id' => $companyA->id,
+            'operator_role' => 'support',
+            'is_active' => false,
+        ]);
+
+        User::factory()->create([
+            'company_id' => $companyA->id,
+            'operator_role' => 'admin',
+            'is_active' => true,
+        ]);
+
+        User::factory()->create([
+            'company_id' => $companyB->id,
+            'operator_role' => 'support',
+            'is_active' => true,
+        ]);
+
+        $this->actingAs($owner)
+            ->getJson('/dashboard/api/operators?operator_role=support&is_active=1')
+            ->assertOk()
+            ->assertJsonPath('ok', true)
+            ->assertJsonCount(1, 'operators')
+            ->assertJsonPath('operators.0.id', $target->id)
+            ->assertJsonPath('operators.0.company_id', $companyA->id)
+            ->assertJsonPath('operators.0.operator_role', 'support')
+            ->assertJsonPath('operators.0.is_active', true)
+            ->assertJsonPath('meta.filters.operator_role', 'support')
+            ->assertJsonPath('meta.filters.is_active', 1)
+            ->assertJsonPath('meta.filters.sort_by', 'id')
+            ->assertJsonPath('meta.filters.sort_dir', 'asc');
+    }
+
+    public function test_operator_list_supports_sorting_by_allowed_fields(): void
+    {
+        $company = $this->createCompany();
+
+        $owner = User::factory()->create([
+            'company_id' => $company->id,
+            'operator_role' => 'owner',
+            'name' => 'Bravo',
+            'email' => 'bravo@example.com',
+        ]);
+
+        User::factory()->create([
+            'company_id' => $company->id,
+            'operator_role' => 'support',
+            'name' => 'Alpha',
+            'email' => 'alpha@example.com',
+        ]);
+
+        User::factory()->create([
+            'company_id' => $company->id,
+            'operator_role' => 'admin',
+            'name' => 'Charlie',
+            'email' => 'charlie@example.com',
+        ]);
+
+        $this->actingAs($owner)
+            ->getJson('/dashboard/api/operators?sort_by=name&sort_dir=desc')
+            ->assertOk()
+            ->assertJsonPath('ok', true)
+            ->assertJsonCount(3, 'operators')
+            ->assertJsonPath('operators.0.name', 'Charlie')
+            ->assertJsonPath('operators.1.name', 'Bravo')
+            ->assertJsonPath('operators.2.name', 'Alpha')
+            ->assertJsonPath('meta.filters.sort_by', 'name')
+            ->assertJsonPath('meta.filters.sort_dir', 'desc');
+    }
+
+    public function test_operator_list_rejects_invalid_sort_field(): void
+    {
+        $company = $this->createCompany();
+
+        $owner = User::factory()->create([
+            'company_id' => $company->id,
+            'operator_role' => 'owner',
+        ]);
+
+        $this->actingAs($owner)
+            ->getJson('/dashboard/api/operators?sort_by=company_id')
+            ->assertStatus(422)
+            ->assertJsonPath('ok', false)
+            ->assertJsonPath('error', 'validation_failed')
+            ->assertJsonStructure([
+                'details' => ['sort_by'],
+            ]);
+    }
+
     public function test_owner_can_update_operator_role_within_tenant(): void
     {
         $company = $this->createCompany();

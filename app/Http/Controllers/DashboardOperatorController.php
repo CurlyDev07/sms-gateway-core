@@ -117,9 +117,38 @@ class DashboardOperatorController extends Controller
         /** @var \App\Models\User|null $actor */
         $actor = $request->user();
 
-        $operators = User::query()
-            ->where('company_id', $companyId)
-            ->orderBy('id')
+        $validator = Validator::make($request->query(), [
+            'operator_role' => ['nullable', 'string', 'in:owner,admin,support'],
+            'is_active' => ['nullable', 'integer', 'in:0,1'],
+            'sort_by' => ['nullable', 'string', 'in:id,name,email'],
+            'sort_dir' => ['nullable', 'string', 'in:asc,desc'],
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'ok' => false,
+                'error' => 'validation_failed',
+                'details' => $validator->errors()->toArray(),
+            ], 422);
+        }
+
+        $validated = $validator->validated();
+        $sortBy = (string) ($validated['sort_by'] ?? 'id');
+        $sortDir = (string) ($validated['sort_dir'] ?? 'asc');
+
+        $query = User::query()
+            ->where('company_id', $companyId);
+
+        if (isset($validated['operator_role'])) {
+            $query->where('operator_role', (string) $validated['operator_role']);
+        }
+
+        if (isset($validated['is_active'])) {
+            $query->where('is_active', (int) $validated['is_active']);
+        }
+
+        $operators = $query
+            ->orderBy($sortBy, $sortDir)
             ->get(['id', 'name', 'email', 'company_id', 'operator_role', 'is_active']);
 
         return response()->json([
@@ -138,6 +167,12 @@ class DashboardOperatorController extends Controller
                 'current_user_id' => $actor !== null ? $actor->id : null,
                 'current_user_role' => $actor !== null ? $actor->operator_role : null,
                 'can_manage_roles' => $actor !== null && (string) $actor->operator_role === User::ROLE_OWNER,
+                'filters' => [
+                    'operator_role' => $validated['operator_role'] ?? null,
+                    'is_active' => isset($validated['is_active']) ? (int) $validated['is_active'] : null,
+                    'sort_by' => $sortBy,
+                    'sort_dir' => $sortDir,
+                ],
             ],
         ]);
     }

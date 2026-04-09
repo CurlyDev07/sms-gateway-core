@@ -158,6 +158,40 @@
 </p>
 
 <div class="controls">
+    <label>
+        filter_role
+        <select id="filterRole">
+            <option value="" selected>all</option>
+            <option value="owner">owner</option>
+            <option value="admin">admin</option>
+            <option value="support">support</option>
+        </select>
+    </label>
+    <label>
+        filter_active
+        <select id="filterActive">
+            <option value="" selected>all</option>
+            <option value="1">active</option>
+            <option value="0">inactive</option>
+        </select>
+    </label>
+    <label>
+        sort_by
+        <select id="sortBy">
+            <option value="id" selected>id</option>
+            <option value="name">name</option>
+            <option value="email">email</option>
+        </select>
+    </label>
+    <label>
+        sort_dir
+        <select id="sortDir">
+            <option value="asc" selected>asc</option>
+            <option value="desc">desc</option>
+        </select>
+    </label>
+    <button id="applyFiltersButton" type="button" class="button-secondary">Apply Filters</button>
+    <button id="clearFiltersButton" type="button" class="button-secondary">Clear Filters</button>
     <button id="loadButton" type="button">Load Operators</button>
 </div>
 
@@ -217,6 +251,12 @@
 
         const loadButton = document.getElementById('loadButton');
         const createPanel = document.getElementById('createPanel');
+        const filterRoleInput = document.getElementById('filterRole');
+        const filterActiveInput = document.getElementById('filterActive');
+        const sortByInput = document.getElementById('sortBy');
+        const sortDirInput = document.getElementById('sortDir');
+        const applyFiltersButton = document.getElementById('applyFiltersButton');
+        const clearFiltersButton = document.getElementById('clearFiltersButton');
         const createNameInput = document.getElementById('createName');
         const createEmailInput = document.getElementById('createEmail');
         const createRoleInput = document.getElementById('createRole');
@@ -233,6 +273,8 @@
         };
 
         const roleOptions = ['owner', 'admin', 'support'];
+        const sortByOptions = ['id', 'name', 'email'];
+        const sortDirOptions = ['asc', 'desc'];
 
         const escapeHtml = (value) => {
             return String(value)
@@ -348,13 +390,45 @@
             });
         };
 
+        const buildListUrl = () => {
+            const params = new URLSearchParams();
+            const operatorRole = String(filterRoleInput.value || '').trim();
+            const isActive = String(filterActiveInput.value || '').trim();
+            const sortBy = String(sortByInput.value || '').trim();
+            const sortDir = String(sortDirInput.value || '').trim();
+
+            if (operatorRole !== '') {
+                params.set('operator_role', operatorRole);
+            }
+
+            if (isActive === '0' || isActive === '1') {
+                params.set('is_active', isActive);
+            }
+
+            if (sortByOptions.includes(sortBy)) {
+                params.set('sort_by', sortBy);
+            }
+
+            if (sortDirOptions.includes(sortDir)) {
+                params.set('sort_dir', sortDir);
+            }
+
+            const queryString = params.toString();
+
+            if (queryString === '') {
+                return listPath;
+            }
+
+            return `${listPath}?${queryString}`;
+        };
+
         const loadOperators = async ({silent = false} = {}) => {
             if (!silent) {
                 setStatus('Loading operators...', 'muted');
             }
 
             try {
-                const response = await fetch(listPath, {
+                const response = await fetch(buildListUrl(), {
                     method: 'GET',
                     headers: {
                         'Accept': 'application/json',
@@ -620,6 +694,18 @@
         };
 
         loadButton.addEventListener('click', () => {
+            loadOperators();
+        });
+
+        applyFiltersButton.addEventListener('click', () => {
+            loadOperators();
+        });
+
+        clearFiltersButton.addEventListener('click', () => {
+            filterRoleInput.value = '';
+            filterActiveInput.value = '';
+            sortByInput.value = 'id';
+            sortDirInput.value = 'asc';
             loadOperators();
         });
 
