@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use App\Services\OperatorAuditLogService;
 use App\Support\TenantContext;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -20,7 +21,7 @@ class DashboardOperatorController extends Controller
      * @param \Illuminate\Http\Request $request
      * @return \Illuminate\Http\JsonResponse
      */
-    public function store(Request $request): JsonResponse
+    public function store(Request $request, OperatorAuditLogService $auditLogService): JsonResponse
     {
         $companyId = TenantContext::companyId($request);
 
@@ -68,6 +69,18 @@ class DashboardOperatorController extends Controller
             'must_change_password' => true,
             'password' => Hash::make($temporaryPassword),
         ]);
+
+        $auditLogService->record(
+            $request,
+            'operator.created',
+            'user',
+            (int) $operator->id,
+            [
+                'email' => (string) $operator->email,
+                'operator_role' => (string) $operator->operator_role,
+                'is_active' => (bool) $operator->is_active,
+            ]
+        );
 
         return response()->json([
             'ok' => true,
@@ -138,7 +151,7 @@ class DashboardOperatorController extends Controller
      * @param int $id
      * @return \Illuminate\Http\JsonResponse
      */
-    public function resetPassword(Request $request, int $id): JsonResponse
+    public function resetPassword(Request $request, int $id, OperatorAuditLogService $auditLogService): JsonResponse
     {
         $companyId = TenantContext::companyId($request);
 
@@ -187,6 +200,17 @@ class DashboardOperatorController extends Controller
         ]);
         $target->refresh();
 
+        $auditLogService->record(
+            $request,
+            'operator.password_reset',
+            'user',
+            (int) $target->id,
+            [
+                'email' => (string) $target->email,
+                'must_change_password' => true,
+            ]
+        );
+
         return response()->json([
             'ok' => true,
             'operator' => [
@@ -211,7 +235,7 @@ class DashboardOperatorController extends Controller
      * @param int $id
      * @return \Illuminate\Http\JsonResponse
      */
-    public function updateRole(Request $request, int $id): JsonResponse
+    public function updateRole(Request $request, int $id, OperatorAuditLogService $auditLogService): JsonResponse
     {
         $companyId = TenantContext::companyId($request);
 
@@ -288,6 +312,18 @@ class DashboardOperatorController extends Controller
             $target->refresh();
         }
 
+        $auditLogService->record(
+            $request,
+            'operator.role_updated',
+            'user',
+            (int) $target->id,
+            [
+                'old_role' => $oldRole,
+                'new_role' => (string) $target->operator_role,
+                'no_change' => $oldRole === $newRole,
+            ]
+        );
+
         return response()->json([
             'ok' => true,
             'operator' => [
@@ -311,7 +347,7 @@ class DashboardOperatorController extends Controller
      * @param int $id
      * @return \Illuminate\Http\JsonResponse
      */
-    public function updateActivation(Request $request, int $id): JsonResponse
+    public function updateActivation(Request $request, int $id, OperatorAuditLogService $auditLogService): JsonResponse
     {
         $companyId = TenantContext::companyId($request);
 
@@ -392,6 +428,18 @@ class DashboardOperatorController extends Controller
             ]);
             $target->refresh();
         }
+
+        $auditLogService->record(
+            $request,
+            'operator.activation_updated',
+            'user',
+            (int) $target->id,
+            [
+                'old_is_active' => $oldActive,
+                'new_is_active' => (bool) $target->is_active,
+                'no_change' => $oldActive === $newActive,
+            ]
+        );
 
         return response()->json([
             'ok' => true,

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Services\OperatorAuditLogService;
 use App\Services\SimMigrationService;
 use App\Support\TenantContext;
 use Illuminate\Http\JsonResponse;
@@ -18,7 +19,11 @@ class MigrationController extends Controller
      * @param \App\Services\SimMigrationService $service
      * @return \Illuminate\Http\JsonResponse
      */
-    public function migrateSingleCustomer(Request $request, SimMigrationService $service): JsonResponse
+    public function migrateSingleCustomer(
+        Request $request,
+        SimMigrationService $service,
+        OperatorAuditLogService $auditLogService
+    ): JsonResponse
     {
         $companyId = TenantContext::companyId($request);
 
@@ -59,6 +64,19 @@ class MigrationController extends Controller
             ], 422);
         }
 
+        $auditLogService->record(
+            $request,
+            'migration.single',
+            'sim',
+            (int) $validated['from_sim_id'],
+            [
+                'from_sim_id' => (int) $validated['from_sim_id'],
+                'to_sim_id' => (int) $validated['to_sim_id'],
+                'customer_phone' => (string) $validated['customer_phone'],
+                'result' => $result,
+            ]
+        );
+
         return response()->json([
             'ok'     => true,
             'result' => $result,
@@ -72,7 +90,11 @@ class MigrationController extends Controller
      * @param \App\Services\SimMigrationService $service
      * @return \Illuminate\Http\JsonResponse
      */
-    public function migrateBulk(Request $request, SimMigrationService $service): JsonResponse
+    public function migrateBulk(
+        Request $request,
+        SimMigrationService $service,
+        OperatorAuditLogService $auditLogService
+    ): JsonResponse
     {
         $companyId = TenantContext::companyId($request);
 
@@ -111,6 +133,18 @@ class MigrationController extends Controller
             ], 422);
         }
 
+        $auditLogService->record(
+            $request,
+            'migration.bulk',
+            'sim',
+            (int) $validated['from_sim_id'],
+            [
+                'from_sim_id' => (int) $validated['from_sim_id'],
+                'to_sim_id' => (int) $validated['to_sim_id'],
+                'result' => $result,
+            ]
+        );
+
         return response()->json([
             'ok'     => true,
             'result' => $result,
@@ -129,7 +163,11 @@ class MigrationController extends Controller
      * @param \App\Services\SimMigrationService $service
      * @return \Illuminate\Http\JsonResponse
      */
-    public function rebalance(Request $request, SimMigrationService $service): JsonResponse
+    public function rebalance(
+        Request $request,
+        SimMigrationService $service,
+        OperatorAuditLogService $auditLogService
+    ): JsonResponse
     {
         $companyId = TenantContext::companyId($request);
 
@@ -167,6 +205,18 @@ class MigrationController extends Controller
                 'error' => $e->getMessage(),
             ], 422);
         }
+
+        $auditLogService->record(
+            $request,
+            'migration.rebalance',
+            'sim',
+            (int) $validated['from_sim_id'],
+            [
+                'from_sim_id' => (int) $validated['from_sim_id'],
+                'to_sim_id' => (int) $validated['to_sim_id'],
+                'result' => $result,
+            ]
+        );
 
         return response()->json([
             'ok'     => true,

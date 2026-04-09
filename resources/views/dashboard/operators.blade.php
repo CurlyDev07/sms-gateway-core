@@ -158,6 +158,7 @@
     <a href="/dashboard/migration">Migration</a>
     <a href="/dashboard/messages/status">Message Status</a>
     <a href="/dashboard/operators">Operators</a>
+    <a href="/dashboard/audit">Audit Log</a>
     <form method="POST" action="{{ route('logout') }}" style="display:inline;">
         @csrf
         <button type="submit" class="logout-button">Logout</button>

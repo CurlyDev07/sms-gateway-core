@@ -104,6 +104,7 @@
     <a href="/dashboard/migration">Migration</a>
     <a href="/dashboard/messages/status">Message Status</a>
     <a href="/dashboard/operators">Operators</a>
+    <a href="/dashboard/audit">Audit Log</a>
     <form method="POST" action="{{ route('logout') }}" style="display:inline;">
         @csrf
         <button type="submit" class="logout-button">Logout</button>
@@ -143,6 +144,12 @@
         <h2>Operators</h2>
         <p>View tenant-local dashboard operators and owner-managed role controls.</p>
         <a href="/dashboard/operators">Open Operator Management</a>
+    </section>
+
+    <section class="card">
+        <h2>Audit Log</h2>
+        <p>Review tenant-local operator activity history for dashboard control actions.</p>
+        <a href="/dashboard/audit">Open Audit Log</a>
     </section>
 </div>
 

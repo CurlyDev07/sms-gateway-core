@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Company;
 use App\Models\Sim;
+use App\Services\OperatorAuditLogService;
 use App\Services\QueueRebuildService;
 use App\Services\SimOperatorStatusService;
 use App\Support\TenantContext;
@@ -27,7 +28,8 @@ class SimAdminController extends Controller
     public function setStatus(
         Request $request,
         int $id,
-        SimOperatorStatusService $service
+        SimOperatorStatusService $service,
+        OperatorAuditLogService $auditLogService
     ): JsonResponse {
         $companyId = TenantContext::companyId($request);
 
@@ -76,6 +78,16 @@ class SimAdminController extends Controller
 
         $sim->refresh();
 
+        $auditLogService->record(
+            $request,
+            'sim.status_updated',
+            'sim',
+            (int) $sim->id,
+            [
+                'operator_status' => (string) $sim->operator_status,
+            ]
+        );
+
         return response()->json([
             'ok'  => true,
             'sim' => $this->simPayload($sim),
@@ -89,7 +101,7 @@ class SimAdminController extends Controller
      * @param int $id
      * @return \Illuminate\Http\JsonResponse
      */
-    public function enableAssignments(Request $request, int $id): JsonResponse
+    public function enableAssignments(Request $request, int $id, OperatorAuditLogService $auditLogService): JsonResponse
     {
         $companyId = TenantContext::companyId($request);
 
@@ -121,6 +133,16 @@ class SimAdminController extends Controller
 
         $sim->refresh();
 
+        $auditLogService->record(
+            $request,
+            'sim.assignments_enabled',
+            'sim',
+            (int) $sim->id,
+            [
+                'accept_new_assignments' => (bool) $sim->accept_new_assignments,
+            ]
+        );
+
         return response()->json([
             'ok'  => true,
             'sim' => $this->simPayload($sim),
@@ -134,7 +156,7 @@ class SimAdminController extends Controller
      * @param int $id
      * @return \Illuminate\Http\JsonResponse
      */
-    public function disableAssignments(Request $request, int $id): JsonResponse
+    public function disableAssignments(Request $request, int $id, OperatorAuditLogService $auditLogService): JsonResponse
     {
         $companyId = TenantContext::companyId($request);
 
@@ -166,6 +188,16 @@ class SimAdminController extends Controller
 
         $sim->refresh();
 
+        $auditLogService->record(
+            $request,
+            'sim.assignments_disabled',
+            'sim',
+            (int) $sim->id,
+            [
+                'accept_new_assignments' => (bool) $sim->accept_new_assignments,
+            ]
+        );
+
         return response()->json([
             'ok'  => true,
             'sim' => $this->simPayload($sim),
@@ -180,7 +212,12 @@ class SimAdminController extends Controller
      * @param \App\Services\QueueRebuildService $service
      * @return \Illuminate\Http\JsonResponse
      */
-    public function rebuildQueue(Request $request, int $id, QueueRebuildService $service): JsonResponse
+    public function rebuildQueue(
+        Request $request,
+        int $id,
+        QueueRebuildService $service,
+        OperatorAuditLogService $auditLogService
+    ): JsonResponse
     {
         $companyId = TenantContext::companyId($request);
 
@@ -204,6 +241,16 @@ class SimAdminController extends Controller
                 'error' => $e->getMessage(),
             ], 422);
         }
+
+        $auditLogService->record(
+            $request,
+            'sim.queue_rebuilt',
+            'sim',
+            $id,
+            [
+                'result' => $result,
+            ]
+        );
 
         return response()->json([
             'ok'     => true,

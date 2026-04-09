@@ -2,8 +2,10 @@
 
 use App\Http\Controllers\AssignmentDashboardPageController;
 use App\Http\Controllers\AssignmentController;
+use App\Http\Controllers\AuditLogDashboardPageController;
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\Auth\ForcePasswordChangeController;
+use App\Http\Controllers\DashboardAuditLogController;
 use App\Http\Controllers\DashboardHomePageController;
 use App\Http\Controllers\DashboardOperatorController;
 use App\Http\Controllers\MessageStatusController;
@@ -69,6 +71,9 @@ Route::middleware(['auth', 'dashboard.password.changed'])->group(function () {
     Route::get('/dashboard/operators', [OperatorDashboardPageController::class, 'index'])
         ->name('dashboard.operators.index');
 
+    Route::get('/dashboard/audit', [AuditLogDashboardPageController::class, 'index'])
+        ->name('dashboard.audit.index');
+
     Route::get('/dashboard/sims/{id}', [SimDetailControlPageController::class, 'show'])
         ->whereNumber('id')
         ->name('dashboard.sims.show');
@@ -82,6 +87,7 @@ Route::middleware(['auth', 'dashboard.password.changed', 'dashboard.tenant'])
         Route::get('/assignments', [AssignmentController::class, 'index']);
         Route::get('/messages/status', [MessageStatusController::class, 'show']);
         Route::get('/operators', [DashboardOperatorController::class, 'index']);
+        Route::get('/audit-logs', [DashboardAuditLogController::class, 'index']);
 
         Route::middleware('dashboard.operator.write')->group(function () {
             Route::post('/assignments/set', [AssignmentController::class, 'set']);

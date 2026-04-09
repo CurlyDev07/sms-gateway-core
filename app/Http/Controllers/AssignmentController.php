@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\CustomerSimAssignment;
 use App\Models\Sim;
+use App\Services\OperatorAuditLogService;
 use App\Support\TenantContext;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -84,7 +85,7 @@ class AssignmentController extends Controller
      * @param \Illuminate\Http\Request $request
      * @return \Illuminate\Http\JsonResponse
      */
-    public function set(Request $request): JsonResponse
+    public function set(Request $request, OperatorAuditLogService $auditLogService): JsonResponse
     {
         $companyId = TenantContext::companyId($request);
 
@@ -137,6 +138,7 @@ class AssignmentController extends Controller
                     'last_used_at' => now(),
                 ]
             );
+        $wasCreated = (bool) $assignment->wasRecentlyCreated;
 
         Log::info('Customer SIM assignment set via API', [
             'company_id'     => $companyId,
@@ -147,6 +149,18 @@ class AssignmentController extends Controller
         ]);
 
         $assignment->refresh();
+
+        $auditLogService->record(
+            $request,
+            'assignment.set',
+            'customer_sim_assignment',
+            (int) $assignment->id,
+            [
+                'customer_phone' => $customerPhone,
+                'sim_id' => $simId,
+                'created' => $wasCreated,
+            ]
+        );
 
         return response()->json([
             'ok'         => true,
@@ -160,7 +174,7 @@ class AssignmentController extends Controller
      * @param \Illuminate\Http\Request $request
      * @return \Illuminate\Http\JsonResponse
      */
-    public function markSafe(Request $request): JsonResponse
+    public function markSafe(Request $request, OperatorAuditLogService $auditLogService): JsonResponse
     {
         $companyId = TenantContext::companyId($request);
 
@@ -207,6 +221,18 @@ class AssignmentController extends Controller
         ]);
 
         $assignment->refresh();
+
+        $auditLogService->record(
+            $request,
+            'assignment.mark_safe',
+            'customer_sim_assignment',
+            (int) $assignment->id,
+            [
+                'customer_phone' => $customerPhone,
+                'sim_id' => (int) $assignment->sim_id,
+                'safe_to_migrate' => (bool) $assignment->safe_to_migrate,
+            ]
+        );
 
         return response()->json([
             'ok'         => true,
