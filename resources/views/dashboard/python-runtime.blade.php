@@ -110,6 +110,32 @@
         opacity: 0.5;
     }
 
+    .send-ready-badge {
+        display: inline-block;
+        margin-top: 6px;
+        padding: 2px 6px;
+        border-radius: 999px;
+        font-size: 11px;
+        background: #dcfce7;
+        color: #166534;
+    }
+
+    .send-blocked-badge {
+        display: inline-block;
+        margin-top: 6px;
+        padding: 2px 6px;
+        border-radius: 999px;
+        font-size: 11px;
+        background: #fee2e2;
+        color: #991b1b;
+    }
+
+    .send-disabled-reason {
+        margin-top: 6px;
+        font-size: 11px;
+        color: #7f1d1d;
+    }
+
     .send-panel {
         border: 1px solid #e5e7eb;
         border-radius: 6px;
@@ -189,6 +215,9 @@
 <p class="muted">
     Runtime integration visibility for Python health + modem discovery using
     <code>GET /dashboard/api/runtime/python</code>. The table below shows the full Python discovery list.
+</p>
+<p class="muted">
+    Note: Current <code>sim_id</code> may be a fallback device identifier, not a confirmed telecom SIM ID.
 </p>
 
 <div class="controls">
@@ -402,6 +431,73 @@
             return 'runtime-row-warning';
         };
 
+        const runtimeRowSendability = (modem, simId) => {
+            const probeError = modem && modem.probe_error !== null && modem.probe_error !== undefined
+                ? String(modem.probe_error).trim()
+                : '';
+
+            if (probeError !== '') {
+                return {
+                    can_use_in_send_test: false,
+                    disabled_reason: 'Probe did not complete; send test disabled.'
+                };
+            }
+
+            if (modem.at_ok === false) {
+                return {
+                    can_use_in_send_test: false,
+                    disabled_reason: 'AT not ready; send test disabled.'
+                };
+            }
+
+            if (modem.sim_ready === false) {
+                return {
+                    can_use_in_send_test: false,
+                    disabled_reason: 'SIM not ready; send test disabled.'
+                };
+            }
+
+            if (modem.creg_registered === false) {
+                return {
+                    can_use_in_send_test: false,
+                    disabled_reason: 'Modem not registered; send test disabled.'
+                };
+            }
+
+            if (modem.at_ok !== true) {
+                return {
+                    can_use_in_send_test: false,
+                    disabled_reason: 'AT not ready; send test disabled.'
+                };
+            }
+
+            if (modem.sim_ready !== true) {
+                return {
+                    can_use_in_send_test: false,
+                    disabled_reason: 'SIM not ready; send test disabled.'
+                };
+            }
+
+            if (modem.creg_registered !== true) {
+                return {
+                    can_use_in_send_test: false,
+                    disabled_reason: 'Modem not registered; send test disabled.'
+                };
+            }
+
+            if (simId === '-' || simId === '') {
+                return {
+                    can_use_in_send_test: false,
+                    disabled_reason: 'No SIM ID available; send test disabled.'
+                };
+            }
+
+            return {
+                can_use_in_send_test: true,
+                disabled_reason: null
+            };
+        };
+
         const renderModems = (modems) => {
             latestDiscoveryRows = Array.isArray(modems) ? modems : [];
 
@@ -413,15 +509,24 @@
             modemRowsEl.innerHTML = latestDiscoveryRows.map((modem, index) => {
                 const state = rowState(modem);
                 const simId = asText(modem.sim_id);
-                const simIdPresent = simId !== '-';
-                const simIdAttr = simIdPresent ? ` data-sim-id="${escapeHtml(simId)}"` : '';
-                const disabledAttr = simIdPresent ? '' : ' disabled';
+                const sendability = runtimeRowSendability(modem, simId);
+                const simIdAttr = ` data-sim-id="${escapeHtml(simId)}"`;
+                const useDisabledAttr = sendability.can_use_in_send_test ? '' : ' disabled';
+                const useTitleAttr = sendability.disabled_reason ? ` title="${escapeHtml(sendability.disabled_reason)}"` : '';
+                const sendBadge = sendability.can_use_in_send_test
+                    ? '<span class="send-ready-badge">send-ready</span>'
+                    : '<span class="send-blocked-badge">not send-ready</span>';
+                const sendDisabledReason = sendability.disabled_reason
+                    ? `<div class="send-disabled-reason">${escapeHtml(sendability.disabled_reason)}</div>`
+                    : '';
 
                 return `
                 <tr class="${rowClass(state)}">
                     <td>
-                        <button type="button" class="mini-button copy-sim-id"${simIdAttr}${disabledAttr}>Copy SIM ID</button>
-                        <button type="button" class="mini-button use-sim-id"${simIdAttr}${disabledAttr}>Use in Send Test</button>
+                        <button type="button" class="mini-button copy-sim-id"${simIdAttr}>Copy SIM ID</button>
+                        <button type="button" class="mini-button use-sim-id"${simIdAttr}${useDisabledAttr}${useTitleAttr}>Use in Send Test</button>
+                        ${sendBadge}
+                        ${sendDisabledReason}
                     </td>
                     <td>${escapeHtml(simId)}</td>
                     <td>${escapeHtml(asText(modem.device_id))}</td>

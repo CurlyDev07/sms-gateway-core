@@ -27,6 +27,9 @@ class PythonRuntimeDashboardPageTest extends TestCase
             ->assertSee('Probe Error')
             ->assertSee('Copy SIM ID')
             ->assertSee('Use in Send Test')
+            ->assertSee('Probe did not complete; send test disabled.')
+            ->assertSee('sim_id')
+            ->assertSee('fallback device identifier')
             ->assertSee('Python runtime is reachable, but modem discovery failed. Check discovery endpoint/runtime logs.');
     }
 }
