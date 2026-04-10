@@ -42,6 +42,10 @@
         color: #b91c1c;
     }
 
+    .warn {
+        color: #b45309;
+    }
+
     .cards {
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
@@ -359,6 +363,49 @@
             `).join('');
         };
 
+        const runtimeStatusMeta = (payload) => {
+            const health = payload && payload.health ? payload.health : {};
+            const discovery = payload && payload.discovery ? payload.discovery : {};
+            const modems = Array.isArray(discovery.modems) ? discovery.modems : [];
+            const fallbackTotal = Number(discovery.discovered_total || 0);
+            const totalCount = modems.length > 0 ? modems.length : (Number.isFinite(fallbackTotal) ? fallbackTotal : 0);
+            const probeErrorCount = modems.filter((modem) => {
+                const probeError = modem && typeof modem === 'object' ? modem.probe_error : null;
+                return probeError !== null && probeError !== undefined && String(probeError).trim() !== '';
+            }).length;
+            const healthyCount = Math.max(totalCount - probeErrorCount, 0);
+
+            if (health.ok === false) {
+                return {
+                    category: 'runtime_unreachable',
+                    type: 'error',
+                    message: 'Python runtime is unreachable. Check runtime service/network/token configuration.'
+                };
+            }
+
+            if (health.ok === true && discovery.ok === false) {
+                return {
+                    category: 'discovery_failed',
+                    type: 'error',
+                    message: 'Python runtime is reachable, but modem discovery failed. Check discovery endpoint/runtime logs.'
+                };
+            }
+
+            if (health.ok === true && discovery.ok === true && probeErrorCount > 0) {
+                return {
+                    category: 'discovery_partial',
+                    type: 'warn',
+                    message: `Python runtime reachable. Discovery completed with warnings: ${healthyCount}/${totalCount} modems healthy, ${probeErrorCount} with probe errors.`
+                };
+            }
+
+            return {
+                category: 'discovery_success',
+                type: 'ok',
+                message: `Python runtime reachable. Discovery completed successfully: ${healthyCount}/${totalCount} modems healthy.`
+            };
+        };
+
         refreshButton.addEventListener('click', async () => {
             setStatus('Checking Python runtime...', 'muted');
 
@@ -384,12 +431,8 @@
 
                 renderSummary(payload);
                 renderModems(payload.discovery && payload.discovery.modems ? payload.discovery.modems : []);
-
-                if (payload.ok === true) {
-                    setStatus('Python runtime reachable; discovery loaded successfully.', 'ok');
-                } else {
-                    setStatus('Python runtime check completed with partial/failed result. See details below.', 'error');
-                }
+                const runtimeStatus = runtimeStatusMeta(payload);
+                setStatus(runtimeStatus.message, runtimeStatus.type);
             } catch (error) {
                 setStatus(`Runtime check failed: ${error.message}`, 'error');
             }

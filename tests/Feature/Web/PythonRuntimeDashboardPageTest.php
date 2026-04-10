@@ -23,6 +23,7 @@ class PythonRuntimeDashboardPageTest extends TestCase
             ->assertSee('Check Python Runtime')
             ->assertSee('Send Runtime Test SMS')
             ->assertSee('Discovered Total')
-            ->assertSee('Tenant Visible');
+            ->assertSee('Tenant Visible')
+            ->assertSee('Python runtime is reachable, but modem discovery failed. Check discovery endpoint/runtime logs.');
     }
 }
