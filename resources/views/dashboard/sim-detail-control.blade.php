@@ -170,6 +170,10 @@
         <div><span class="field-label" title="If true, this SIM can receive new customer assignments.">Accept New Assignments:</span><span id="field-accept-new">-</span></div>
         <div><span class="field-label" title="System safety flag that blocks new assignments despite acceptance setting.">Disabled For New Assignments:</span><span id="field-disabled-new">-</span></div>
         <div><span class="field-label">Last Success At:</span><span id="field-last-success">-</span></div>
+        <div><span class="field-label" title="Temporary suppression flag triggered by repeated runtime send failures.">Runtime Suppressed:</span><span id="field-runtime-suppressed">-</span></div>
+        <div><span class="field-label" title="When temporary runtime suppression ends.">Runtime Suppressed Until:</span><span id="field-runtime-suppressed-until">-</span></div>
+        <div><span class="field-label" title="Most recent runtime failure reason observed.">Last Runtime Error:</span><span id="field-runtime-last-error">-</span></div>
+        <div><span class="field-label" title="Classification for last runtime failure (retryable/non_retryable).">Last Failure Class:</span><span id="field-runtime-last-classification">-</span></div>
     </div>
 </div>
 
@@ -218,6 +222,7 @@
             const health = sim.health || {};
             const stuck = sim.stuck || {};
             const queueDepth = sim.queue_depth || {};
+            const runtimeControl = health.runtime_control || {};
 
             setField('field-id', sim.id);
             setField('field-uuid', sim.uuid);
@@ -238,6 +243,10 @@
             setField('field-accept-new', boolText(sim.accept_new_assignments ?? false));
             setField('field-disabled-new', boolText(sim.disabled_for_new_assignments ?? false));
             setField('field-last-success', sim.last_success_at);
+            setField('field-runtime-suppressed', boolText(runtimeControl.suppressed ?? false));
+            setField('field-runtime-suppressed-until', runtimeControl.suppressed_until);
+            setField('field-runtime-last-error', runtimeControl.last_error);
+            setField('field-runtime-last-classification', runtimeControl.last_classification);
         };
 
         const loadSim = async ({silent = false} = {}) => {

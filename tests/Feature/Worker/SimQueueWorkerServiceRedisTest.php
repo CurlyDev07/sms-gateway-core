@@ -6,10 +6,12 @@ use App\Contracts\SmsSenderInterface;
 use App\DTO\SmsSendResult;
 use App\Models\OutboundMessage;
 use App\Models\Sim;
+use App\Models\SimHealthLog;
 use App\Services\OutboundRetryService;
 use App\Services\QueueRebuildService;
 use App\Services\RedisQueueService;
 use App\Services\SimQueueWorkerService;
+use App\Services\SimHealthService;
 use App\Services\SimStateService;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -406,6 +408,159 @@ class SimQueueWorkerServiceRedisTest extends TestCase
         $this->assertNotNull($fresh->scheduled_at);
     }
 
+    /** @test */
+    public function invalid_response_failure_is_non_retryable_and_marked_failed_without_reschedule(): void
+    {
+        Carbon::setTestNow(Carbon::parse('2026-04-10 13:00:00'));
+
+        $company = $this->createCompany();
+        $sim = $this->createSim($company, ['operator_status' => 'active', 'status' => 'active']);
+        $message = $this->createOutboundMessage([
+            'company_id' => $company->id,
+            'sim_id' => $sim->id,
+            'status' => 'queued',
+            'scheduled_at' => null,
+            'message_type' => 'CHAT',
+            'retry_count' => 0,
+        ]);
+
+        $smsSender = Mockery::mock(SmsSenderInterface::class);
+        $smsSender->shouldReceive('send')
+            ->once()
+            ->andReturn(SmsSendResult::failed('INVALID_RESPONSE', ['error_layer' => 'python_api'], 'python_api'));
+
+        $simState = Mockery::mock(SimStateService::class);
+        $simState->shouldReceive('canSend')->once()->andReturn(true);
+        $simState->shouldReceive('getSleepSecondsForMessageType')->once()->andReturn(1);
+        $simState->shouldNotReceive('markSendSuccess');
+
+        $retryService = Mockery::mock(OutboundRetryService::class)->makePartial();
+        $retryService->shouldReceive('handlePermanentFailure')->once()->passthru();
+        $retryService->shouldNotReceive('handleSendFailure');
+
+        $redisQueue = Mockery::mock(RedisQueueService::class);
+        $redisQueue->shouldReceive('popNext')->once()->with($sim->id)->andReturn($message->id);
+
+        $rebuild = Mockery::mock(QueueRebuildService::class);
+        $rebuild->shouldReceive('hasLock')->once()->with($sim->id)->andReturn(false);
+
+        $worker = new TestableSimQueueWorkerService(
+            $smsSender,
+            $simState,
+            $retryService,
+            $redisQueue,
+            $rebuild,
+            app(SimHealthService::class)
+        );
+
+        try {
+            $worker->run($sim->id);
+            $this->fail('Expected StopWorkerLoopException was not thrown.');
+        } catch (StopWorkerLoopException $e) {
+            $this->assertSame('stop-loop', $e->getMessage());
+        }
+
+        $fresh = $message->fresh();
+        $this->assertSame('failed', $fresh->status);
+        $this->assertSame(1, (int) $fresh->retry_count);
+        $this->assertNull($fresh->scheduled_at);
+        $this->assertNull($fresh->locked_at);
+        $this->assertSame('INVALID_RESPONSE', $fresh->failure_reason);
+        $this->assertSame('non_retryable', data_get($fresh->metadata, 'python_runtime.retry_decision.classification'));
+        $this->assertFalse((bool) data_get($fresh->metadata, 'python_runtime.retry_decision.retryable'));
+    }
+
+    /** @test */
+    public function repeated_runtime_timeouts_trigger_temporary_sim_runtime_suppression(): void
+    {
+        Carbon::setTestNow(Carbon::parse('2026-04-10 14:00:00'));
+
+        $company = $this->createCompany();
+        $sim = $this->createSim($company, [
+            'operator_status' => 'active',
+            'status' => 'active',
+            'mode' => 'NORMAL',
+            'cooldown_until' => null,
+        ]);
+
+        $messages = [
+            $this->createOutboundMessage([
+                'company_id' => $company->id,
+                'sim_id' => $sim->id,
+                'status' => 'queued',
+                'scheduled_at' => null,
+                'message_type' => 'CHAT',
+            ]),
+            $this->createOutboundMessage([
+                'company_id' => $company->id,
+                'sim_id' => $sim->id,
+                'status' => 'queued',
+                'scheduled_at' => null,
+                'message_type' => 'CHAT',
+            ]),
+            $this->createOutboundMessage([
+                'company_id' => $company->id,
+                'sim_id' => $sim->id,
+                'status' => 'queued',
+                'scheduled_at' => null,
+                'message_type' => 'CHAT',
+            ]),
+        ];
+
+        foreach ($messages as $message) {
+            $smsSender = Mockery::mock(SmsSenderInterface::class);
+            $smsSender->shouldReceive('send')
+                ->once()
+                ->andReturn(SmsSendResult::failed('RUNTIME_TIMEOUT', ['error_layer' => 'transport'], 'transport'));
+
+            $simState = Mockery::mock(SimStateService::class);
+            $simState->shouldReceive('canSend')->once()->andReturn(true);
+            $simState->shouldReceive('getSleepSecondsForMessageType')->once()->andReturn(1);
+            $simState->shouldNotReceive('markSendSuccess');
+
+            $retryService = Mockery::mock(OutboundRetryService::class)->makePartial();
+            $retryService->shouldReceive('handleSendFailure')->once()->passthru();
+            $retryService->shouldNotReceive('handlePermanentFailure');
+
+            $redisQueue = Mockery::mock(RedisQueueService::class);
+            $redisQueue->shouldReceive('popNext')->once()->with($sim->id)->andReturn($message->id);
+
+            $rebuild = Mockery::mock(QueueRebuildService::class);
+            $rebuild->shouldReceive('hasLock')->once()->with($sim->id)->andReturn(false);
+
+            $worker = new TestableSimQueueWorkerService(
+                $smsSender,
+                $simState,
+                $retryService,
+                $redisQueue,
+                $rebuild,
+                app(SimHealthService::class)
+            );
+
+            try {
+                $worker->run($sim->id);
+                $this->fail('Expected StopWorkerLoopException was not thrown.');
+            } catch (StopWorkerLoopException $e) {
+                $this->assertSame('stop-loop', $e->getMessage());
+            }
+        }
+
+        $freshSim = $sim->fresh();
+        $lastMessage = $messages[2]->fresh();
+
+        $this->assertSame('COOLDOWN', $freshSim->mode);
+        $this->assertNotNull($freshSim->cooldown_until);
+        $this->assertTrue($freshSim->cooldown_until->greaterThan(now()));
+        $this->assertSame('retryable', data_get($lastMessage->metadata, 'python_runtime.retry_decision.classification'));
+        $this->assertTrue((bool) data_get($lastMessage->metadata, 'python_runtime.sim_runtime_control.suppressed'));
+
+        $this->assertSame(3, SimHealthLog::query()->where('sim_id', $sim->id)->where('status', 'error')->count());
+        $this->assertGreaterThanOrEqual(
+            1,
+            SimHealthLog::query()->where('sim_id', $sim->id)->where('status', 'cooldown')->count()
+        );
+    }
+
     private function buildWorkerForClaimTests(): TestableSimQueueWorkerService
     {
         $smsSender = Mockery::mock(SmsSenderInterface::class);
@@ -429,4 +584,3 @@ class SimQueueWorkerServiceRedisTest extends TestCase
         ], $attributes));
     }
 }
-

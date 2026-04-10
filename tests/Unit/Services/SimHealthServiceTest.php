@@ -2,6 +2,7 @@
 
 namespace Tests\Unit\Services;
 
+use App\Models\SimHealthLog;
 use App\Services\SimHealthService;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -156,5 +157,100 @@ class SimHealthServiceTest extends TestCase
         ]);
 
         $this->assertTrue($this->service->isUnhealthy($sim));
+    }
+
+    /** @test */
+    public function repeated_runtime_failures_trigger_temporary_runtime_suppression_cooldown(): void
+    {
+        Carbon::setTestNow(Carbon::parse('2026-04-10 10:00:00'));
+
+        $company = $this->createCompany();
+        $sim = $this->createSim($company, [
+            'mode' => 'NORMAL',
+            'cooldown_until' => null,
+        ]);
+
+        $retryDecision = [
+            'retryable' => true,
+            'classification' => 'retryable',
+            'reason' => 'layer_retryable_by_policy',
+        ];
+
+        $this->service->recordRuntimeFailure($sim, 'RUNTIME_TIMEOUT', 'transport', $retryDecision, 1001, 'worker_send_failure');
+        $this->service->recordRuntimeFailure($sim, 'RUNTIME_TIMEOUT', 'transport', $retryDecision, 1002, 'worker_send_failure');
+        $outcome = $this->service->recordRuntimeFailure($sim, 'RUNTIME_TIMEOUT', 'transport', $retryDecision, 1003, 'worker_send_failure');
+
+        $freshSim = $sim->fresh();
+
+        $this->assertTrue($outcome['suppressed']);
+        $this->assertSame(3, $outcome['recent_failure_count']);
+        $this->assertSame('COOLDOWN', $freshSim->mode);
+        $this->assertNotNull($freshSim->cooldown_until);
+        $this->assertTrue($freshSim->cooldown_until->greaterThan(now()));
+
+        $this->assertGreaterThanOrEqual(
+            3,
+            SimHealthLog::query()->where('sim_id', $sim->id)->where('status', 'error')->count()
+        );
+    }
+
+    /** @test */
+    public function check_health_includes_runtime_control_snapshot_fields(): void
+    {
+        Carbon::setTestNow(Carbon::parse('2026-04-10 11:00:00'));
+
+        $company = $this->createCompany();
+        $sim = $this->createSim($company, [
+            'last_success_at' => Carbon::now()->subMinutes(8),
+            'mode' => 'COOLDOWN',
+            'cooldown_until' => Carbon::now()->addMinutes(10),
+        ]);
+
+        SimHealthLog::query()->create([
+            'sim_id' => $sim->id,
+            'status' => 'error',
+            'error_message' => json_encode([
+                'error' => 'RUNTIME_TIMEOUT',
+                'error_layer' => 'transport',
+                'classification' => 'retryable',
+                'retryable' => true,
+            ]),
+            'logged_at' => now()->subMinutes(3),
+        ]);
+
+        SimHealthLog::query()->create([
+            'sim_id' => $sim->id,
+            'status' => 'error',
+            'error_message' => json_encode([
+                'error' => 'RUNTIME_TIMEOUT',
+                'error_layer' => 'transport',
+                'classification' => 'retryable',
+                'retryable' => true,
+            ]),
+            'logged_at' => now()->subMinutes(2),
+        ]);
+
+        SimHealthLog::query()->create([
+            'sim_id' => $sim->id,
+            'status' => 'error',
+            'error_message' => json_encode([
+                'error' => 'INVALID_RESPONSE',
+                'error_layer' => 'python_api',
+                'classification' => 'non_retryable',
+                'retryable' => false,
+            ]),
+            'logged_at' => now()->subMinute(),
+        ]);
+
+        $result = $this->service->checkHealth($sim);
+        $runtime = $result['runtime_control'];
+
+        $this->assertTrue($runtime['suppressed']);
+        $this->assertNotNull($runtime['suppressed_until']);
+        $this->assertSame('INVALID_RESPONSE', $runtime['last_error']);
+        $this->assertSame('python_api', $runtime['last_error_layer']);
+        $this->assertSame('non_retryable', $runtime['last_classification']);
+        $this->assertFalse($runtime['last_retryable']);
+        $this->assertIsInt($runtime['recent_failure_count']);
     }
 }

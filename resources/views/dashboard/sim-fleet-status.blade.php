@@ -160,11 +160,15 @@
             <th title="If true, new customer stickies may be placed on this SIM.">Accept New Assignments</th>
             <th title="Health/system safety flag that blocks new assignments even if accept_new_assignments is true.">Disabled For New Assignments</th>
             <th>Last Success At</th>
+            <th title="Temporary suppression flag from repeated runtime failures.">Runtime Suppressed</th>
+            <th title="When temporary runtime suppression ends for this SIM.">Suppressed Until</th>
+            <th title="Most recent runtime failure reason seen by worker/runtime bridge.">Last Runtime Error</th>
+            <th title="Whether the last runtime failure was retryable or final.">Last Failure Class</th>
         </tr>
         </thead>
         <tbody id="simRows">
         <tr>
-            <td colspan="17" class="muted">No SIM rows loaded.</td>
+            <td colspan="21" class="muted">No SIM rows loaded.</td>
         </tr>
         </tbody>
     </table>
@@ -195,7 +199,7 @@
 
         const renderRows = (sims) => {
             if (!Array.isArray(sims) || sims.length === 0) {
-                rowsEl.innerHTML = '<tr><td colspan="17" class="muted">No SIM rows found for this tenant.</td></tr>';
+                rowsEl.innerHTML = '<tr><td colspan="21" class="muted">No SIM rows found for this tenant.</td></tr>';
                 return;
             }
 
@@ -203,6 +207,7 @@
                 const health = sim.health || {};
                 const stuck = sim.stuck || {};
                 const queueDepth = sim.queue_depth || {};
+                const runtimeControl = health.runtime_control || {};
                 const simId = Number(sim.id);
                 const simLink = Number.isFinite(simId)
                     ? `<a href="/dashboard/sims/${simId}" title="Open SIM detail/control page for SIM ${simId}.">${simId}</a>`
@@ -227,6 +232,10 @@
                         <td>${escapeHtml(boolText(sim.accept_new_assignments ?? false))}</td>
                         <td>${escapeHtml(boolText(sim.disabled_for_new_assignments ?? false))}</td>
                         <td>${escapeHtml(sim.last_success_at ?? '')}</td>
+                        <td>${escapeHtml(boolText(runtimeControl.suppressed ?? false))}</td>
+                        <td>${escapeHtml(runtimeControl.suppressed_until ?? '')}</td>
+                        <td>${escapeHtml(runtimeControl.last_error ?? '')}</td>
+                        <td>${escapeHtml(runtimeControl.last_classification ?? '')}</td>
                     </tr>
                 `;
             }).join('');

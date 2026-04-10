@@ -8,6 +8,28 @@ use Illuminate\Support\Facades\Log;
 class OutboundRetryService
 {
     private const RETRY_DELAY_MINUTES = 5;
+    private const RETRYABLE_ERRORS = [
+        'RUNTIME_UNREACHABLE',
+        'RUNTIME_TIMEOUT',
+        'CONNECTION_FAILED',
+        'TEMPORARY_NETWORK_FAILURE',
+        'SIM_NOT_REGISTERED',
+        'NETWORK_NOT_REGISTERED',
+        'NO_SIGNAL',
+        'MODEM_TIMEOUT',
+        'MODEM_BUSY',
+        'PORT_BUSY',
+    ];
+    private const NON_RETRYABLE_ERRORS = [
+        'INVALID_RESPONSE',
+        'SIM_IMSI_MISSING',
+    ];
+    private const RETRYABLE_NETWORK_ERRORS = [
+        'TEMPORARY_NETWORK_FAILURE',
+        'SIM_NOT_REGISTERED',
+        'NETWORK_NOT_REGISTERED',
+        'NO_SIGNAL',
+    ];
 
     /**
      * Handle outbound send failure by scheduling fixed-interval retry.
@@ -77,6 +99,87 @@ class OutboundRetryService
             'source' => $source,
             'failure_reason' => $reason,
         ]);
+    }
+
+    /**
+     * Classify one send failure into retryable vs non-retryable behavior.
+     *
+     * @param string|null $error
+     * @param string|null $errorLayer
+     * @return array{retryable:bool,classification:string,reason:string,error:?string,error_layer:?string}
+     */
+    public function classifyFailure(?string $error = null, ?string $errorLayer = null): array
+    {
+        $normalizedError = strtoupper(trim((string) $error));
+        $normalizedLayer = strtolower(trim((string) $errorLayer));
+
+        if ($normalizedError !== '' && in_array($normalizedError, self::RETRYABLE_ERRORS, true)) {
+            return [
+                'retryable' => true,
+                'classification' => 'retryable',
+                'reason' => 'explicit_retryable_error_code',
+                'error' => $error,
+                'error_layer' => $errorLayer,
+            ];
+        }
+
+        if ($normalizedError !== '' && in_array($normalizedError, self::NON_RETRYABLE_ERRORS, true)) {
+            return [
+                'retryable' => false,
+                'classification' => 'non_retryable',
+                'reason' => 'explicit_non_retryable_error_code',
+                'error' => $error,
+                'error_layer' => $errorLayer,
+            ];
+        }
+
+        if ($normalizedLayer === 'network') {
+            if ($normalizedError !== '' && in_array($normalizedError, self::RETRYABLE_NETWORK_ERRORS, true)) {
+                return [
+                    'retryable' => true,
+                    'classification' => 'retryable',
+                    'reason' => 'temporary_network_signal',
+                    'error' => $error,
+                    'error_layer' => $errorLayer,
+                ];
+            }
+
+            return [
+                'retryable' => false,
+                'classification' => 'non_retryable',
+                'reason' => 'carrier_rejection_network_layer',
+                'error' => $error,
+                'error_layer' => $errorLayer,
+            ];
+        }
+
+        if (in_array($normalizedLayer, ['python_api', 'hardware'], true)) {
+            return [
+                'retryable' => false,
+                'classification' => 'non_retryable',
+                'reason' => 'non_retryable_error_layer',
+                'error' => $error,
+                'error_layer' => $errorLayer,
+            ];
+        }
+
+        if ($normalizedLayer === '' || in_array($normalizedLayer, ['transport', 'gateway', 'modem', 'unknown'], true)) {
+            return [
+                'retryable' => true,
+                'classification' => 'retryable',
+                'reason' => 'layer_retryable_by_policy',
+                'error' => $error,
+                'error_layer' => $errorLayer,
+            ];
+        }
+
+        return [
+            'retryable' => true,
+            'classification' => 'retryable',
+            'reason' => 'fallback_retryable',
+            'error' => $error,
+            'error_layer' => $errorLayer,
+        ];
     }
 
     /**

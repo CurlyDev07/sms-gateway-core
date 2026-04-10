@@ -57,6 +57,7 @@ class SimController extends Controller
                     'status'                  => $health['status'],
                     'reason'                  => $health['reason'],
                     'minutes_since_last_success' => $health['minutes_since_last_success'],
+                    'runtime_control'         => $health['runtime_control'] ?? [],
                 ],
                 'stuck' => $health['stuck'],
                 'queue_depth' => [

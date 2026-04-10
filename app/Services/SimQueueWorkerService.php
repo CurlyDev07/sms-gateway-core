@@ -32,6 +32,10 @@ class SimQueueWorkerService
      * @var \App\Services\QueueRebuildService
      */
     protected $queueRebuildService;
+    /**
+     * @var \App\Services\SimHealthService
+     */
+    protected $simHealthService;
 
     /**
      * @param \App\Contracts\SmsSenderInterface $smsSender
@@ -41,7 +45,8 @@ class SimQueueWorkerService
         SimStateService $simStateService,
         OutboundRetryService $outboundRetryService,
         RedisQueueService $redisQueueService,
-        QueueRebuildService $queueRebuildService
+        QueueRebuildService $queueRebuildService,
+        ?SimHealthService $simHealthService = null
     )
     {
         $this->smsSender = $smsSender;
@@ -49,6 +54,7 @@ class SimQueueWorkerService
         $this->outboundRetryService = $outboundRetryService;
         $this->redisQueueService = $redisQueueService;
         $this->queueRebuildService = $queueRebuildService;
+        $this->simHealthService = $simHealthService ?: app(SimHealthService::class);
     }
 
     /**
@@ -249,10 +255,7 @@ class SimQueueWorkerService
     }
 
     /**
-     * Route send failure to permanent failure or scheduled retry based on errorLayer.
-     *
-     * network errorLayer = Python-confirmed carrier/provider rejection → mark failed, no retry.
-     * All other layers (transport, hardware, modem, gateway, unknown, null) → schedule retry.
+     * Route send failure to permanent failure or scheduled retry using explicit classification.
      *
      * @param \App\Models\OutboundMessage $message
      * @param \App\DTO\SmsSendResult $result
@@ -267,10 +270,35 @@ class SimQueueWorkerService
                 return;
             }
 
-            $lockedMessage->metadata = $this->mergeRuntimeMetadata($lockedMessage->metadata, $result, 'worker_send_failure');
+            $retryDecision = $this->outboundRetryService->classifyFailure(
+                $result->error,
+                $result->errorLayer
+            );
+
+            $sim = Sim::query()->lockForUpdate()->find($lockedMessage->sim_id);
+            $runtimeControl = null;
+
+            if ($sim !== null) {
+                $runtimeControl = $this->simHealthService->recordRuntimeFailure(
+                    $sim,
+                    $result->error,
+                    $result->errorLayer,
+                    $retryDecision,
+                    (int) $lockedMessage->id,
+                    'worker_send_failure'
+                );
+            }
+
+            $lockedMessage->metadata = $this->mergeRuntimeMetadata(
+                $lockedMessage->metadata,
+                $result,
+                'worker_send_failure',
+                $retryDecision,
+                $runtimeControl
+            );
             $lockedMessage->save();
 
-            if ($result->errorLayer === 'network') {
+            if ((bool) ($retryDecision['retryable'] ?? true) === false) {
                 $this->outboundRetryService->handlePermanentFailure(
                     $lockedMessage,
                     $result->error,
@@ -328,9 +356,17 @@ class SimQueueWorkerService
      * @param mixed $existing
      * @param \App\DTO\SmsSendResult $result
      * @param string $source
+     * @param array<string,mixed>|null $retryDecision
+     * @param array<string,mixed>|null $runtimeControl
      * @return array<string,mixed>
      */
-    protected function mergeRuntimeMetadata($existing, SmsSendResult $result, string $source): array
+    protected function mergeRuntimeMetadata(
+        $existing,
+        SmsSendResult $result,
+        string $source,
+        ?array $retryDecision = null,
+        ?array $runtimeControl = null
+    ): array
     {
         $metadata = is_array($existing) ? $existing : [];
 
@@ -343,6 +379,18 @@ class SimQueueWorkerService
             'error_layer' => $result->errorLayer,
             'raw' => $result->raw,
         ];
+
+        if (is_array($retryDecision)) {
+            $metadata['python_runtime']['retry_decision'] = [
+                'classification' => $retryDecision['classification'] ?? 'retryable',
+                'retryable' => (bool) ($retryDecision['retryable'] ?? true),
+                'reason' => $retryDecision['reason'] ?? null,
+            ];
+        }
+
+        if (is_array($runtimeControl)) {
+            $metadata['python_runtime']['sim_runtime_control'] = $runtimeControl;
+        }
 
         return $metadata;
     }

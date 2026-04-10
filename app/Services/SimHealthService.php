@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Sim;
+use App\Models\SimHealthLog;
 
 class SimHealthService
 {
@@ -10,6 +11,9 @@ class SimHealthService
     private const STUCK_6H_HOURS = 6;
     private const STUCK_24H_HOURS = 24;
     private const STUCK_3D_HOURS = 72;
+    private const RUNTIME_FAILURE_WINDOW_MINUTES = 15;
+    private const RUNTIME_FAILURE_THRESHOLD = 3;
+    private const RUNTIME_SUPPRESSION_MINUTES = 15;
 
     /**
      * Evaluate SIM health using last_success_at only.
@@ -43,6 +47,103 @@ class SimHealthService
             'disabled_for_new_assignments' => (bool) $sim->disabled_for_new_assignments,
             'disable_flag_changed' => $changed,
             'stuck' => $this->computeStuckAge($sim),
+            'runtime_control' => $this->runtimeControlSnapshot($sim),
+        ];
+    }
+
+    /**
+     * Persist runtime failure signal and apply temporary SIM suppression on repeated failures.
+     *
+     * @param \App\Models\Sim $sim
+     * @param string|null $error
+     * @param string|null $errorLayer
+     * @param array<string,mixed> $retryDecision
+     * @param int $messageId
+     * @param string $source
+     * @return array<string,mixed>
+     */
+    public function recordRuntimeFailure(
+        Sim $sim,
+        ?string $error,
+        ?string $errorLayer,
+        array $retryDecision,
+        int $messageId,
+        string $source = 'worker_send_failure'
+    ): array {
+        $now = now();
+        $payload = [
+            'source' => $source,
+            'message_id' => $messageId,
+            'error' => $error,
+            'error_layer' => $errorLayer,
+            'retryable' => (bool) ($retryDecision['retryable'] ?? true),
+            'classification' => $retryDecision['classification'] ?? 'retryable',
+            'classification_reason' => $retryDecision['reason'] ?? null,
+        ];
+
+        SimHealthLog::query()->create([
+            'sim_id' => $sim->id,
+            'status' => 'error',
+            'error_message' => json_encode($payload, JSON_UNESCAPED_SLASHES),
+            'logged_at' => $now,
+        ]);
+
+        $windowStartedAt = $now->copy()->subMinutes(self::RUNTIME_FAILURE_WINDOW_MINUTES);
+        $recentFailureCount = SimHealthLog::query()
+            ->where('sim_id', $sim->id)
+            ->where('status', 'error')
+            ->where('logged_at', '>=', $windowStartedAt)
+            ->count();
+
+        $suppressed = false;
+        $suppressedUntil = $sim->cooldown_until;
+        $cooldownActivated = false;
+
+        if ($recentFailureCount >= self::RUNTIME_FAILURE_THRESHOLD) {
+            $candidateUntil = $now->copy()->addMinutes(self::RUNTIME_SUPPRESSION_MINUTES);
+            $currentCooldown = $sim->cooldown_until;
+
+            if ($currentCooldown === null || $currentCooldown->lessThan($candidateUntil)) {
+                $sim->mode = 'COOLDOWN';
+                $sim->cooldown_until = $candidateUntil;
+                $suppressedUntil = $candidateUntil;
+                $cooldownActivated = true;
+            } else {
+                $suppressedUntil = $currentCooldown;
+            }
+
+            $suppressed = true;
+        }
+
+        $sim->last_error_at = $now;
+        $sim->save();
+
+        if ($cooldownActivated) {
+            SimHealthLog::query()->create([
+                'sim_id' => $sim->id,
+                'status' => 'cooldown',
+                'error_message' => json_encode([
+                    'source' => $source,
+                    'reason' => 'runtime_failure_threshold_reached',
+                    'window_minutes' => self::RUNTIME_FAILURE_WINDOW_MINUTES,
+                    'threshold' => self::RUNTIME_FAILURE_THRESHOLD,
+                    'recent_failure_count' => $recentFailureCount,
+                    'suppressed_until' => $suppressedUntil !== null ? $suppressedUntil->toIso8601String() : null,
+                ], JSON_UNESCAPED_SLASHES),
+                'logged_at' => $now,
+            ]);
+        }
+
+        return [
+            'suppressed' => $suppressed,
+            'suppressed_until' => $suppressedUntil !== null ? $suppressedUntil->toIso8601String() : null,
+            'recent_failure_count' => $recentFailureCount,
+            'window_minutes' => self::RUNTIME_FAILURE_WINDOW_MINUTES,
+            'threshold' => self::RUNTIME_FAILURE_THRESHOLD,
+            'classification' => $retryDecision['classification'] ?? 'retryable',
+            'retryable' => (bool) ($retryDecision['retryable'] ?? true),
+            'error' => $error,
+            'error_layer' => $errorLayer,
         ];
     }
 
@@ -154,5 +255,54 @@ class SimHealthService
             ->where('company_id', $companyId)
             ->count();
     }
-}
 
+    /**
+     * @param \App\Models\Sim $sim
+     * @return array<string,mixed>
+     */
+    protected function runtimeControlSnapshot(Sim $sim): array
+    {
+        $windowStartedAt = now()->subMinutes(self::RUNTIME_FAILURE_WINDOW_MINUTES);
+
+        $recentFailureCount = SimHealthLog::query()
+            ->where('sim_id', $sim->id)
+            ->where('status', 'error')
+            ->where('logged_at', '>=', $windowStartedAt)
+            ->count();
+
+        $latestFailureLog = SimHealthLog::query()
+            ->where('sim_id', $sim->id)
+            ->where('status', 'error')
+            ->orderByDesc('logged_at')
+            ->first();
+
+        $latestPayload = null;
+        if ($latestFailureLog !== null && is_string($latestFailureLog->error_message)) {
+            $decoded = json_decode($latestFailureLog->error_message, true);
+            if (is_array($decoded)) {
+                $latestPayload = $decoded;
+            }
+        }
+
+        $suppressed = $sim->isCoolingDown() && $recentFailureCount >= self::RUNTIME_FAILURE_THRESHOLD;
+
+        return [
+            'suppressed' => $suppressed,
+            'suppressed_until' => $suppressed && $sim->cooldown_until !== null
+                ? $sim->cooldown_until->toIso8601String()
+                : null,
+            'recent_failure_count' => $recentFailureCount,
+            'window_minutes' => self::RUNTIME_FAILURE_WINDOW_MINUTES,
+            'threshold' => self::RUNTIME_FAILURE_THRESHOLD,
+            'last_failure_at' => ($latestFailureLog !== null && $latestFailureLog->logged_at !== null)
+                ? $latestFailureLog->logged_at->toIso8601String()
+                : null,
+            'last_error' => is_array($latestPayload) ? ($latestPayload['error'] ?? null) : null,
+            'last_error_layer' => is_array($latestPayload) ? ($latestPayload['error_layer'] ?? null) : null,
+            'last_classification' => is_array($latestPayload) ? ($latestPayload['classification'] ?? null) : null,
+            'last_retryable' => is_array($latestPayload) && array_key_exists('retryable', $latestPayload)
+                ? (bool) $latestPayload['retryable']
+                : null,
+        ];
+    }
+}

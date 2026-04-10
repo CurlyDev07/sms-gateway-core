@@ -3,6 +3,7 @@
 namespace Tests\Feature\Http;
 
 use App\Services\RedisQueueService;
+use App\Models\SimHealthLog;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\Support\CreatesGatewayEntities;
@@ -65,6 +66,7 @@ class SimControllerTest extends TestCase
             ->assertJsonPath('sims.0.health.status', 'healthy')
             ->assertJsonPath('sims.0.health.reason', null)
             ->assertJsonPath('sims.0.health.minutes_since_last_success', 10)
+            ->assertJsonPath('sims.0.health.runtime_control.suppressed', false)
             ->assertJsonPath('sims.0.stuck.stuck_6h', false)
             ->assertJsonPath('sims.0.stuck.stuck_24h', false)
             ->assertJsonPath('sims.0.stuck.stuck_3d', false)
@@ -113,9 +115,70 @@ class SimControllerTest extends TestCase
             ->assertJsonPath('sims.0.health.status', 'unhealthy')
             ->assertJsonPath('sims.0.health.reason', 'no_success_recorded')
             ->assertJsonPath('sims.0.health.minutes_since_last_success', null)
+            ->assertJsonPath('sims.0.health.runtime_control.suppressed', false)
             ->assertJsonPath('sims.0.stuck.stuck_6h', true)
             ->assertJsonPath('sims.0.stuck.stuck_24h', true)
             ->assertJsonPath('sims.0.stuck.stuck_3d', true);
+    }
+
+    /** @test */
+    public function it_returns_runtime_control_snapshot_when_sim_has_runtime_failures_and_active_suppression(): void
+    {
+        Carbon::setTestNow(Carbon::parse('2026-04-10 12:00:00'));
+
+        $company = $this->createCompany();
+        $sim = $this->createSim($company, [
+            'last_success_at' => Carbon::now()->subMinutes(5),
+            'mode' => 'COOLDOWN',
+            'cooldown_until' => Carbon::now()->addMinutes(10),
+        ]);
+
+        SimHealthLog::query()->create([
+            'sim_id' => $sim->id,
+            'status' => 'error',
+            'error_message' => json_encode([
+                'error' => 'RUNTIME_TIMEOUT',
+                'error_layer' => 'transport',
+                'classification' => 'retryable',
+                'retryable' => true,
+            ]),
+            'logged_at' => now()->subMinutes(3),
+        ]);
+
+        SimHealthLog::query()->create([
+            'sim_id' => $sim->id,
+            'status' => 'error',
+            'error_message' => json_encode([
+                'error' => 'RUNTIME_TIMEOUT',
+                'error_layer' => 'transport',
+                'classification' => 'retryable',
+                'retryable' => true,
+            ]),
+            'logged_at' => now()->subMinutes(2),
+        ]);
+
+        SimHealthLog::query()->create([
+            'sim_id' => $sim->id,
+            'status' => 'error',
+            'error_message' => json_encode([
+                'error' => 'INVALID_RESPONSE',
+                'error_layer' => 'python_api',
+                'classification' => 'non_retryable',
+                'retryable' => false,
+            ]),
+            'logged_at' => now()->subMinute(),
+        ]);
+
+        [$apiClient, $secret] = $this->createApiClient($company);
+
+        $this->withHeaders($this->authHeaders($apiClient->api_key, $secret))
+            ->getJson('/api/sims')
+            ->assertOk()
+            ->assertJsonPath('sims.0.health.runtime_control.suppressed', true)
+            ->assertJsonPath('sims.0.health.runtime_control.last_error', 'INVALID_RESPONSE')
+            ->assertJsonPath('sims.0.health.runtime_control.last_error_layer', 'python_api')
+            ->assertJsonPath('sims.0.health.runtime_control.last_classification', 'non_retryable')
+            ->assertJsonPath('sims.0.health.runtime_control.last_retryable', false);
     }
 
     /** @test */

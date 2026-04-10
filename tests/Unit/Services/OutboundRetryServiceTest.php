@@ -110,4 +110,41 @@ class OutboundRetryServiceTest extends TestCase
 
         $this->assertTrue($this->service->canRetry($message));
     }
+
+    /** @test */
+    public function classify_failure_marks_runtime_timeout_as_retryable(): void
+    {
+        $decision = $this->service->classifyFailure('RUNTIME_TIMEOUT', 'transport');
+
+        $this->assertTrue($decision['retryable']);
+        $this->assertSame('retryable', $decision['classification']);
+    }
+
+    /** @test */
+    public function classify_failure_marks_invalid_response_as_non_retryable(): void
+    {
+        $decision = $this->service->classifyFailure('INVALID_RESPONSE', 'python_api');
+
+        $this->assertFalse($decision['retryable']);
+        $this->assertSame('non_retryable', $decision['classification']);
+    }
+
+    /** @test */
+    public function classify_failure_marks_default_network_rejection_as_non_retryable(): void
+    {
+        $decision = $this->service->classifyFailure('SEND_FAILED', 'network');
+
+        $this->assertFalse($decision['retryable']);
+        $this->assertSame('non_retryable', $decision['classification']);
+        $this->assertSame('carrier_rejection_network_layer', $decision['reason']);
+    }
+
+    /** @test */
+    public function classify_failure_allows_retry_for_temporary_network_registration_issue(): void
+    {
+        $decision = $this->service->classifyFailure('NETWORK_NOT_REGISTERED', 'network');
+
+        $this->assertTrue($decision['retryable']);
+        $this->assertSame('retryable', $decision['classification']);
+    }
 }
