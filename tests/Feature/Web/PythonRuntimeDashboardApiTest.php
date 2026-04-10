@@ -31,7 +31,7 @@ class PythonRuntimeDashboardApiTest extends TestCase
     public function test_runtime_api_returns_health_and_tenant_filtered_discovery_rows(): void
     {
         $company = $this->createCompany();
-        $this->createSim($company, ['imsi' => '515031234567890']);
+        $tenantSim = $this->createSim($company, ['imsi' => '515031234567890']);
 
         $otherCompany = $this->createCompany();
         $this->createSim($otherCompany, ['imsi' => '515039999999999']);
@@ -80,8 +80,10 @@ class PythonRuntimeDashboardApiTest extends TestCase
             ->assertJsonCount(2, 'discovery.all_modems')
             ->assertJsonPath('discovery.modems.0.device_id', 'modem-a')
             ->assertJsonPath('discovery.modems.0.sim_id', '515031234567890')
+            ->assertJsonPath('discovery.modems.0.tenant_sim_db_id', $tenantSim->id)
             ->assertJsonPath('discovery.modems.0.probe_error', null)
             ->assertJsonPath('discovery.all_modems.1.device_id', 'modem-b')
+            ->assertJsonPath('discovery.all_modems.1.tenant_sim_db_id', null)
             ->assertJsonPath('discovery.all_modems.1.probe_error', 'PROBE_TIMEOUT after 12.0s');
     }
 

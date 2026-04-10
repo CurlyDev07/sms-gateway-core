@@ -38,12 +38,26 @@ class PythonRuntimeController extends Controller
         $health = $runtimeClient->health();
         $discovery = $runtimeClient->discover();
 
-        $tenantImsis = Sim::query()
+        $tenantSims = Sim::query()
             ->where('company_id', $companyId)
             ->whereNotNull('imsi')
-            ->pluck('imsi')
-            ->map(function ($imsi): string {
-                return trim((string) $imsi);
+            ->orderBy('id')
+            ->get(['id', 'imsi']);
+
+        $tenantImsiToSimId = [];
+        foreach ($tenantSims as $tenantSim) {
+            $imsi = trim((string) $tenantSim->imsi);
+
+            if ($imsi === '' || isset($tenantImsiToSimId[$imsi])) {
+                continue;
+            }
+
+            $tenantImsiToSimId[$imsi] = (int) $tenantSim->id;
+        }
+
+        $tenantImsis = collect(array_keys($tenantImsiToSimId))
+            ->map(function (string $imsi): string {
+                return trim($imsi);
             })
             ->filter()
             ->values()
@@ -57,6 +71,14 @@ class PythonRuntimeController extends Controller
             $normalized = $this->normalizeModemRow($modem);
             $allModems[] = $normalized;
             $mappedSimId = $normalized['sim_id'];
+            $tenantSimDbId = null;
+
+            if ($mappedSimId !== null && isset($tenantImsiToSimId[$mappedSimId])) {
+                $tenantSimDbId = (int) $tenantImsiToSimId[$mappedSimId];
+            }
+
+            $normalized['tenant_sim_db_id'] = $tenantSimDbId;
+            $allModems[count($allModems) - 1] = $normalized;
 
             if ($mappedSimId === null || !isset($tenantImsiSet[$mappedSimId])) {
                 continue;

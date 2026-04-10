@@ -219,6 +219,9 @@
 <p class="muted">
     Note: Current <code>sim_id</code> may be a fallback device identifier, not a confirmed telecom SIM ID.
 </p>
+<p class="muted">
+    Send test uses <strong>Tenant SIM DB ID</strong> (Laravel <code>sims.id</code>), not runtime SIM ID.
+</p>
 
 <div class="controls">
     <button id="refreshButton" type="button">Check Python Runtime</button>
@@ -269,7 +272,7 @@
 
     <div class="send-grid">
         <label>
-            SIM ID
+            Tenant SIM DB ID
             <input id="sendSimId" type="number" min="1" placeholder="e.g. 1">
         </label>
         <label>
@@ -298,7 +301,8 @@
         <thead>
             <tr>
                 <th>Actions</th>
-                <th>SIM ID</th>
+                <th>Runtime SIM ID (IMSI/device)</th>
+                <th>Tenant SIM DB ID</th>
                 <th>Device ID</th>
                 <th>Port</th>
                 <th>AT OK</th>
@@ -311,7 +315,7 @@
         </thead>
         <tbody id="modemRows">
             <tr>
-                <td colspan="10" class="muted">No modem rows loaded.</td>
+                <td colspan="11" class="muted">No modem rows loaded.</td>
             </tr>
         </tbody>
     </table>
@@ -431,7 +435,7 @@
             return 'runtime-row-warning';
         };
 
-        const runtimeRowSendability = (modem, simId) => {
+        const runtimeRowSendability = (modem, runtimeSimId, tenantSimDbId) => {
             const probeError = modem && modem.probe_error !== null && modem.probe_error !== undefined
                 ? String(modem.probe_error).trim()
                 : '';
@@ -485,10 +489,18 @@
                 };
             }
 
-            if (simId === '-' || simId === '') {
+            const normalizedTenantSimId = String(tenantSimDbId ?? '').trim();
+            if (normalizedTenantSimId === '' || normalizedTenantSimId === '-' || !/^[1-9]\d*$/.test(normalizedTenantSimId)) {
                 return {
                     can_use_in_send_test: false,
-                    disabled_reason: 'No SIM ID available; send test disabled.'
+                    disabled_reason: 'No tenant SIM mapping for this runtime SIM ID; send test disabled.'
+                };
+            }
+
+            if (runtimeSimId === '-' || runtimeSimId === '') {
+                return {
+                    can_use_in_send_test: false,
+                    disabled_reason: 'No runtime SIM ID available; send test disabled.'
                 };
             }
 
@@ -502,15 +514,17 @@
             latestDiscoveryRows = Array.isArray(modems) ? modems : [];
 
             if (latestDiscoveryRows.length === 0) {
-                modemRowsEl.innerHTML = '<tr><td colspan="10" class="muted">No modem rows returned by discovery.</td></tr>';
+                modemRowsEl.innerHTML = '<tr><td colspan="11" class="muted">No modem rows returned by discovery.</td></tr>';
                 return;
             }
 
             modemRowsEl.innerHTML = latestDiscoveryRows.map((modem, index) => {
                 const state = rowState(modem);
-                const simId = asText(modem.sim_id);
-                const sendability = runtimeRowSendability(modem, simId);
-                const simIdAttr = ` data-sim-id="${escapeHtml(simId)}"`;
+                const runtimeSimId = asText(modem.sim_id);
+                const tenantSimDbId = asText(modem.tenant_sim_db_id);
+                const sendability = runtimeRowSendability(modem, runtimeSimId, tenantSimDbId);
+                const runtimeSimIdAttr = ` data-sim-id="${escapeHtml(runtimeSimId)}"`;
+                const tenantSimDbIdAttr = ` data-tenant-sim-id="${escapeHtml(tenantSimDbId)}"`;
                 const useDisabledAttr = sendability.can_use_in_send_test ? '' : ' disabled';
                 const useTitleAttr = sendability.disabled_reason ? ` title="${escapeHtml(sendability.disabled_reason)}"` : '';
                 const sendBadge = sendability.can_use_in_send_test
@@ -523,12 +537,13 @@
                 return `
                 <tr class="${rowClass(state)}">
                     <td>
-                        <button type="button" class="mini-button copy-sim-id"${simIdAttr}>Copy SIM ID</button>
-                        <button type="button" class="mini-button use-sim-id"${simIdAttr}${useDisabledAttr}${useTitleAttr}>Use in Send Test</button>
+                        <button type="button" class="mini-button copy-sim-id"${runtimeSimIdAttr}>Copy SIM ID</button>
+                        <button type="button" class="mini-button use-sim-id"${runtimeSimIdAttr}${tenantSimDbIdAttr}${useDisabledAttr}${useTitleAttr}>Use in Send Test</button>
                         ${sendBadge}
                         ${sendDisabledReason}
                     </td>
-                    <td>${escapeHtml(simId)}</td>
+                    <td>${escapeHtml(runtimeSimId)}</td>
+                    <td>${escapeHtml(tenantSimDbId)}</td>
                     <td>${escapeHtml(asText(modem.device_id))}</td>
                     <td>${escapeHtml(asText(modem.port))}</td>
                     <td>${escapeHtml(boolText(modem.at_ok))}</td>
@@ -625,15 +640,21 @@
             }
 
             const simId = (target.dataset.simId || '').trim();
+            const tenantSimId = (target.dataset.tenantSimId || '').trim();
 
             if (simId === '') {
-                setStatus('No SIM ID available for this modem row.', 'warn');
+                setStatus('No runtime SIM ID available for this modem row.', 'warn');
                 return;
             }
 
             if (target.classList.contains('use-sim-id')) {
-                sendSimIdEl.value = simId;
-                setStatus(`SIM ID ${simId} copied into send test form.`, 'ok');
+                if (!/^[1-9]\d*$/.test(tenantSimId)) {
+                    setStatus('No tenant SIM DB ID mapping for this runtime SIM ID.', 'warn');
+                    return;
+                }
+
+                sendSimIdEl.value = tenantSimId;
+                setStatus(`Tenant SIM DB ID ${tenantSimId} loaded into send test form (runtime SIM ID: ${simId}).`, 'ok');
                 return;
             }
 
