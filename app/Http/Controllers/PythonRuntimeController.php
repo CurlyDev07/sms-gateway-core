@@ -51,15 +51,18 @@ class PythonRuntimeController extends Controller
 
         $tenantImsiSet = array_fill_keys($tenantImsis, true);
 
+        $allModems = [];
         $visibleModems = [];
         foreach ($discovery['modems'] as $modem) {
-            $mappedSimId = $this->extractModemSimIdentifier($modem);
+            $normalized = $this->normalizeModemRow($modem);
+            $allModems[] = $normalized;
+            $mappedSimId = $normalized['sim_id'];
 
             if ($mappedSimId === null || !isset($tenantImsiSet[$mappedSimId])) {
                 continue;
             }
 
-            $visibleModems[] = $this->normalizeModemRow($modem);
+            $visibleModems[] = $normalized;
         }
 
         return response()->json([
@@ -77,6 +80,7 @@ class PythonRuntimeController extends Controller
                 'discovered_total' => count($discovery['modems']),
                 'tenant_visible_total' => count($visibleModems),
                 'modems' => $visibleModems,
+                'all_modems' => $allModems,
                 'tenant_imsi_mapped' => count($tenantImsis),
             ],
         ]);
@@ -186,6 +190,7 @@ class PythonRuntimeController extends Controller
             'sim_ready' => $modem['sim_ready'] ?? null,
             'creg_registered' => $modem['creg_registered'] ?? null,
             'signal' => $modem['signal'] ?? null,
+            'probe_error' => $this->firstString($modem, ['probe_error']),
             'last_seen_at' => $this->firstString($modem, ['last_seen_at', 'last_seen']),
         ];
     }

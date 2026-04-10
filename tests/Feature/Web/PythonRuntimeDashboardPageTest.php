@@ -24,6 +24,9 @@ class PythonRuntimeDashboardPageTest extends TestCase
             ->assertSee('Send Runtime Test SMS')
             ->assertSee('Discovered Total')
             ->assertSee('Tenant Visible')
+            ->assertSee('Probe Error')
+            ->assertSee('Copy SIM ID')
+            ->assertSee('Use in Send Test')
             ->assertSee('Python runtime is reachable, but modem discovery failed. Check discovery endpoint/runtime logs.');
     }
 }

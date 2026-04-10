@@ -52,12 +52,14 @@ class PythonRuntimeDashboardApiTest extends TestCase
                         'sim_id' => '515031234567890',
                         'port' => '/dev/ttyUSB0',
                         'at_ok' => true,
+                        'probe_error' => null,
                     ],
                     [
                         'device_id' => 'modem-b',
                         'sim_id' => '515039999999999',
                         'port' => '/dev/ttyUSB1',
                         'at_ok' => true,
+                        'probe_error' => 'PROBE_TIMEOUT after 12.0s',
                     ],
                 ],
             ], 200),
@@ -75,8 +77,12 @@ class PythonRuntimeDashboardApiTest extends TestCase
             ->assertJsonPath('discovery.discovered_total', 2)
             ->assertJsonPath('discovery.tenant_visible_total', 1)
             ->assertJsonCount(1, 'discovery.modems')
+            ->assertJsonCount(2, 'discovery.all_modems')
             ->assertJsonPath('discovery.modems.0.device_id', 'modem-a')
-            ->assertJsonPath('discovery.modems.0.sim_id', '515031234567890');
+            ->assertJsonPath('discovery.modems.0.sim_id', '515031234567890')
+            ->assertJsonPath('discovery.modems.0.probe_error', null)
+            ->assertJsonPath('discovery.all_modems.1.device_id', 'modem-b')
+            ->assertJsonPath('discovery.all_modems.1.probe_error', 'PROBE_TIMEOUT after 12.0s');
     }
 
     public function test_runtime_api_returns_structured_failure_when_python_is_unreachable(): void

@@ -82,6 +82,34 @@
         margin-top: 12px;
     }
 
+    .runtime-row-healthy {
+        background: #ecfdf5;
+    }
+
+    .runtime-row-warning {
+        background: #fffbeb;
+    }
+
+    .runtime-row-error {
+        background: #fef2f2;
+    }
+
+    .mini-button {
+        padding: 5px 8px;
+        font-size: 12px;
+        border-radius: 4px;
+        margin-right: 6px;
+        border: 1px solid #374151;
+        background: #ffffff;
+        color: #111827;
+        cursor: pointer;
+    }
+
+    .mini-button:disabled {
+        cursor: not-allowed;
+        opacity: 0.5;
+    }
+
     .send-panel {
         border: 1px solid #e5e7eb;
         border-radius: 6px;
@@ -160,7 +188,7 @@
 @section('content')
 <p class="muted">
     Runtime integration visibility for Python health + modem discovery using
-    <code>GET /dashboard/api/runtime/python</code>. Discovery rows are tenant-filtered by IMSI mapping.
+    <code>GET /dashboard/api/runtime/python</code>. The table below shows the full Python discovery list.
 </p>
 
 <div class="controls">
@@ -240,19 +268,21 @@
     <table>
         <thead>
             <tr>
+                <th>Actions</th>
+                <th>SIM ID</th>
                 <th>Device ID</th>
-                <th>SIM ID / IMSI</th>
                 <th>Port</th>
                 <th>AT OK</th>
                 <th>SIM Ready</th>
                 <th>CREG Registered</th>
                 <th>Signal</th>
+                <th>Probe Error</th>
                 <th>Last Seen At</th>
             </tr>
         </thead>
         <tbody id="modemRows">
             <tr>
-                <td colspan="8" class="muted">No modem rows loaded.</td>
+                <td colspan="10" class="muted">No modem rows loaded.</td>
             </tr>
         </tbody>
     </table>
@@ -286,6 +316,7 @@
         const discoveredTotalEl = document.getElementById('discoveredTotal');
         const tenantVisibleTotalEl = document.getElementById('tenantVisibleTotal');
         const tenantImsiMappedEl = document.getElementById('tenantImsiMapped');
+        let latestDiscoveryRows = [];
 
         const escapeHtml = (value) => {
             return String(value)
@@ -343,30 +374,73 @@
             tenantImsiMappedEl.textContent = asText(discovery.tenant_imsi_mapped);
         };
 
+        const rowState = (modem) => {
+            const probeError = modem && modem.probe_error !== null && modem.probe_error !== undefined
+                ? String(modem.probe_error).trim()
+                : '';
+
+            if (probeError !== '') {
+                return 'error';
+            }
+
+            if (modem.at_ok === true && modem.sim_ready === true && modem.creg_registered === true) {
+                return 'healthy';
+            }
+
+            return 'warning';
+        };
+
+        const rowClass = (state) => {
+            if (state === 'healthy') {
+                return 'runtime-row-healthy';
+            }
+
+            if (state === 'error') {
+                return 'runtime-row-error';
+            }
+
+            return 'runtime-row-warning';
+        };
+
         const renderModems = (modems) => {
-            if (!Array.isArray(modems) || modems.length === 0) {
-                modemRowsEl.innerHTML = '<tr><td colspan="8" class="muted">No tenant-visible modem rows found.</td></tr>';
+            latestDiscoveryRows = Array.isArray(modems) ? modems : [];
+
+            if (latestDiscoveryRows.length === 0) {
+                modemRowsEl.innerHTML = '<tr><td colspan="10" class="muted">No modem rows returned by discovery.</td></tr>';
                 return;
             }
 
-            modemRowsEl.innerHTML = modems.map((modem) => `
-                <tr>
+            modemRowsEl.innerHTML = latestDiscoveryRows.map((modem, index) => {
+                const state = rowState(modem);
+                const simId = asText(modem.sim_id);
+                const simIdPresent = simId !== '-';
+                const simIdAttr = simIdPresent ? ` data-sim-id="${escapeHtml(simId)}"` : '';
+                const disabledAttr = simIdPresent ? '' : ' disabled';
+
+                return `
+                <tr class="${rowClass(state)}">
+                    <td>
+                        <button type="button" class="mini-button copy-sim-id"${simIdAttr}${disabledAttr}>Copy SIM ID</button>
+                        <button type="button" class="mini-button use-sim-id"${simIdAttr}${disabledAttr}>Use in Send Test</button>
+                    </td>
+                    <td>${escapeHtml(simId)}</td>
                     <td>${escapeHtml(asText(modem.device_id))}</td>
-                    <td>${escapeHtml(asText(modem.sim_id))}</td>
                     <td>${escapeHtml(asText(modem.port))}</td>
                     <td>${escapeHtml(boolText(modem.at_ok))}</td>
                     <td>${escapeHtml(boolText(modem.sim_ready))}</td>
                     <td>${escapeHtml(boolText(modem.creg_registered))}</td>
                     <td>${escapeHtml(asText(modem.signal))}</td>
+                    <td>${escapeHtml(asText(modem.probe_error))}</td>
                     <td>${escapeHtml(asText(modem.last_seen_at))}</td>
                 </tr>
-            `).join('');
+            `;
+            }).join('');
         };
 
         const runtimeStatusMeta = (payload) => {
             const health = payload && payload.health ? payload.health : {};
             const discovery = payload && payload.discovery ? payload.discovery : {};
-            const modems = Array.isArray(discovery.modems) ? discovery.modems : [];
+            const modems = Array.isArray(discovery.all_modems) ? discovery.all_modems : [];
             const fallbackTotal = Number(discovery.discovered_total || 0);
             const totalCount = modems.length > 0 ? modems.length : (Number.isFinite(fallbackTotal) ? fallbackTotal : 0);
             const probeErrorCount = modems.filter((modem) => {
@@ -430,11 +504,54 @@
                 }
 
                 renderSummary(payload);
-                renderModems(payload.discovery && payload.discovery.modems ? payload.discovery.modems : []);
+                renderModems(payload.discovery && payload.discovery.all_modems ? payload.discovery.all_modems : []);
                 const runtimeStatus = runtimeStatusMeta(payload);
                 setStatus(runtimeStatus.message, runtimeStatus.type);
             } catch (error) {
                 setStatus(`Runtime check failed: ${error.message}`, 'error');
+            }
+        });
+
+        modemRowsEl.addEventListener('click', async (event) => {
+            const target = event.target;
+
+            if (!(target instanceof HTMLButtonElement)) {
+                return;
+            }
+
+            const simId = (target.dataset.simId || '').trim();
+
+            if (simId === '') {
+                setStatus('No SIM ID available for this modem row.', 'warn');
+                return;
+            }
+
+            if (target.classList.contains('use-sim-id')) {
+                sendSimIdEl.value = simId;
+                setStatus(`SIM ID ${simId} copied into send test form.`, 'ok');
+                return;
+            }
+
+            if (target.classList.contains('copy-sim-id')) {
+                try {
+                    if (navigator.clipboard && navigator.clipboard.writeText) {
+                        await navigator.clipboard.writeText(simId);
+                    } else {
+                        const helper = document.createElement('textarea');
+                        helper.value = simId;
+                        helper.setAttribute('readonly', '');
+                        helper.style.position = 'absolute';
+                        helper.style.left = '-9999px';
+                        document.body.appendChild(helper);
+                        helper.select();
+                        document.execCommand('copy');
+                        document.body.removeChild(helper);
+                    }
+
+                    setStatus(`SIM ID copied: ${simId}`, 'ok');
+                } catch (_) {
+                    setStatus(`Could not copy SIM ID automatically. Use this value manually: ${simId}`, 'warn');
+                }
             }
         });
 
