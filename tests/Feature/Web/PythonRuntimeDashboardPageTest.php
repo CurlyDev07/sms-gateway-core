@@ -38,12 +38,22 @@ class PythonRuntimeDashboardPageTest extends TestCase
             ->assertSee('Identifier Source')
             ->assertSee('Runtime Send-Ready')
             ->assertSee('Probe Error')
+            ->assertSee('Row Safety')
+            ->assertSee('Strongest usable')
+            ->assertSee('Usable with caution')
+            ->assertSee('Visible only / not mapped')
+            ->assertSee('Degraded')
+            ->assertSee('Quick Filters')
+            ->assertSee('All')
+            ->assertSee('Send Ready')
+            ->assertSee('Fallback')
             ->assertSee('Copy SIM ID')
             ->assertSee('Use in Send Test')
             ->assertSee('Probe did not complete; send test disabled.')
             ->assertSee('No tenant SIM mapping for this runtime SIM ID; send test disabled.')
             ->assertSee('sim_id')
             ->assertSee('fallback device identifier')
+            ->assertSee('Safety guide')
             ->assertSee('Python runtime is reachable, but modem discovery failed. Check discovery endpoint/runtime logs.');
     }
 }

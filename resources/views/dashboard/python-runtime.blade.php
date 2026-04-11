@@ -184,6 +184,68 @@
         color: #991b1b;
     }
 
+    .safety-badge {
+        display: inline-block;
+        border-radius: 999px;
+        padding: 2px 8px;
+        font-size: 11px;
+        margin-bottom: 4px;
+    }
+
+    .safety-strong {
+        background: #dcfce7;
+        color: #166534;
+    }
+
+    .safety-caution {
+        background: #ffedd5;
+        color: #9a3412;
+    }
+
+    .safety-visible {
+        background: #dbeafe;
+        color: #1d4ed8;
+    }
+
+    .safety-degraded {
+        background: #fee2e2;
+        color: #991b1b;
+    }
+
+    .safety-note {
+        font-size: 11px;
+        color: #374151;
+        margin-top: 3px;
+    }
+
+    .row-filters {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 8px;
+        margin-top: 10px;
+        margin-bottom: 8px;
+    }
+
+    .row-filters strong {
+        font-size: 12px;
+        color: #374151;
+    }
+
+    button.filter-chip {
+        padding: 4px 8px;
+        border: 1px solid #d1d5db;
+        background: #ffffff;
+        color: #111827;
+        font-size: 12px;
+    }
+
+    button.filter-chip.active {
+        border-color: #111827;
+        background: #111827;
+        color: #ffffff;
+    }
+
     .send-panel {
         border: 1px solid #e5e7eb;
         border-radius: 6px;
@@ -269,6 +331,9 @@
 </p>
 <p class="muted">
     Send test uses <strong>Tenant SIM DB ID</strong> (Laravel <code>sims.id</code>), not runtime SIM ID.
+</p>
+<p class="muted">
+    Safety guide: <strong>Strongest usable</strong> means mapped + IMSI-backed + send-ready; fallback IDs are lower-trust; unmapped rows are runtime-visible only; probe/runtime issues are marked degraded.
 </p>
 
 <div class="controls">
@@ -378,11 +443,24 @@
     <div id="sendStatus" class="send-result muted">No send test executed yet.</div>
 </section>
 
+<div class="row-filters" id="runtimeRowFilters">
+    <strong>Quick Filters</strong>
+    <button type="button" class="filter-chip active" data-filter="all" aria-pressed="true">All</button>
+    <button type="button" class="filter-chip" data-filter="mapped" aria-pressed="false">Mapped</button>
+    <button type="button" class="filter-chip" data-filter="unmapped" aria-pressed="false">Unmapped</button>
+    <button type="button" class="filter-chip" data-filter="send_ready" aria-pressed="false">Send Ready</button>
+    <button type="button" class="filter-chip" data-filter="probe_error" aria-pressed="false">Probe Error</button>
+    <button type="button" class="filter-chip" data-filter="fallback" aria-pressed="false">Fallback</button>
+</div>
+
+<div id="runtimeFilterSummary" class="muted">Showing all rows.</div>
+
 <div class="table-wrap">
     <table>
         <thead>
             <tr>
                 <th>Actions</th>
+                <th>Row Safety</th>
                 <th>Runtime SIM ID (IMSI/device)</th>
                 <th>Tenant SIM DB ID</th>
                 <th>Mapping Status</th>
@@ -400,7 +478,7 @@
         </thead>
         <tbody id="modemRows">
             <tr>
-                <td colspan="14" class="muted">No modem rows loaded.</td>
+                <td colspan="15" class="muted">No modem rows loaded.</td>
             </tr>
         </tbody>
     </table>
@@ -417,6 +495,8 @@
         const statusEl = document.getElementById('status');
         const sendStatusEl = document.getElementById('sendStatus');
         const modemRowsEl = document.getElementById('modemRows');
+        const runtimeRowFiltersEl = document.getElementById('runtimeRowFilters');
+        const runtimeFilterSummaryEl = document.getElementById('runtimeFilterSummary');
 
         const sendSimIdEl = document.getElementById('sendSimId');
         const sendCustomerPhoneEl = document.getElementById('sendCustomerPhone');
@@ -441,6 +521,7 @@
         const fleetProbeErrorEl = document.getElementById('fleetProbeError');
         const fleetFallbackEl = document.getElementById('fleetFallback');
         let latestDiscoveryRows = [];
+        let activeRowFilter = 'all';
 
         const escapeHtml = (value) => {
             return String(value)
@@ -494,6 +575,16 @@
                 && modem.at_ok === true
                 && modem.sim_ready === true
                 && modem.creg_registered === true;
+        };
+
+        const normalizedIdentifierSource = (modem) => {
+            return String(modem && modem.identifier_source !== undefined ? modem.identifier_source : '')
+                .trim()
+                .toLowerCase();
+        };
+
+        const isFallbackIdentifier = (modem) => {
+            return normalizedIdentifierSource(modem) === 'fallback_device_id';
         };
 
         const setStatus = (text, type = 'muted') => {
@@ -622,23 +713,125 @@
             };
         };
 
+        const rowSafetyMeta = (modem) => {
+            const mapped = isMappedTenantSim(modem);
+            const ready = runtimeSendReady(modem);
+            const probeError = hasProbeError(modem);
+            const identifierSource = normalizedIdentifierSource(modem);
+            const sendability = runtimeRowSendability(modem, asText(modem.sim_id), asText(modem.tenant_sim_db_id));
+
+            if (probeError || !ready) {
+                return {
+                    badgeClass: 'safety-degraded',
+                    label: 'Degraded',
+                    description: sendability.disabled_reason || 'Runtime readiness checks are incomplete; treat as degraded.'
+                };
+            }
+
+            if (!mapped) {
+                return {
+                    badgeClass: 'safety-visible',
+                    label: 'Visible only / not mapped',
+                    description: 'No tenant SIM DB mapping; visible for runtime truth and debugging only.'
+                };
+            }
+
+            if (identifierSource === 'imsi') {
+                return {
+                    badgeClass: 'safety-strong',
+                    label: 'Strongest usable',
+                    description: 'Mapped IMSI-backed row with runtime send-ready state.'
+                };
+            }
+
+            return {
+                badgeClass: 'safety-caution',
+                label: 'Usable with caution',
+                description: 'Mapped and send-ready, but identifier/runtime signal quality is weaker than IMSI-backed rows.'
+            };
+        };
+
+        const filterLabel = (filter) => {
+            if (filter === 'mapped') {
+                return 'Mapped';
+            }
+
+            if (filter === 'unmapped') {
+                return 'Unmapped';
+            }
+
+            if (filter === 'send_ready') {
+                return 'Send Ready';
+            }
+
+            if (filter === 'probe_error') {
+                return 'Probe Error';
+            }
+
+            if (filter === 'fallback') {
+                return 'Fallback';
+            }
+
+            return 'All';
+        };
+
+        const applyRuntimeRowFilter = (rows) => {
+            const list = Array.isArray(rows) ? rows : [];
+
+            if (activeRowFilter === 'mapped') {
+                return list.filter((modem) => isMappedTenantSim(modem));
+            }
+
+            if (activeRowFilter === 'unmapped') {
+                return list.filter((modem) => !isMappedTenantSim(modem));
+            }
+
+            if (activeRowFilter === 'send_ready') {
+                return list.filter((modem) => runtimeSendReady(modem));
+            }
+
+            if (activeRowFilter === 'probe_error') {
+                return list.filter((modem) => hasProbeError(modem));
+            }
+
+            if (activeRowFilter === 'fallback') {
+                return list.filter((modem) => isFallbackIdentifier(modem));
+            }
+
+            return list;
+        };
+
+        const updateFilterChips = () => {
+            const chips = runtimeRowFiltersEl.querySelectorAll('button.filter-chip[data-filter]');
+            chips.forEach((chip) => {
+                const filter = String(chip.dataset.filter || 'all');
+                const isActive = filter === activeRowFilter;
+                chip.classList.toggle('active', isActive);
+                chip.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+            });
+        };
+
         const renderModems = (modems) => {
             latestDiscoveryRows = Array.isArray(modems) ? modems : [];
+            const filteredRows = applyRuntimeRowFilter(latestDiscoveryRows);
+            runtimeFilterSummaryEl.textContent = `Showing ${filteredRows.length} of ${latestDiscoveryRows.length} rows (${filterLabel(activeRowFilter)}).`;
+            updateFilterChips();
 
-            if (latestDiscoveryRows.length === 0) {
-                modemRowsEl.innerHTML = '<tr><td colspan="14" class="muted">No modem rows returned by discovery.</td></tr>';
+            if (filteredRows.length === 0) {
+                modemRowsEl.innerHTML = '<tr><td colspan="15" class="muted">No modem rows match the selected filter.</td></tr>';
                 return;
             }
 
-            modemRowsEl.innerHTML = latestDiscoveryRows.map((modem, index) => {
+            modemRowsEl.innerHTML = filteredRows.map((modem) => {
                 const state = rowState(modem);
                 const runtimeSimId = asText(modem.sim_id);
                 const tenantSimDbId = asText(modem.tenant_sim_db_id);
                 const sendability = runtimeRowSendability(modem, runtimeSimId, tenantSimDbId);
                 const isMapped = isMappedTenantSim(modem);
                 const identifierSource = asText(modem.identifier_source);
-                const isFallbackIdentifier = String(identifierSource) === 'fallback_device_id';
+                const fallbackIdentifier = isFallbackIdentifier(modem);
                 const runtimeReady = runtimeSendReady(modem);
+                const safety = rowSafetyMeta(modem);
                 const runtimeSimIdAttr = ` data-sim-id="${escapeHtml(runtimeSimId)}"`;
                 const tenantSimDbIdAttr = ` data-tenant-sim-id="${escapeHtml(tenantSimDbId)}"`;
                 const useDisabledAttr = sendability.can_use_in_send_test ? '' : ' disabled';
@@ -652,12 +845,14 @@
                 const mappingBadge = isMapped
                     ? '<span class="state-badge state-good">mapped</span>'
                     : '<span class="state-badge state-danger">unmapped</span>';
-                const identifierBadge = isFallbackIdentifier
+                const identifierBadge = fallbackIdentifier
                     ? '<span class="state-badge state-warn">fallback_device_id</span>'
                     : `<span class="state-badge state-good">${escapeHtml(identifierSource)}</span>`;
                 const runtimeReadyBadge = runtimeReady
                     ? '<span class="state-badge state-good">true</span>'
                     : '<span class="state-badge state-warn">false</span>';
+                const safetyBadge = `<span class="safety-badge ${escapeHtml(safety.badgeClass)}">${escapeHtml(safety.label)}</span>`;
+                const safetyNote = `<div class="safety-note">${escapeHtml(safety.description)}</div>`;
 
                 return `
                 <tr class="${rowClass(state)}">
@@ -666,6 +861,10 @@
                         <button type="button" class="mini-button use-sim-id"${runtimeSimIdAttr}${tenantSimDbIdAttr}${useDisabledAttr}${useTitleAttr}>Use in Send Test</button>
                         ${sendBadge}
                         ${sendDisabledReason}
+                    </td>
+                    <td>
+                        ${safetyBadge}
+                        ${safetyNote}
                     </td>
                     <td>${escapeHtml(runtimeSimId)}</td>
                     <td>${escapeHtml(tenantSimDbId)}</td>
@@ -763,6 +962,24 @@
                 message: `Python runtime reachable. Discovery completed successfully: ${healthyCount}/${totalCount} modems healthy.`
             };
         };
+
+        runtimeRowFiltersEl.addEventListener('click', (event) => {
+            const target = event.target;
+
+            if (!(target instanceof HTMLButtonElement)) {
+                return;
+            }
+
+            const filter = String(target.dataset.filter || '').trim();
+            const allowedFilters = ['all', 'mapped', 'unmapped', 'send_ready', 'probe_error', 'fallback'];
+
+            if (!allowedFilters.includes(filter)) {
+                return;
+            }
+
+            activeRowFilter = filter;
+            renderModems(latestDiscoveryRows);
+        });
 
         refreshButton.addEventListener('click', async () => {
             setStatus('Checking Python runtime...', 'muted');
