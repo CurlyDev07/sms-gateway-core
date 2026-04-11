@@ -274,6 +274,28 @@
         color: #374151;
     }
 
+    .help-guide {
+        margin: 0 0 12px 0;
+    }
+
+    .help-guide summary {
+        cursor: pointer;
+        font-weight: 600;
+        color: #111827;
+        margin-bottom: 6px;
+    }
+
+    .help-guide ul {
+        margin: 8px 0 0 18px;
+        padding: 0;
+        color: #374151;
+        font-size: 12px;
+    }
+
+    .help-guide li {
+        margin-bottom: 6px;
+    }
+
     .action-intent {
         margin-top: 6px;
         font-size: 11px;
@@ -438,6 +460,20 @@
     Safety guide: <strong>Strongest usable</strong> means mapped + IMSI-backed + send-ready; fallback IDs are lower-trust; unmapped rows are runtime-visible only; probe/runtime issues are marked degraded.
 </p>
 
+<details class="action-legend help-guide">
+    <summary>How to read this page</summary>
+    <ul>
+        <li><strong>Runtime SIM ID</strong>: runtime/discovery identity for diagnostics and copy actions.</li>
+        <li><strong>Tenant SIM DB ID</strong>: Laravel <code>sims.id</code> used by send-test and Laravel-side actions.</li>
+        <li><strong>Mapped</strong>: runtime row is linked to a tenant SIM record in Laravel.</li>
+        <li><strong>Fallback identifier</strong>: runtime used a weaker device-based identity instead of stronger SIM identity.</li>
+        <li><strong>Send Ready</strong>: runtime currently reports the row as send-capable.</li>
+        <li><strong>View Details</strong>: diagnostics only.</li>
+        <li><strong>Copy SIM ID</strong>: copies Runtime SIM ID.</li>
+        <li><strong>Use in Send Test</strong>: uses Tenant SIM DB ID only.</li>
+    </ul>
+</details>
+
 <div class="controls">
     <button id="refreshButton" type="button">Check Python Runtime</button>
 </div>
@@ -514,6 +550,31 @@
             </div>
         </div>
     </section>
+
+    <section class="card">
+        <h2>Mapping Review</h2>
+        <p class="muted">
+            Review-only visibility for runtime-to-Laravel reconciliation signals. No automatic remapping is performed on this page.
+        </p>
+        <div class="snapshot-grid">
+            <div class="snapshot-item">
+                <strong>Needs Review</strong>
+                <span id="mappingReviewNeedsReview">-</span>
+            </div>
+            <div class="snapshot-item">
+                <strong>Unmapped Rows</strong>
+                <span id="mappingReviewUnmapped">-</span>
+            </div>
+            <div class="snapshot-item">
+                <strong>Fallback Rows</strong>
+                <span id="mappingReviewFallback">-</span>
+            </div>
+            <div class="snapshot-item">
+                <strong>Unmapped + Send Ready</strong>
+                <span id="mappingReviewUnmappedSendReady">-</span>
+            </div>
+        </div>
+    </section>
 </div>
 
 <section class="send-panel">
@@ -556,14 +617,17 @@
 <div class="row-filters" id="runtimeRowFilters">
     <strong>Quick Filters</strong>
     <button type="button" class="filter-chip active" data-filter="all" aria-pressed="true">All</button>
+    <button type="button" class="filter-chip" data-filter="needs_review" aria-pressed="false">Needs Review</button>
     <button type="button" class="filter-chip" data-filter="mapped" aria-pressed="false">Mapped</button>
     <button type="button" class="filter-chip" data-filter="unmapped" aria-pressed="false">Unmapped</button>
+    <button type="button" class="filter-chip" data-filter="unmapped_send_ready" aria-pressed="false">Unmapped + Send Ready</button>
     <button type="button" class="filter-chip" data-filter="send_ready" aria-pressed="false">Send Ready</button>
     <button type="button" class="filter-chip" data-filter="probe_error" aria-pressed="false">Probe Error</button>
     <button type="button" class="filter-chip" data-filter="fallback" aria-pressed="false">Fallback</button>
 </div>
 
 <div id="runtimeFilterSummary" class="muted">Showing all rows.</div>
+<div id="mappingReviewSummary" class="muted">Mapping review summary will appear after discovery loads.</div>
 
 <section class="action-legend">
     <h3>Action Safety Legend</h3>
@@ -622,6 +686,22 @@
         <div class="diagnostics-item">
             <strong>Safety Reason</strong>
             <span id="diagSafetyReason">-</span>
+        </div>
+        <div class="diagnostics-item">
+            <strong>Mapping Review Status</strong>
+            <span id="diagMappingReviewStatus">-</span>
+        </div>
+        <div class="diagnostics-item">
+            <strong>Needs Review Reason</strong>
+            <span id="diagNeedsReviewReason">-</span>
+        </div>
+        <div class="diagnostics-item">
+            <strong>Review Flags</strong>
+            <span id="diagReviewFlags">-</span>
+        </div>
+        <div class="diagnostics-item">
+            <strong>Reconciliation Note</strong>
+            <span id="diagReconciliationNote">Review only: no Laravel mapping action is performed on this page.</span>
         </div>
         <div class="diagnostics-item">
             <strong>Send-Test Actionability</strong>
@@ -732,6 +812,7 @@
         const modemRowsEl = document.getElementById('modemRows');
         const runtimeRowFiltersEl = document.getElementById('runtimeRowFilters');
         const runtimeFilterSummaryEl = document.getElementById('runtimeFilterSummary');
+        const mappingReviewSummaryEl = document.getElementById('mappingReviewSummary');
         const selectedContextStatusEl = document.getElementById('selectedContextStatus');
         const clearSelectionButtonEl = document.getElementById('clearSelectionButton');
         const selectedRuntimeSimIdEl = document.getElementById('selectedRuntimeSimId');
@@ -742,6 +823,10 @@
         const runtimeDetailStatusEl = document.getElementById('runtimeDetailStatus');
         const diagSafetyEl = document.getElementById('diagSafety');
         const diagSafetyReasonEl = document.getElementById('diagSafetyReason');
+        const diagMappingReviewStatusEl = document.getElementById('diagMappingReviewStatus');
+        const diagNeedsReviewReasonEl = document.getElementById('diagNeedsReviewReason');
+        const diagReviewFlagsEl = document.getElementById('diagReviewFlags');
+        const diagReconciliationNoteEl = document.getElementById('diagReconciliationNote');
         const diagActionabilityEl = document.getElementById('diagActionability');
         const diagRuntimeSimIdEl = document.getElementById('diagRuntimeSimId');
         const diagTenantSimDbIdEl = document.getElementById('diagTenantSimDbId');
@@ -780,6 +865,10 @@
         const fleetSendReadyEl = document.getElementById('fleetSendReady');
         const fleetProbeErrorEl = document.getElementById('fleetProbeError');
         const fleetFallbackEl = document.getElementById('fleetFallback');
+        const mappingReviewNeedsReviewEl = document.getElementById('mappingReviewNeedsReview');
+        const mappingReviewUnmappedEl = document.getElementById('mappingReviewUnmapped');
+        const mappingReviewFallbackEl = document.getElementById('mappingReviewFallback');
+        const mappingReviewUnmappedSendReadyEl = document.getElementById('mappingReviewUnmappedSendReady');
         let latestDiscoveryRows = [];
         let currentRenderedRows = [];
         let activeRowFilter = 'all';
@@ -858,6 +947,59 @@
 
         const isFallbackIdentifier = (modem) => {
             return normalizedIdentifierSource(modem) === 'fallback_device_id';
+        };
+
+        const mappingNeedsReview = (modem) => {
+            return !isMappedTenantSim(modem) || isFallbackIdentifier(modem);
+        };
+
+        const unmappedAndSendReady = (modem) => {
+            return !isMappedTenantSim(modem) && runtimeSendReady(modem);
+        };
+
+        const mappingReviewContext = (modem) => {
+            const mapped = isMappedTenantSim(modem);
+            const fallback = isFallbackIdentifier(modem);
+            const ready = runtimeSendReady(modem);
+            const unmapped = !mapped;
+
+            const flags = [];
+            if (unmapped) {
+                flags.push('unmapped');
+            }
+
+            if (fallback) {
+                flags.push('fallback_identifier');
+            }
+
+            if (unmapped && ready) {
+                flags.push('unmapped_send_ready');
+            }
+
+            if (mapped && fallback) {
+                flags.push('mapped_weaker_identity');
+            }
+
+            let reason = 'No mapping review issue detected.';
+            if (unmapped && ready) {
+                reason = 'Unmapped + Send Ready: runtime reports send-capable, but no tenant SIM DB mapping exists yet.';
+            } else if (unmapped && fallback) {
+                reason = 'Unmapped in Laravel and fallback identifier is in use.';
+            } else if (unmapped) {
+                reason = 'Unmapped in Laravel.';
+            } else if (mapped && fallback) {
+                reason = 'Mapped but weaker identity context: fallback identifier is in use.';
+            } else if (fallback) {
+                reason = 'Fallback identifier is in use.';
+            }
+
+            return {
+                needsReview: flags.length > 0,
+                status: flags.length > 0 ? 'needs_review' : 'clear',
+                reason,
+                flags: flags.length > 0 ? flags.join(', ') : 'none',
+                note: 'Review only: no Laravel mapping action is performed on this page.',
+            };
         };
 
         const formatLocalDateTime = (date) => {
@@ -1156,12 +1298,20 @@
         };
 
         const filterLabel = (filter) => {
+            if (filter === 'needs_review') {
+                return 'Needs Review';
+            }
+
             if (filter === 'mapped') {
                 return 'Mapped';
             }
 
             if (filter === 'unmapped') {
                 return 'Unmapped';
+            }
+
+            if (filter === 'unmapped_send_ready') {
+                return 'Unmapped + Send Ready';
             }
 
             if (filter === 'send_ready') {
@@ -1182,12 +1332,20 @@
         const applyRuntimeRowFilter = (rows) => {
             const list = Array.isArray(rows) ? rows : [];
 
+            if (activeRowFilter === 'needs_review') {
+                return list.filter((modem) => mappingNeedsReview(modem));
+            }
+
             if (activeRowFilter === 'mapped') {
                 return list.filter((modem) => isMappedTenantSim(modem));
             }
 
             if (activeRowFilter === 'unmapped') {
                 return list.filter((modem) => !isMappedTenantSim(modem));
+            }
+
+            if (activeRowFilter === 'unmapped_send_ready') {
+                return list.filter((modem) => unmappedAndSendReady(modem));
             }
 
             if (activeRowFilter === 'send_ready') {
@@ -1223,6 +1381,10 @@
             runtimeDetailStatusEl.textContent = message;
             setDiagnosticsField(diagSafetyEl, '-');
             setDiagnosticsField(diagSafetyReasonEl, '-');
+            setDiagnosticsField(diagMappingReviewStatusEl, '-');
+            setDiagnosticsField(diagNeedsReviewReasonEl, '-');
+            setDiagnosticsField(diagReviewFlagsEl, '-');
+            setDiagnosticsField(diagReconciliationNoteEl, 'Review only: no Laravel mapping action is performed on this page.');
             setDiagnosticsField(diagActionabilityEl, '-');
             setDiagnosticsField(diagRuntimeSimIdEl, '-');
             setDiagnosticsField(diagTenantSimDbIdEl, '-');
@@ -1247,6 +1409,7 @@
             }
 
             const safety = rowSafetyMeta(modem);
+            const review = mappingReviewContext(modem);
             const runtimeSimId = asText(modem.sim_id);
             const tenantSimDbId = asText(modem.tenant_sim_db_id);
             const sendability = runtimeRowSendability(modem, runtimeSimId, tenantSimDbId);
@@ -1257,6 +1420,10 @@
             runtimeDetailStatusEl.textContent = `Showing diagnostics for runtime SIM ID: ${runtimeSimId}`;
             setDiagnosticsField(diagSafetyEl, safety.label);
             setDiagnosticsField(diagSafetyReasonEl, safety.description);
+            setDiagnosticsField(diagMappingReviewStatusEl, review.status);
+            setDiagnosticsField(diagNeedsReviewReasonEl, review.reason);
+            setDiagnosticsField(diagReviewFlagsEl, review.flags);
+            setDiagnosticsField(diagReconciliationNoteEl, review.note);
             setDiagnosticsField(diagActionabilityEl, actionability);
             setDiagnosticsField(diagRuntimeSimIdEl, runtimeSimId);
             setDiagnosticsField(diagTenantSimDbIdEl, tenantSimDbId);
@@ -1276,6 +1443,7 @@
 
         const renderModems = (modems) => {
             latestDiscoveryRows = Array.isArray(modems) ? modems : [];
+            renderMappingReview(latestDiscoveryRows);
             const filteredRows = applyRuntimeRowFilter(latestDiscoveryRows);
             currentRenderedRows = filteredRows;
             runtimeFilterSummaryEl.textContent = `Showing ${filteredRows.length} of ${latestDiscoveryRows.length} rows (${filterLabel(activeRowFilter)}).`;
@@ -1355,6 +1523,9 @@
                 const mappingBadge = isMapped
                     ? '<span class="state-badge state-good">mapped</span>'
                     : '<span class="state-badge state-danger">unmapped</span>';
+                const mappingReviewBadge = mappingNeedsReview(modem)
+                    ? '<div class="safety-note"><span class="state-badge state-warn">needs_review</span></div>'
+                    : '';
                 const identifierBadge = fallbackIdentifier
                     ? '<span class="state-badge state-warn">fallback_device_id</span>'
                     : `<span class="state-badge state-good">${escapeHtml(identifierSource)}</span>`;
@@ -1383,7 +1554,7 @@
                     </td>
                     <td>${escapeHtml(runtimeSimId)}</td>
                     <td>${escapeHtml(tenantSimDbId)}</td>
-                    <td>${mappingBadge}</td>
+                    <td>${mappingBadge}${mappingReviewBadge}</td>
                     <td>${identifierBadge}</td>
                     <td>${runtimeReadyBadge}</td>
                     <td>${escapeHtml(asText(modem.device_id))}</td>
@@ -1433,6 +1604,49 @@
             fleetSendReadyEl.textContent = String(sendReady);
             fleetProbeErrorEl.textContent = String(probeError);
             fleetFallbackEl.textContent = String(fallbackIdentifiers);
+        };
+
+        const mappingReviewCounts = (modems) => {
+            const rows = Array.isArray(modems) ? modems : [];
+            let unmapped = 0;
+            let fallback = 0;
+            let unmappedSendReadyCount = 0;
+
+            rows.forEach((modem) => {
+                const isUnmapped = !isMappedTenantSim(modem);
+                const isFallback = isFallbackIdentifier(modem);
+                const isUnmappedReady = unmappedAndSendReady(modem);
+
+                if (isUnmapped) {
+                    unmapped += 1;
+                }
+
+                if (isFallback) {
+                    fallback += 1;
+                }
+
+                if (isUnmappedReady) {
+                    unmappedSendReadyCount += 1;
+                }
+            });
+
+            return {
+                needsReview: rows.filter((modem) => mappingNeedsReview(modem)).length,
+                unmapped,
+                fallback,
+                unmappedSendReady: unmappedSendReadyCount,
+            };
+        };
+
+        const renderMappingReview = (rows) => {
+            const counts = mappingReviewCounts(rows);
+
+            mappingReviewNeedsReviewEl.textContent = String(counts.needsReview);
+            mappingReviewUnmappedEl.textContent = String(counts.unmapped);
+            mappingReviewFallbackEl.textContent = String(counts.fallback);
+            mappingReviewUnmappedSendReadyEl.textContent = String(counts.unmappedSendReady);
+
+            mappingReviewSummaryEl.textContent = `Mapping review: ${counts.needsReview} rows need review (unmapped: ${counts.unmapped}, fallback: ${counts.fallback}, unmapped + send-ready: ${counts.unmappedSendReady}).`;
         };
 
         const runtimeStatusMeta = (payload) => {
@@ -1487,6 +1701,7 @@
         };
 
         clearDiagnostics();
+        renderMappingReview([]);
         renderSelectedContext();
         setRuntimeState(
             'not_loaded',
@@ -1503,7 +1718,16 @@
             }
 
             const filter = String(target.dataset.filter || '').trim();
-            const allowedFilters = ['all', 'mapped', 'unmapped', 'send_ready', 'probe_error', 'fallback'];
+            const allowedFilters = [
+                'all',
+                'needs_review',
+                'mapped',
+                'unmapped',
+                'unmapped_send_ready',
+                'send_ready',
+                'probe_error',
+                'fallback'
+            ];
 
             if (!allowedFilters.includes(filter)) {
                 return;
