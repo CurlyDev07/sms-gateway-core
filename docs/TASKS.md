@@ -941,9 +941,18 @@ TASK 031 Evidence Ledger:
   - Dashboard note: `dashboard_api_status=302` is expected in script context (session-protected dashboard API without login cookie) and is not counted as runtime discovery failure
   - Result: PASS
 - H2 artifact links + pass/fail
-  - Result: PENDING
+  - Scenario: runtime endpoint unreachable classification path
+  - Artifacts: `artifacts/task-031/h2/runs.log`, `artifacts/task-031/h2/runtime_client_unreachable.txt`, `artifacts/task-031/h2/outbound_metadata_sample.txt`, `artifacts/task-031/h2/sms-app.log`, `artifacts/task-031/h2/config_snapshot.txt`, `artifacts/task-031/h2/commit.txt`, `artifacts/task-031/h2/timestamps.txt`
+  - Run summary: in-process URL override to unreachable endpoint produced `health.ok=false` and `discover.ok=false` with `error=connection_failed` and explicit connection exceptions
+  - Dashboard note: `dashboard_api_status=302` expected in script context (session-protected dashboard API without login cookie)
+  - Result: PASS
 - H3 artifact links + pass/fail
-  - Result: PENDING
+  - Scenario: runtime send timeout classification + retry policy mapping
+  - Artifacts: `artifacts/task-031/h3/runs.log`, `artifacts/task-031/h3/runtime_send_timeout.txt`, `artifacts/task-031/h3/retry_classification.txt`, `artifacts/task-031/h3/retry_fields_sample.txt`, `artifacts/task-031/h3/sms-app.log`, `artifacts/task-031/h3/config_snapshot.txt`, `artifacts/task-031/h3/commit.txt`, `artifacts/task-031/h3/timestamps.txt`
+  - Run summary: send-path timeout simulation produced `error=runtime_timeout` with `is_runtime_timeout=true`; classifier marks `RUNTIME_TIMEOUT` as retryable and `INVALID_RESPONSE` as non-retryable
+  - Persistence note: timeout sample validated classification + retry policy mapping; `runtime_timeout_rows` may be empty in artifact query when no recent persisted timeout-failed rows exist
+  - Dashboard note: `dashboard_api_status=302` expected in script context (session-protected dashboard API without login cookie)
+  - Result: PASS
 - H4 artifact links + pass/fail
   - Result: PENDING
 - H5 artifact links + pass/fail
