@@ -308,10 +308,9 @@ Status: IN PROGRESS
 
 ### Phase 6 Follow-Up (Open)
 - TASK 031 (IN PROGRESS): broader runtime/fleet reliability hardening after initial real-world validation milestone
-  - broader multi-modem live validation matrix
-  - operational recovery hardening for runtime failure modes
-  - runbook-grade suppression/cooldown/retry interaction expectations
-  - evidence-based acceptance criteria for hardening completion
+  - executed through strict checklist items `031-H1`..`031-H8` (see `docs/TASKS.md`)
+  - closure controlled by explicit acceptance gate `AC-031-01`..`AC-031-07`
+  - evidence ledger required before closure (artifact-linked pass/fail per hardening item)
 - TASK 032 (OPEN): deeper send-path maturity beyond the current validated bridge
   - explicit scope boundary: this is not runtime-page polish scope
   - later scale/performance handoff remains in Phase 5B

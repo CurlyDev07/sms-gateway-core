@@ -1236,10 +1236,9 @@ Current Phase 6 boundary:
 
 Open follow-up for later Phase 6 slices:
 - TASK 031 (IN PROGRESS): live-fleet reliability hardening follow-ups
-  - broader multi-modem live validation matrix
-  - operational recovery hardening for runtime failure modes
-  - runbook-grade suppression/cooldown/retry interaction expectations
-  - evidence-based hardening acceptance criteria
+  - governed by strict hardening checklist `031-H1`..`031-H8` in `docs/TASKS.md`
+  - closure gated by `AC-031-01`..`AC-031-07` with artifact-linked evidence ledger
+  - retains hardening-only boundary (no runtime-page polish scope)
 - TASK 032 (OPEN): deeper send-path maturity beyond current validated bridge + later scale handoff boundary
   - explicitly not runtime-page polish scope
 - TASK 021/022/023 remain deferred under Phase 5B scale/load path

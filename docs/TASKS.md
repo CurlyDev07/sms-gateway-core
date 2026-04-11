@@ -839,19 +839,109 @@ Boundary:
 ---
 
 ## TASK 031 — PHASE 6 LIVE FLEET VALIDATION / RUNTIME HARDENING FOLLOW-UPS
-Status: IN PROGRESS (hardening follow-ups remain open)
+Status: IN PROGRESS (strict hardening checklist active)
 
-Goal:
-- complete runtime hardening and live-fleet reliability depth beyond currently validated baseline
+Objective:
+- complete runtime hardening and live-fleet reliability depth beyond the validated baseline using evidence-based pass/fail gates
 
-Remaining in this task (hardening-only):
-- broader multi-modem live validation matrix (repeatability and failure-condition coverage)
-- operational recovery hardening for runtime failure modes across transport/runtime/hardware/network layers
-- runbook-grade expectations for suppression/cooldown/retry interactions under failure and recovery
-- evidence-based acceptance criteria for reliability hardening completion
+Scope In:
+- live-fleet reliability hardening only
+- multi-modem validation repeatability
+- runtime failure-mode recovery hardening
+- suppression/cooldown/retry interaction hardening
+- runbook-grade operational expectations with reproducible evidence
 
-Explicitly out of this task:
-- runtime page polish/UI maturity slices already implemented in 6.4/6.5/6.6
+Scope Out:
+- runtime page UI polish/maturity slices (already implemented in 6.4/6.5/6.6)
+- deeper send-path maturity redesign (TASK 032)
+- scale/load work (TASK 021/022/023)
+- mapping-write workflow changes
+
+Timeout Budget Source of Truth:
+- use currently active runtime timeout settings from deployment/runtime configuration (Laravel + Python runtime), rather than introducing new fixed values in this task doc
+
+Evidence Ledger Location:
+- maintain one ledger inside this task section under `TASK 031 Evidence Ledger` with artifact links for each hardening item (H1–H8)
+
+Hardening Checklist:
+
+031-H1 Multi-modem discovery reliability matrix
+- Scenario: repeated live discovery runs across healthy + degraded fleet conditions.
+- Expected behavior: bounded discovery response with structured output and no hanging.
+- Evidence to collect: timestamped discovery payload set + runtime logs per run.
+- Pass condition: all planned runs complete within configured timeout budget with no unclassified errors.
+- Failure/follow-up condition: capture failing payload/log and open hardening sub-item.
+
+031-H2 Runtime unreachable handling
+- Scenario: runtime endpoint unreachable.
+- Expected behavior: explicit unreachable classification, safe failure, no false success.
+- Evidence to collect: dashboard API response, runtime client result, outbound metadata sample, logs.
+- Pass condition: classification + surfaced state are consistent and traceable end-to-end.
+- Failure/follow-up condition: file reliability defect with payload + metadata evidence.
+
+031-H3 Runtime timeout handling
+- Scenario: runtime timeout on discovery/send path.
+- Expected behavior: timeout classification preserved and controlled retry behavior applied.
+- Evidence to collect: metadata retry fields (`retry_count`, `scheduled_at`, classification) + logs.
+- Pass condition: no uncontrolled immediate retry loop; policy-consistent scheduling confirmed.
+- Failure/follow-up condition: open retry-hardening defect with reproducible timeline.
+
+031-H4 Invalid response handling
+- Scenario: malformed/invalid runtime response.
+- Expected behavior: deterministic invalid-response classification and safe terminal/retry handling per policy.
+- Evidence to collect: raw response sample, normalized classification, resulting message state.
+- Pass condition: deterministic classification path with no ambiguous final state.
+- Failure/follow-up condition: document classification gap and lock corrective rule.
+
+031-H5 Suppression/cooldown behavior under repeated failures
+- Scenario: repeated runtime failures for same SIM.
+- Expected behavior: suppression/cooldown activates per policy and becomes operator-visible.
+- Evidence to collect: SIM runtime-control snapshots across repeated failures.
+- Pass condition: suppression state transitions are predictable and policy-consistent.
+- Failure/follow-up condition: open SIM-health hardening defect with transition evidence.
+
+031-H6 Recovery behavior after faults clear
+- Scenario: previously failing runtime/SIM recovers.
+- Expected behavior: suppression/cooldown exits per policy; send eligibility restores when conditions are met.
+- Evidence to collect: before/after health snapshots + message outcomes + logs.
+- Pass condition: recovery occurs without stale stuck suppression.
+- Failure/follow-up condition: file recovery-path bug with before/after evidence.
+
+031-H7 Runbook-grade operator expectations
+- Scenario: operator executes procedures for unreachable, timeout, probe-error-heavy, suppression/recovery conditions.
+- Expected behavior: repeatable outcomes from documented steps.
+- Evidence to collect: completed runbook execution records for each scenario.
+- Pass condition: second-operator dry run succeeds without undocumented tribal knowledge.
+- Failure/follow-up condition: revise runbook and rerun validation.
+
+031-H8 Evidence ledger and closure review
+- Scenario: hardening closure decision.
+- Expected behavior: all checklist items map to explicit artifacts and pass/fail outcomes.
+- Evidence to collect: single evidence ledger linking artifacts for H1–H7.
+- Pass condition: ledger complete; all required pass conditions met.
+- Failure/follow-up condition: keep TASK 031 open with explicit remaining items.
+
+Acceptance Criteria:
+- AC-031-01: Discovery reliability matrix completed with bounded, reproducible outcomes.
+- AC-031-02: Unreachable and timeout classes validated with policy-consistent handling.
+- AC-031-03: Invalid-response handling is deterministic and evidence-backed.
+- AC-031-04: Suppression/cooldown activation and recovery are validated and visible.
+- AC-031-05: Runbook procedures are dry-run validated for all required scenarios.
+- AC-031-06: Evidence ledger is complete and auditable.
+- AC-031-07: No ambiguous remaining scope in TASK 031; spillover is explicitly placed in TASK 032 or deferred tasks.
+
+Done / Closure Gate:
+- TASK 031 can be marked DONE only when all checklist items (H1–H8) pass and all acceptance criteria (AC-031-01..07) are satisfied with linked evidence.
+
+TASK 031 Evidence Ledger:
+- H1 artifact links + pass/fail
+- H2 artifact links + pass/fail
+- H3 artifact links + pass/fail
+- H4 artifact links + pass/fail
+- H5 artifact links + pass/fail
+- H6 artifact links + pass/fail
+- H7 artifact links + pass/fail
+- H8 artifact links + pass/fail
 
 ---
 

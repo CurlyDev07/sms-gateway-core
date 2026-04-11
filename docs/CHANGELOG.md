@@ -4,6 +4,35 @@ Last Updated: 2026-04-11
 
 ---
 
+## [2026-04-11] Docs Planning Checkpoint — TASK 031 Hardening Checklist Formalized
+
+### Summary
+Documentation-only planning update. TASK 031 is now formalized as a strict execution checklist with evidence requirements, pass/fail conditions, acceptance criteria, and an explicit closure gate.
+
+### What Changed
+- `docs/TASKS.md` now defines TASK 031 with:
+  - objective
+  - scope in / scope out
+  - hardening checklist items `031-H1`..`031-H8`
+  - evidence required per item
+  - pass/failure follow-up conditions
+  - acceptance criteria `AC-031-01`..`AC-031-07`
+  - done/closure gate + evidence ledger location
+- `docs/ROADMAP.md` now points Phase 6 follow-up to the strict TASK 031 checklist and AC-based closure gate.
+- `IMPLEMENTATION_PLAN.md` now states TASK 031 is governed by the strict checklist and artifact-linked closure gate.
+
+### Boundary Preserved
+- TASK 031 remains hardening/reliability only.
+- TASK 032 remains deeper send-path maturity only.
+- TASK 021/022/023 remain deferred under Phase 5B scale/load work.
+- Implemented 6.4/6.5/6.6 runtime/operator UI maturity remains documented as completed and is not reopened.
+
+### Status
+- docs/planning alignment update only
+- no product/runtime/API/auth behavior changes
+
+---
+
 ## [2026-04-11] Phase 6 Realignment Checkpoint — Runtime/UI Maturity Reflected (In Progress)
 
 ### Summary
