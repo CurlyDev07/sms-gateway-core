@@ -1,6 +1,6 @@
 # TASKS
 
-Last Updated: 2026-04-11 (Phase 6 runtime validation milestone)
+Last Updated: 2026-04-11 (Phase 6 realignment checkpoint)
 
 ---
 
@@ -648,7 +648,7 @@ Deferred beyond Phase 4 (later backlog):
 
 # PHASE 5A — DASHBOARD / AUTH / OPERATOR SYSTEM
 
-Phase 5A Status: IN PROGRESS (near completion)
+Phase 5A Status: COMPLETE (Locked)
 Phase 5A Checkpoint Validation: full suite green (267 passed)
 
 ## TASK 024 — DASHBOARD SESSION AUTH + TENANT BINDING
@@ -706,11 +706,12 @@ Completed:
 ---
 
 ## TASK 028 — PHASE 5A LOCK/CHECKPOINT CLOSURE
-Status: IN PROGRESS
+Status: DONE (closure/admin/docs boundary finalized)
 
-Remaining:
-- finalize Phase 5A lock boundary wording in docs
-- decide lock vs additional checkpoint based on scope-only review
+Completed:
+- finalized Phase 5A lock boundary wording in docs
+- closed Phase 5A checkpoint/lock decision as documentation/admin boundary work
+- no unresolved core engineering scope remained for Phase 5A at closure
 
 ---
 
@@ -725,6 +726,9 @@ Goal:
 - scale Laravel control plane
 - preserve SIM isolation
 
+Scope note:
+- deferred scale-path work (not a blocker for current Phase 6 implemented runtime/UI maturity documentation)
+
 ---
 
 ## TASK 022 — PYTHON EXECUTION SCALE-OUT
@@ -734,6 +738,9 @@ Goal:
 - scale Python nodes as needed
 - keep Laravel/Python boundary intact
 - maintain SIM-centric routing
+
+Scope note:
+- deferred scale-path work (not a blocker for current Phase 6 implemented runtime/UI maturity documentation)
 
 ---
 
@@ -753,11 +760,14 @@ Validate:
 - operator controls
 - migration safety
 
+Scope note:
+- deferred scale-path work (not a blocker for current Phase 6 implemented runtime/UI maturity documentation)
+
 ---
 
 # PHASE 6 — PYTHON RUNTIME INTEGRATION & LIVE MODEM FLEET
 
-Phase 6 Status: IN PROGRESS (Phase 6.1 foundation + Phase 6.2 send bridge + real runtime send validation milestone; Phase 6 remains open)
+Phase 6 Status: IN PROGRESS (implemented through 6.6.b runtime/operator maturity; hardening and deeper send-path maturity remain open)
 Current Validation Baseline: full suite green (286 passed)
 
 ## TASK 029 — PHASE 6.1 LARAVEL ↔ PYTHON RUNTIME CONTRACT FOUNDATION
@@ -803,29 +813,45 @@ Boundary of this task:
 
 ---
 
+## IMPLEMENTED PHASE 6 MATURITY SLICES (POST-6.2, NOW REALIGNED)
+Status: IMPLEMENTED (reflected in docs realignment)
+
+Implemented:
+- Phase 6.3: retry reliability + SIM runtime suppression/control behavior
+- Phase 6.4.a: runtime fleet observability UI
+- Phase 6.4.b: row safety semantics / operator action clarity
+- Phase 6.4.c: runtime detail drilldown / operator diagnostics
+- Phase 6.4.d: operator empty/failure/refresh states
+- Phase 6.5.a: runtime page action safety / intent confirmation
+- Phase 6.5.b: selected row context / action target clarity
+- Phase 6.5.c: operator reset / clear context UX
+- Phase 6.5.d: lightweight operator guidance / page help copy
+- Phase 6.6.a: runtime-to-Laravel mapping review / operator reconciliation UX
+- Phase 6.6.b: mapping review detail / reconciliation context
+
+Boundary:
+- implemented 6.4/6.5/6.6 slices are operator/runtime UI maturity and reconciliation visibility
+- these slices do not represent final runtime hardening completion
+- these slices do not add mapping-write workflows
+- Runtime SIM ID remains distinct from Tenant SIM DB ID (`sims.id`)
+- send-test/Laravel actions continue using Tenant SIM DB ID only
+
+---
+
 ## TASK 031 — PHASE 6 LIVE FLEET VALIDATION / RUNTIME HARDENING FOLLOW-UPS
-Status: IN PROGRESS (validation milestone achieved; hardening follow-ups remain open)
+Status: IN PROGRESS (hardening follow-ups remain open)
 
 Goal:
-- perform broader real-world runtime/fleet validation on top of Phase 6.1/6.2 baseline
-- deepen runtime/send-path hardening and operational recovery behavior
+- complete runtime hardening and live-fleet reliability depth beyond currently validated baseline
 
-Current milestone achieved:
-- real end-to-end Laravel→Python→modem send validated in live environment
-- runtime discovery + dashboard send-test flow verified against real hardware
-- physical SMS delivery confirmed
-- runtime UI safety guardrails verified in use:
-  - full discovery rows visible
-  - non-send-ready rows blocked from send-test
-  - disabled reasons shown to operators
-- critical SIM identity lesson captured:
-  - Runtime SIM ID (Python discovery IMSI/fallback identifier) is distinct from Tenant SIM DB ID (`sims.id`)
-  - dashboard send-test must use Tenant SIM DB ID
-  - mixing IDs caused `sim_not_found`; mapping + UI distinction resolved it
+Remaining in this task (hardening-only):
+- broader multi-modem live validation matrix (repeatability and failure-condition coverage)
+- operational recovery hardening for runtime failure modes across transport/runtime/hardware/network layers
+- runbook-grade expectations for suppression/cooldown/retry interactions under failure and recovery
+- evidence-based acceptance criteria for reliability hardening completion
 
-Remaining in this task:
-- continue runtime reliability hardening beyond this milestone
-- expand fleet-level validation coverage and failure-recovery depth
+Explicitly out of this task:
+- runtime page polish/UI maturity slices already implemented in 6.4/6.5/6.6
 
 ---
 
@@ -833,8 +859,16 @@ Remaining in this task:
 Status: OPEN
 
 Goal:
-- complete deeper send-path maturity work needed beyond current structured bridge
-- hand off future scaling/performance concerns to Phase 5B-aligned scale path
+- complete deeper send-path maturity work beyond the currently validated bridge baseline
+- define clean handoff boundary from send-path maturity to Phase 5B scale/load work
+
+Scope in this task:
+- deeper send-path maturity and recovery behavior not yet finalized by TASK 031 hardening closure
+- explicit boundary-setting for what remains Phase 6 vs what moves to Phase 5B scale path
+
+Explicitly out of this task:
+- additional runtime page UI polish/operator UX slices (not TASK 032 scope)
+- Phase 5B scale/load execution (remains TASK 021/022/023)
 
 ---
 

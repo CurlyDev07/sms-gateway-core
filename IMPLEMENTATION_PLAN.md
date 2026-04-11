@@ -1,7 +1,7 @@
 # SMS Gateway Core – Implementation Plan (Revised)
 
-**Last Updated:** 2026-04-11 (Phase 6 runtime validation milestone)
-**Status:** Phase 0/1/2/4 Complete (Locked) — Phase 5A In Progress (Near Completion), Phase 5B Not Started, Phase 6 In Progress (6.1 + 6.2 + runtime validation milestone)
+**Last Updated:** 2026-04-11 (Phase 6 realignment checkpoint)
+**Status:** Phase 0/1/2/4 Complete (Locked) — Phase 5A Complete (Locked), Phase 5B Not Started, Phase 6 In Progress (implemented through 6.6.b; hardening/maturity open)
 **Alignment:** Validated against all 9 locked docs with phase-boundary corrections
 
 ---
@@ -1139,7 +1139,7 @@ UX polish included:
 
 ### 7.1 PHASE 5A — DASHBOARD / AUTH / OPERATOR SYSTEM (Current)
 
-**Status:** IN PROGRESS (near completion)
+**Status:** COMPLETE (Locked)
 **Validation:** checkpoint full suite green (267 passed)
 
 Implemented in repo:
@@ -1161,7 +1161,8 @@ Implemented in repo:
 Current boundary:
 - this track is dashboard/session-human-operator scope only
 - machine `/api/*` API-client authentication remains unchanged
-- no Phase 5A lock claim in this checkpoint (status-only realignment)
+- lock/checkpoint closure finalized as docs/admin boundary (TASK 028 complete)
+- no unresolved core engineering scope remains in this track
 
 ### 7.2 PHASE 5B — SCALE / INFRASTRUCTURE / THROUGHPUT (Future)
 
@@ -1178,7 +1179,7 @@ Planned scope:
 
 ### 7.3 PHASE 6 — PYTHON RUNTIME INTEGRATION & LIVE MODEM FLEET (Current Runtime Track)
 
-**Status:** IN PROGRESS (Phase 6.1 + 6.2 implemented checkpoints + real runtime send validated; Phase 6 remains open)
+**Status:** IN PROGRESS (implemented through 6.6.b runtime/operator maturity; Phase 6 remains open)
 **Validation:** current full suite green (286 passed)
 
 Phase 6.1 foundation implemented in current repo:
@@ -1214,14 +1215,34 @@ Phase 6 runtime validation milestone achieved in live environment:
   - Laravel dashboard send-test and Laravel-side actions must use Tenant SIM DB ID
   - mixing IDs causes `sim_not_found`; mapping resolution + UI distinction fix this
 
+Implemented Phase 6 maturity slices after 6.2:
+- Phase 6.3: retry reliability + SIM runtime suppression/control behavior
+- Phase 6.4.a–6.4.d: runtime fleet observability, row safety/action clarity, diagnostics drilldown, empty/failure/refresh clarity
+- Phase 6.5.a–6.5.d: action safety/intent clarity, selected-target clarity, reset context UX, lightweight operator guidance
+- Phase 6.6.a–6.6.b: mapping review visibility + reconciliation context explanation (read-only)
+
+Scope boundary clarification for implemented 6.4/6.5/6.6 slices:
+- these slices are operator/runtime UI maturity and reconciliation visibility
+- these slices are not final runtime hardening completion
+- these slices do not introduce mapping-write workflows
+- Runtime SIM ID and Tenant SIM DB ID remain explicitly distinct
+- send-test/Laravel actions continue using Tenant SIM DB ID (`sims.id`) only
+
 Current Phase 6 boundary:
-- Phase 6.1/6.2 + runtime validation milestone provide runtime health/discovery + first structured send bridge + proven real send path
+- implemented scope now covers Phase 6.1/6.2 foundation/bridge + real runtime send validation + 6.3/6.4/6.5/6.6 runtime/operator maturity
 - Python runtime remains external to this Laravel repo
 - this does not claim full production send hardening/complete fleet maturity
 - this does not include broader scale-path hardening (Phase 5B/later work)
 
 Open follow-up for later Phase 6 slices:
-- deeper runtime/send-path hardening and broader live-fleet validation
+- TASK 031 (IN PROGRESS): live-fleet reliability hardening follow-ups
+  - broader multi-modem live validation matrix
+  - operational recovery hardening for runtime failure modes
+  - runbook-grade suppression/cooldown/retry interaction expectations
+  - evidence-based hardening acceptance criteria
+- TASK 032 (OPEN): deeper send-path maturity beyond current validated bridge + later scale handoff boundary
+  - explicitly not runtime-page polish scope
+- TASK 021/022/023 remain deferred under Phase 5B scale/load path
 
 ---
 

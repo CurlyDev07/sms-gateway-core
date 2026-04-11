@@ -4,6 +4,42 @@ Last Updated: 2026-04-11
 
 ---
 
+## [2026-04-11] Phase 6 Realignment Checkpoint — Runtime/UI Maturity Reflected (In Progress)
+
+### Summary
+Docs are realigned to current repo reality. Phase 6 remains IN PROGRESS, and implemented scope now explicitly includes runtime/operator maturity work delivered after the 6.1/6.2 foundation and send bridge.
+
+### Implemented Phase 6 Scope (Current Reality)
+- Phase 6.1: Laravel↔Python runtime contract foundation (`/health`, `/modems/discover`)
+- Phase 6.2: Structured Laravel→Python send execution bridge with normalized runtime failures
+- Phase 6.3: Retry reliability + SIM runtime suppression/control behavior
+- Phase 6.4.a–6.4.d: Runtime fleet observability, row safety semantics, diagnostics drilldown, empty/failure/refresh clarity
+- Phase 6.5.a–6.5.d: Action intent clarity, selected-target clarity, reset context UX, lightweight operator guidance
+- Phase 6.6.a–6.6.b: Mapping review visibility + reconciliation context explanation (read-only)
+
+### Scope Boundary Clarification
+- Implemented 6.4/6.5/6.6 slices are operator/runtime UI maturity and reconciliation visibility.
+- These slices are not final runtime hardening completion and do not introduce mapping-write workflows.
+- Runtime SIM ID and Tenant SIM DB ID remain explicitly distinct.
+- Send-test and Laravel-side actions continue to use Tenant SIM DB ID (`sims.id`) only.
+
+### Remaining Open Scope
+- TASK 031 (IN PROGRESS): live-fleet reliability hardening follow-ups
+- TASK 032 (OPEN): deeper send-path maturity + later scale handoff
+- TASK 021/022/023 remain deferred under Phase 5B scale/load path
+
+### Validation
+- current documented full-suite baseline remains: 286 passed
+
+### Status
+- Phase 4 COMPLETE (Locked)
+- Phase 5A COMPLETE (Locked; TASK 028 closure/docs boundary finalized)
+- Phase 5B NOT STARTED (future scale path)
+- Phase 6 IN PROGRESS (implemented through 6.6.b; hardening/maturity work remains open)
+- Python runtime remains external to this Laravel repo
+
+---
+
 ## [2026-04-11] Phase 6 Runtime Validation Milestone — Real End-to-End Send Verified (In Progress)
 
 ### Summary

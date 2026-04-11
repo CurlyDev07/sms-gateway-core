@@ -3,7 +3,7 @@
 ---
 
 ## CURRENT PHASE
-Phase 6 – IN PROGRESS (6.1 Foundation + 6.2 Send Bridge + Real End-to-End Send Validated)
+Phase 6 – IN PROGRESS (6.1 + 6.2 + 6.3 + 6.4/6.5/6.6 Runtime/UI Maturity Implemented; Hardening Still Open)
 
 ### Phase Status
 - Phase 0: COMPLETE (Locked)
@@ -11,15 +11,15 @@ Phase 6 – IN PROGRESS (6.1 Foundation + 6.2 Send Bridge + Real End-to-End Send
 - Phase 2: COMPLETE (Locked)
 - Phase 3: COMPLETE (absorbed into Phase 2 — see Phase 3 section)
 - Phase 4: COMPLETE (Locked) — tenant-safe operator API + core dashboard/operator surfaces implemented
-- Phase 5A: IN PROGRESS (near completion) — dashboard/auth/operator system
+- Phase 5A: COMPLETE (Locked) — dashboard/auth/operator system
 - Phase 5B: NOT STARTED — scale/infrastructure/throughput path
-- Phase 6: IN PROGRESS — Python Runtime Integration & Live Modem Fleet (Phase 6.1 foundation + Phase 6.2 send bridge + real runtime send validation milestone)
+- Phase 6: IN PROGRESS — Python Runtime Integration & Live Modem Fleet (implemented through 6.6.b; TASK 031/032 remain open)
 - Phase 1 lock result: manual migration baseline + failover/reassign hardening complete
 - Phase 2 lock result: Redis transport + rebuild + retry + worker/controller/event wiring + Laravel-side Python integration + errorLayer-aware retry policy + live smoke-test proven + last_success_at bug fix + bootstrap seeders + Python API authentication + SimHealthService validation — all complete and locked
 - Phase 2 lock validation: full suite green (120 passed)
 - Phase 2 explicit deferral: per-modem send lock is Python-owned hardware-safe execution behavior; deferred outside Phase 2 lock scope
 - Phase 4 lock validation: full suite green (205 passed)
-- Phase 5A checkpoint validation: full suite green (267 passed)
+- Phase 5A closure: TASK 028 finalized as docs/closure boundary work (no additional core engineering required)
 - Phase 6.2 current validation: full suite green (286 passed)
 - Phase 6 runtime validation milestone: real Laravel→Python→modem send verified (physical SMS received)
 
@@ -215,7 +215,7 @@ Backend/API surfaces (including rebalance + bulk send) and core dashboard/operat
 
 ## PHASE 5A — DASHBOARD / AUTH / OPERATOR SYSTEM
 
-Status: IN PROGRESS (near completion)
+Status: COMPLETE (Locked)
 
 Completed in current repo:
 - dashboard login/logout and session-protected dashboard routes
@@ -228,8 +228,9 @@ Completed in current repo:
 - shared dashboard layout + identity banner + navigation/page-title polish
 - operator list filter/sort/search
 
-Remaining for lock decision:
-- finalize Phase 5A lock boundary/checkpoint wording in docs
+Lock closure:
+- Phase 5A lock/checkpoint closure task completed as docs/admin boundary finalization (TASK 028)
+- no additional core engineering scope required for Phase 5A lock
 
 ---
 
@@ -270,6 +271,28 @@ Status: IN PROGRESS
 - runtime diagnostics persisted to `outbound_messages.metadata`
 - controlled dashboard send-test surface added for manual verification
 
+### Phase 6.3 Reliability Control (Implemented)
+- retry classification and controlled retry behavior integrated into runtime send path
+- SIM runtime suppression/control visibility integrated into Laravel-side health/safety surfaces
+- runtime-control snapshots surfaced for operator visibility and safer behavior under repeated failures
+
+### Phase 6.4 Runtime Fleet Observability UI (Implemented)
+- 6.4.a: runtime fleet observability baseline
+- 6.4.b: row safety semantics and operator action clarity
+- 6.4.c: runtime detail drilldown diagnostics
+- 6.4.d: empty/failure/refresh state clarity
+
+### Phase 6.5 Runtime Action Clarity UI (Implemented)
+- 6.5.a: action intent confirmation and identity-boundary clarity
+- 6.5.b: selected-row/action-target context clarity
+- 6.5.c: clear-selection/reset-context UX
+- 6.5.d: lightweight operator guidance / page help copy
+
+### Phase 6.6 Mapping Review Visibility UI (Implemented)
+- 6.6.a: runtime-to-Laravel mapping review summary/filter/visibility
+- 6.6.b: diagnostics-level reconciliation context explanation (read-only)
+- mapping review remains informational only (no mapping-write workflow added)
+
 ### Phase 6 Runtime Validation Milestone (Implemented)
 - real end-to-end Laravel→Python→modem send validated in live environment
 - Python runtime discovery + send execution path verified through operator runtime dashboard flow
@@ -284,10 +307,15 @@ Status: IN PROGRESS
   - mixing IDs causes `sim_not_found`; mapping and UI distinction resolve the issue
 
 ### Phase 6 Follow-Up (Open)
-- broader runtime/fleet reliability hardening after initial real-world validation milestone
-- deeper send-path hardening and recovery maturity beyond current validated baseline
-- broader monitoring/analytics depth for runtime operations
-- future scaling/performance work remains outside this slice (see Phase 5B)
+- TASK 031 (IN PROGRESS): broader runtime/fleet reliability hardening after initial real-world validation milestone
+  - broader multi-modem live validation matrix
+  - operational recovery hardening for runtime failure modes
+  - runbook-grade suppression/cooldown/retry interaction expectations
+  - evidence-based acceptance criteria for hardening completion
+- TASK 032 (OPEN): deeper send-path maturity beyond the current validated bridge
+  - explicit scope boundary: this is not runtime-page polish scope
+  - later scale/performance handoff remains in Phase 5B
+- TASK 021/022/023 remain deferred under Phase 5B scale/load path and are not blockers for documenting implemented Phase 6 maturity
 
 ---
 
