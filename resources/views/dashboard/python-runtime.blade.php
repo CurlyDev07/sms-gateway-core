@@ -34,6 +34,24 @@
         font-size: 14px;
     }
 
+    .runtime-meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        margin: 6px 0 10px 0;
+        font-size: 12px;
+        color: #374151;
+    }
+
+    .runtime-meta strong {
+        color: #111827;
+    }
+
+    .state-helper {
+        font-size: 13px;
+        margin: 0 0 12px 0;
+    }
+
     .ok {
         color: #065f46;
     }
@@ -92,6 +110,11 @@
 
     .runtime-row-error {
         background: #fef2f2;
+    }
+
+    .runtime-row-selected {
+        outline: 2px solid #1d4ed8;
+        outline-offset: -2px;
     }
 
     .mini-button {
@@ -232,6 +255,31 @@
         color: #374151;
     }
 
+    .action-legend {
+        border: 1px solid #e5e7eb;
+        border-radius: 6px;
+        background: #f9fafb;
+        padding: 10px;
+        margin-bottom: 10px;
+    }
+
+    .action-legend h3 {
+        margin: 0 0 6px 0;
+        font-size: 14px;
+    }
+
+    .action-legend p {
+        margin: 0;
+        font-size: 12px;
+        color: #374151;
+    }
+
+    .action-intent {
+        margin-top: 6px;
+        font-size: 11px;
+        color: #1f2937;
+    }
+
     button.filter-chip {
         padding: 4px 8px;
         border: 1px solid #d1d5db;
@@ -248,6 +296,14 @@
 
     .diagnostics-panel {
         margin-bottom: 10px;
+    }
+
+    .selected-context-panel {
+        margin-bottom: 10px;
+    }
+
+    .context-actions {
+        margin: 8px 0 0 0;
     }
 
     .diagnostics-grid {
@@ -387,6 +443,14 @@
 </div>
 
 <div id="status" class="status muted">No runtime data loaded yet.</div>
+<div class="runtime-meta">
+    <span><strong>Last Refresh Attempt:</strong> <span id="lastRefreshAttempt">-</span></span>
+    <span><strong>Last Successful Load:</strong> <span id="lastRefreshSuccess">-</span></span>
+    <span><strong>Runtime State:</strong> <span id="runtimeStateLabel">not_loaded</span></span>
+</div>
+<div id="runtimeStateHelper" class="state-helper muted">
+    Click <strong>Check Python Runtime</strong> to load health/discovery state.
+</div>
 
 <div class="cards">
     <section class="card">
@@ -500,6 +564,49 @@
 </div>
 
 <div id="runtimeFilterSummary" class="muted">Showing all rows.</div>
+
+<section class="action-legend">
+    <h3>Action Safety Legend</h3>
+    <p>
+        <strong>View Details</strong> inspects runtime diagnostics only.
+        <strong>Copy SIM ID</strong> copies the runtime <code>sim_id</code>.
+        <strong>Use in Send Test</strong> uses Laravel Tenant SIM DB ID (<code>sims.id</code>), never runtime SIM ID.
+    </p>
+</section>
+
+<section class="card selected-context-panel">
+    <h2>Selected Row / Action Target</h2>
+    <p class="muted">
+        Runtime context and Laravel action target are tracked separately. Send test always targets
+        <strong>Tenant SIM DB ID</strong>, never runtime SIM ID.
+    </p>
+    <div id="selectedContextStatus" class="muted">No row selected yet.</div>
+    <div class="context-actions">
+        <button id="clearSelectionButton" type="button" class="mini-button">Clear Selection</button>
+    </div>
+    <div class="diagnostics-grid">
+        <div class="diagnostics-item">
+            <strong>Selected Runtime SIM ID</strong>
+            <span id="selectedRuntimeSimId">-</span>
+        </div>
+        <div class="diagnostics-item">
+            <strong>Selected Tenant SIM DB ID</strong>
+            <span id="selectedTenantSimDbId">-</span>
+        </div>
+        <div class="diagnostics-item">
+            <strong>Diagnostics Target</strong>
+            <span id="selectedDiagnosticsTarget">-</span>
+        </div>
+        <div class="diagnostics-item">
+            <strong>Send-Test Target</strong>
+            <span id="selectedSendTestTarget">-</span>
+        </div>
+        <div class="diagnostics-item">
+            <strong>Last Action Context</strong>
+            <span id="selectedLastActionContext">-</span>
+        </div>
+    </div>
+</section>
 
 <section class="card diagnostics-panel">
     <h2>Row Diagnostics</h2>
@@ -617,10 +724,21 @@
         const refreshButton = document.getElementById('refreshButton');
         const sendTestButton = document.getElementById('sendTestButton');
         const statusEl = document.getElementById('status');
+        const lastRefreshAttemptEl = document.getElementById('lastRefreshAttempt');
+        const lastRefreshSuccessEl = document.getElementById('lastRefreshSuccess');
+        const runtimeStateLabelEl = document.getElementById('runtimeStateLabel');
+        const runtimeStateHelperEl = document.getElementById('runtimeStateHelper');
         const sendStatusEl = document.getElementById('sendStatus');
         const modemRowsEl = document.getElementById('modemRows');
         const runtimeRowFiltersEl = document.getElementById('runtimeRowFilters');
         const runtimeFilterSummaryEl = document.getElementById('runtimeFilterSummary');
+        const selectedContextStatusEl = document.getElementById('selectedContextStatus');
+        const clearSelectionButtonEl = document.getElementById('clearSelectionButton');
+        const selectedRuntimeSimIdEl = document.getElementById('selectedRuntimeSimId');
+        const selectedTenantSimDbIdEl = document.getElementById('selectedTenantSimDbId');
+        const selectedDiagnosticsTargetEl = document.getElementById('selectedDiagnosticsTarget');
+        const selectedSendTestTargetEl = document.getElementById('selectedSendTestTarget');
+        const selectedLastActionContextEl = document.getElementById('selectedLastActionContext');
         const runtimeDetailStatusEl = document.getElementById('runtimeDetailStatus');
         const diagSafetyEl = document.getElementById('diagSafety');
         const diagSafetyReasonEl = document.getElementById('diagSafetyReason');
@@ -665,6 +783,18 @@
         let latestDiscoveryRows = [];
         let currentRenderedRows = [];
         let activeRowFilter = 'all';
+        let currentRuntimeCategory = 'not_loaded';
+        let lastRefreshAttemptAt = null;
+        let lastRefreshSuccessAt = null;
+        let selectedRowKey = null;
+        let selectedContext = {
+            runtimeSimId: null,
+            tenantSimDbId: null,
+            diagnosticsTarget: null,
+            sendTestTarget: null,
+            lastAction: null,
+            status: 'No row selected yet.'
+        };
 
         const escapeHtml = (value) => {
             return String(value)
@@ -728,6 +858,137 @@
 
         const isFallbackIdentifier = (modem) => {
             return normalizedIdentifierSource(modem) === 'fallback_device_id';
+        };
+
+        const formatLocalDateTime = (date) => {
+            if (!(date instanceof Date) || Number.isNaN(date.getTime())) {
+                return '-';
+            }
+
+            return date.toLocaleString();
+        };
+
+        const normalizeNullableValue = (value) => {
+            const text = asText(value);
+
+            return text === '-' ? null : text;
+        };
+
+        const rowIdentityKey = (modem) => {
+            return [
+                asText(modem && modem.sim_id !== undefined ? modem.sim_id : null),
+                asText(modem && modem.tenant_sim_db_id !== undefined ? modem.tenant_sim_db_id : null),
+                asText(modem && modem.device_id !== undefined ? modem.device_id : null),
+                asText(modem && modem.port !== undefined ? modem.port : null),
+            ].join('|');
+        };
+
+        const renderSelectedContext = () => {
+            selectedContextStatusEl.textContent = selectedContext.status || 'No row selected yet.';
+            selectedRuntimeSimIdEl.textContent = selectedContext.runtimeSimId || '-';
+            selectedTenantSimDbIdEl.textContent = selectedContext.tenantSimDbId || '-';
+            selectedDiagnosticsTargetEl.textContent = selectedContext.diagnosticsTarget || '-';
+            selectedSendTestTargetEl.textContent = selectedContext.sendTestTarget || '-';
+            selectedLastActionContextEl.textContent = selectedContext.lastAction || '-';
+        };
+
+        const setSelectedContextStatus = (statusText) => {
+            selectedContext.status = statusText;
+            renderSelectedContext();
+        };
+
+        const setSelectedContextFromRow = (modem) => {
+            if (!modem || typeof modem !== 'object') {
+                return;
+            }
+
+            selectedContext.runtimeSimId = normalizeNullableValue(modem.sim_id);
+            selectedContext.tenantSimDbId = normalizeNullableValue(modem.tenant_sim_db_id);
+            selectedRowKey = rowIdentityKey(modem);
+        };
+
+        const markDiagnosticsContext = (modem) => {
+            setSelectedContextFromRow(modem);
+            const runtimeSimId = selectedContext.runtimeSimId || '-';
+            selectedContext.diagnosticsTarget = `runtime SIM ID ${runtimeSimId}`;
+            selectedContext.lastAction = 'View Details';
+            selectedContext.status = `Diagnostics focused on runtime SIM ID ${runtimeSimId}.`;
+            renderSelectedContext();
+        };
+
+        const markSendTestContext = (modem, tenantSimId, runtimeSimId) => {
+            setSelectedContextFromRow(modem);
+            const safeRuntimeSimId = normalizeNullableValue(runtimeSimId) || '-';
+            const safeTenantSimId = normalizeNullableValue(tenantSimId) || '-';
+            selectedContext.sendTestTarget = `Tenant SIM DB ID ${safeTenantSimId}`;
+            selectedContext.lastAction = 'Use in Send Test';
+            selectedContext.status = `Send-test target set to Tenant SIM DB ID ${safeTenantSimId} (runtime SIM ID ${safeRuntimeSimId}).`;
+            renderSelectedContext();
+        };
+
+        const markCopyContext = (modem, runtimeSimId) => {
+            setSelectedContextFromRow(modem);
+            const safeRuntimeSimId = normalizeNullableValue(runtimeSimId) || '-';
+            selectedContext.lastAction = 'Copy SIM ID';
+            selectedContext.status = `Copied runtime SIM ID ${safeRuntimeSimId}. Send-test target remains Tenant SIM DB ID based.`;
+            renderSelectedContext();
+        };
+
+        const neutralDiagnosticsMessage = () => {
+            if (currentRenderedRows.length > 0) {
+                return 'No row selected yet. Click View Details on any visible row.';
+            }
+
+            if (latestDiscoveryRows.length > 0) {
+                return 'No row selected from current filter view. Adjust filters or click View Details on a visible row.';
+            }
+
+            if (currentRuntimeCategory === 'runtime_unreachable') {
+                return 'No row selected. Python runtime is currently unreachable.';
+            }
+
+            if (currentRuntimeCategory === 'discovery_failed') {
+                return 'No row selected. Discovery failed on the latest runtime check.';
+            }
+
+            return 'No row selected yet.';
+        };
+
+        const clearSelectedContext = (statusText = 'No row selected yet.') => {
+            selectedRowKey = null;
+            selectedContext = {
+                runtimeSimId: null,
+                tenantSimDbId: null,
+                diagnosticsTarget: null,
+                sendTestTarget: null,
+                lastAction: null,
+                status: statusText
+            };
+
+            renderSelectedContext();
+            clearDiagnostics(neutralDiagnosticsMessage());
+
+            const selectedRows = modemRowsEl.querySelectorAll('tr.runtime-row-selected');
+            selectedRows.forEach((rowElement) => {
+                rowElement.classList.remove('runtime-row-selected');
+            });
+        };
+
+        const setRuntimeState = (category, label, helperText, type = 'muted') => {
+            currentRuntimeCategory = category;
+            runtimeStateLabelEl.textContent = label;
+            runtimeStateHelperEl.className = `state-helper ${type}`;
+            runtimeStateHelperEl.textContent = helperText;
+        };
+
+        const markRefreshAttempt = () => {
+            lastRefreshAttemptAt = new Date();
+            lastRefreshAttemptEl.textContent = formatLocalDateTime(lastRefreshAttemptAt);
+        };
+
+        const markRefreshSuccess = () => {
+            lastRefreshSuccessAt = new Date();
+            lastRefreshSuccessEl.textContent = formatLocalDateTime(lastRefreshSuccessAt);
         };
 
         const setStatus = (text, type = 'muted') => {
@@ -1021,9 +1282,43 @@
             updateFilterChips();
 
             if (filteredRows.length === 0) {
-                modemRowsEl.innerHTML = '<tr><td colspan="15" class="muted">No modem rows match the selected filter.</td></tr>';
-                clearDiagnostics('No row selected. Load runtime rows and click View Details.');
+                if (latestDiscoveryRows.length === 0) {
+                    let emptyMessage = 'Discovery returned zero modem rows. Check modem connectivity and run discovery again.';
+
+                    if (currentRuntimeCategory === 'runtime_unreachable') {
+                        emptyMessage = 'Python runtime unreachable. No discovery rows available until runtime connectivity is restored.';
+                    } else if (currentRuntimeCategory === 'discovery_failed') {
+                        emptyMessage = 'Python runtime is reachable, but discovery failed. No rows available from the latest check.';
+                    }
+
+                    modemRowsEl.innerHTML = `<tr><td colspan="15" class="muted">${escapeHtml(emptyMessage)}</td></tr>`;
+                    selectedRowKey = null;
+                    selectedContext = {
+                        runtimeSimId: null,
+                        tenantSimDbId: null,
+                        diagnosticsTarget: null,
+                        sendTestTarget: selectedContext.sendTestTarget,
+                        lastAction: selectedContext.lastAction,
+                        status: 'No row selected yet.'
+                    };
+                    renderSelectedContext();
+                } else {
+                    modemRowsEl.innerHTML = '<tr><td colspan="15" class="muted">No modem rows match current filter selection.</td></tr>';
+                    setSelectedContextStatus('No visible rows for current filters. Selection context is preserved.');
+                }
+
+                const diagnosticsMessage = latestDiscoveryRows.length === 0
+                    ? 'No diagnostics row selected. Load discovery rows, then click View Details.'
+                    : 'No diagnostics row selected from current filter view. Click View Details on any visible row.';
+                clearDiagnostics(diagnosticsMessage);
                 return;
+            }
+
+            if (selectedRowKey !== null) {
+                const selectedVisible = filteredRows.some((modem) => rowIdentityKey(modem) === selectedRowKey);
+                if (!selectedVisible) {
+                    setSelectedContextStatus('Selected row is hidden by current filters. Switch to All to see it highlighted.');
+                }
             }
 
             modemRowsEl.innerHTML = filteredRows.map((modem, index) => {
@@ -1040,13 +1335,23 @@
                 const tenantSimDbIdAttr = ` data-tenant-sim-id="${escapeHtml(tenantSimDbId)}"`;
                 const rowIndexAttr = ` data-row-index="${index}"`;
                 const useDisabledAttr = sendability.can_use_in_send_test ? '' : ' disabled';
-                const useTitleAttr = sendability.disabled_reason ? ` title="${escapeHtml(sendability.disabled_reason)}"` : '';
+                const copyTitleAttr = ' title="Copies runtime SIM ID from Python discovery."';
+                const useTitleText = sendability.can_use_in_send_test
+                    ? `Loads Tenant SIM DB ID ${tenantSimDbId} into send test form (runtime SIM ID is not used for send test).`
+                    : sendability.disabled_reason;
+                const useTitleAttr = useTitleText ? ` title="${escapeHtml(useTitleText)}"` : '';
+                const detailsTitleAttr = ' title="Open runtime diagnostics details for this row."';
                 const sendBadge = sendability.can_use_in_send_test
                     ? '<span class="send-ready-badge">send-ready</span>'
                     : '<span class="send-blocked-badge">not send-ready</span>';
                 const sendDisabledReason = sendability.disabled_reason
                     ? `<div class="send-disabled-reason">${escapeHtml(sendability.disabled_reason)}</div>`
                     : '';
+                const actionIntent = sendability.can_use_in_send_test
+                    ? `Send test will use Tenant SIM DB ID ${tenantSimDbId} (not runtime SIM ID).`
+                    : (isMapped
+                        ? 'Mapped row, but runtime readiness checks currently block send test.'
+                        : 'Diagnostics/debug only until this runtime SIM ID is mapped to a Tenant SIM DB ID.');
                 const mappingBadge = isMapped
                     ? '<span class="state-badge state-good">mapped</span>'
                     : '<span class="state-badge state-danger">unmapped</span>';
@@ -1058,15 +1363,19 @@
                     : '<span class="state-badge state-warn">false</span>';
                 const safetyBadge = `<span class="safety-badge ${escapeHtml(safety.badgeClass)}">${escapeHtml(safety.label)}</span>`;
                 const safetyNote = `<div class="safety-note">${escapeHtml(safety.description)}</div>`;
+                const identityKey = rowIdentityKey(modem);
+                const rowSelectedClass = selectedRowKey === identityKey ? ' runtime-row-selected' : '';
+                const rowIdentityAttr = ` data-row-identity="${escapeHtml(identityKey)}"`;
 
                 return `
-                <tr class="${rowClass(state)}">
+                <tr class="${rowClass(state)}${rowSelectedClass}"${rowIdentityAttr}>
                     <td>
-                        <button type="button" class="mini-button view-details"${rowIndexAttr}>View Details</button>
-                        <button type="button" class="mini-button copy-sim-id"${runtimeSimIdAttr}>Copy SIM ID</button>
-                        <button type="button" class="mini-button use-sim-id"${runtimeSimIdAttr}${tenantSimDbIdAttr}${useDisabledAttr}${useTitleAttr}>Use in Send Test</button>
+                        <button type="button" class="mini-button view-details"${rowIndexAttr}${detailsTitleAttr}>View Details</button>
+                        <button type="button" class="mini-button copy-sim-id"${rowIndexAttr}${runtimeSimIdAttr}${copyTitleAttr}>Copy SIM ID</button>
+                        <button type="button" class="mini-button use-sim-id"${rowIndexAttr}${runtimeSimIdAttr}${tenantSimDbIdAttr}${useDisabledAttr}${useTitleAttr}>Use in Send Test</button>
                         ${sendBadge}
                         ${sendDisabledReason}
+                        <div class="action-intent">${escapeHtml(actionIntent)}</div>
                     </td>
                     <td>
                         ${safetyBadge}
@@ -1162,6 +1471,14 @@
                 };
             }
 
+            if (health.ok === true && discovery.ok === true && totalCount === 0) {
+                return {
+                    category: 'discovery_empty',
+                    type: 'warn',
+                    message: 'Python runtime reachable. Discovery returned zero modem rows.'
+                };
+            }
+
             return {
                 category: 'discovery_success',
                 type: 'ok',
@@ -1170,6 +1487,13 @@
         };
 
         clearDiagnostics();
+        renderSelectedContext();
+        setRuntimeState(
+            'not_loaded',
+            'not_loaded',
+            'Click Check Python Runtime to load current health/discovery state.',
+            'muted'
+        );
 
         runtimeRowFiltersEl.addEventListener('click', (event) => {
             const target = event.target;
@@ -1187,10 +1511,31 @@
 
             activeRowFilter = filter;
             renderModems(latestDiscoveryRows);
+
+            if (latestDiscoveryRows.length > 0 && currentRenderedRows.length === 0) {
+                setRuntimeState(
+                    'discovery_filtered_empty',
+                    'discovery_filtered_empty',
+                    'Current filters hide all rows. Switch to All or adjust filters to inspect runtime entries.',
+                    'warn'
+                );
+            }
+        });
+
+        clearSelectionButtonEl.addEventListener('click', () => {
+            clearSelectedContext('Context cleared. No active row selected.');
+            setStatus('Selection context cleared. Runtime data and send-test form values are unchanged.', 'muted');
         });
 
         refreshButton.addEventListener('click', async () => {
+            markRefreshAttempt();
             setStatus('Checking Python runtime...', 'muted');
+            setRuntimeState(
+                'checking',
+                'checking',
+                'Checking runtime health and modem discovery from the latest request...',
+                'muted'
+            );
 
             try {
                 const response = await fetch(apiPath, {
@@ -1209,17 +1554,67 @@
 
                 if (!response.ok || payload === null) {
                     setStatus(`Runtime check failed: HTTP ${response.status}`, 'error');
+                    setRuntimeState(
+                        'request_failed',
+                        'request_failed',
+                        `Runtime request failed with HTTP ${response.status}. Verify dashboard API path, auth session, and runtime service availability.`,
+                        'error'
+                    );
                     return;
                 }
 
+                const runtimeStatus = runtimeStatusMeta(payload);
                 renderSummary(payload);
                 const modemRows = payload.discovery && payload.discovery.all_modems ? payload.discovery.all_modems : [];
                 renderFleetSnapshot(modemRows);
                 renderModems(modemRows);
-                const runtimeStatus = runtimeStatusMeta(payload);
                 setStatus(runtimeStatus.message, runtimeStatus.type);
+                markRefreshSuccess();
+
+                if (runtimeStatus.category === 'runtime_unreachable') {
+                    setRuntimeState(
+                        runtimeStatus.category,
+                        runtimeStatus.category,
+                        'Python runtime is not reachable. Check service availability, network route, and runtime token settings.',
+                        'error'
+                    );
+                } else if (runtimeStatus.category === 'discovery_failed') {
+                    setRuntimeState(
+                        runtimeStatus.category,
+                        runtimeStatus.category,
+                        'Runtime responded, but discovery failed. Inspect runtime discovery endpoint/logs and retry.',
+                        'error'
+                    );
+                } else if (runtimeStatus.category === 'discovery_empty') {
+                    setRuntimeState(
+                        runtimeStatus.category,
+                        runtimeStatus.category,
+                        'Discovery is currently empty. Verify modem attachments/ports and rerun the check.',
+                        'warn'
+                    );
+                } else if (runtimeStatus.category === 'discovery_partial') {
+                    setRuntimeState(
+                        runtimeStatus.category,
+                        runtimeStatus.category,
+                        'Discovery completed with warnings. Review degraded rows and probe errors before using send test.',
+                        'warn'
+                    );
+                } else {
+                    setRuntimeState(
+                        runtimeStatus.category,
+                        runtimeStatus.category,
+                        'Discovery completed successfully. Use filters and View Details for targeted diagnostics.',
+                        'ok'
+                    );
+                }
             } catch (error) {
                 setStatus(`Runtime check failed: ${error.message}`, 'error');
+                setRuntimeState(
+                    'request_failed',
+                    'request_failed',
+                    `Runtime request error: ${error.message}. Verify runtime host/network reachability and retry.`,
+                    'error'
+                );
             }
         });
 
@@ -1238,12 +1633,19 @@
                     return;
                 }
 
-                showRowDiagnostics(currentRenderedRows[rowIndex]);
+                const row = currentRenderedRows[rowIndex];
+                showRowDiagnostics(row);
+                markDiagnosticsContext(row);
+                renderModems(latestDiscoveryRows);
                 return;
             }
 
             const simId = (target.dataset.simId || '').trim();
             const tenantSimId = (target.dataset.tenantSimId || '').trim();
+            const rowIndex = Number(target.dataset.rowIndex || -1);
+            const row = Number.isInteger(rowIndex) && rowIndex >= 0 && rowIndex < currentRenderedRows.length
+                ? currentRenderedRows[rowIndex]
+                : null;
 
             if (simId === '') {
                 setStatus('No runtime SIM ID available for this modem row.', 'warn');
@@ -1252,11 +1654,22 @@
 
             if (target.classList.contains('use-sim-id')) {
                 if (!/^[1-9]\d*$/.test(tenantSimId)) {
+                    if (row) {
+                        setSelectedContextFromRow(row);
+                        selectedContext.lastAction = 'Use in Send Test';
+                        selectedContext.status = `Use in Send Test blocked: no Tenant SIM DB ID mapping for runtime SIM ID ${simId}.`;
+                        renderSelectedContext();
+                        renderModems(latestDiscoveryRows);
+                    }
                     setStatus('No tenant SIM DB ID mapping for this runtime SIM ID.', 'warn');
                     return;
                 }
 
                 sendSimIdEl.value = tenantSimId;
+                if (row) {
+                    markSendTestContext(row, tenantSimId, simId);
+                    renderModems(latestDiscoveryRows);
+                }
                 setStatus(`Tenant SIM DB ID ${tenantSimId} loaded into send test form (runtime SIM ID: ${simId}).`, 'ok');
                 return;
             }
@@ -1277,6 +1690,10 @@
                         document.body.removeChild(helper);
                     }
 
+                    if (row) {
+                        markCopyContext(row, simId);
+                        renderModems(latestDiscoveryRows);
+                    }
                     setStatus(`SIM ID copied: ${simId}`, 'ok');
                 } catch (_) {
                     setStatus(`Could not copy SIM ID automatically. Use this value manually: ${simId}`, 'warn');
