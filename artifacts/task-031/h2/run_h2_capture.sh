@@ -46,12 +46,12 @@ if docker compose exec -T sms-app php artisan tinker --execute='dump([
     ->where("metadata", "like", "%runtime_unreachable%")
     ->latest("id")
     ->limit(10)
-    ->get(["id","status","provider_status","updated_at","metadata"])
+    ->get(["id","status","failure_reason","updated_at","metadata"])
     ->toArray(),
   "latest_rows" => \App\Models\OutboundMessage::query()
     ->latest("id")
     ->limit(10)
-    ->get(["id","status","provider_status","updated_at","metadata"])
+    ->get(["id","status","failure_reason","updated_at","metadata"])
     ->toArray(),
 ]);' > "$OUT_DIR/outbound_metadata_sample.txt"; then
   echo "outbound_metadata_sample_status=ok" | tee -a "$OUT_DIR/runs.log"
