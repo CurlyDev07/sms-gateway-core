@@ -1,6 +1,41 @@
 # CHANGELOG
 
-Last Updated: 2026-04-10
+Last Updated: 2026-04-11
+
+---
+
+## [2026-04-11] Phase 6 Runtime Validation Milestone — Real End-to-End Send Verified (In Progress)
+
+### Summary
+Phase 6 remains active. This milestone records real-world runtime validation in the live environment: Laravel triggered Python runtime execution through a real modem path and SMS delivery was physically confirmed.
+
+### Milestone Proven (Current Reality)
+- Laravel runtime page successfully reached Python runtime health/discovery surfaces
+- Python runtime discovery returned live modem rows and runtime state
+- Laravel dashboard send-test triggered real Python `/send` execution against modem hardware
+- Python send execution path completed successfully with structured response
+- destination device received the SMS message (physical delivery validated)
+- runtime UI safety guardrails are in place:
+  - full discovery row visibility
+  - send-test disabled for non-send-ready rows
+  - clear row-level disabled reasons for operator safety
+- runtime identity mapping lesson is now explicit and operationally validated:
+  - Runtime SIM ID (Python discovery value: IMSI/fallback runtime identifier) is not the same as Laravel SIM DB ID
+  - dashboard send-test and Laravel-side actions must use tenant `sims.id` (Tenant SIM DB ID)
+  - mixing identifiers produced `sim_not_found`; mapping and UI clarification resolved this
+- runtime UI now distinguishes runtime SIM identity from tenant SIM DB identity for safer operator use
+
+### Validation
+- Laravel full-suite baseline remains as last documented checkpoint: 286 passed
+- additional live runtime validation completed in real environment (hardware send path proven)
+
+### Status
+- Phase 4 COMPLETE (Locked)
+- Phase 5A IN PROGRESS (near completion)
+- Phase 5B NOT STARTED (future scale path)
+- Phase 6 IN PROGRESS (6.1 foundation + 6.2 send bridge + real end-to-end runtime send now validated)
+- Python runtime remains external to this Laravel repo
+- broader runtime hardening/reliability/scaling maturity remains open
 
 ---
 

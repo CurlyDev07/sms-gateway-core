@@ -1,7 +1,7 @@
 # SMS Gateway Core – Implementation Plan (Revised)
 
-**Last Updated:** 2026-04-10 (Phase 6.2 send execution bridge checkpoint)
-**Status:** Phase 0/1/2/4 Complete (Locked) — Phase 5A In Progress (Near Completion), Phase 5B Not Started, Phase 6 In Progress (6.1 + 6.2)
+**Last Updated:** 2026-04-11 (Phase 6 runtime validation milestone)
+**Status:** Phase 0/1/2/4 Complete (Locked) — Phase 5A In Progress (Near Completion), Phase 5B Not Started, Phase 6 In Progress (6.1 + 6.2 + runtime validation milestone)
 **Alignment:** Validated against all 9 locked docs with phase-boundary corrections
 
 ---
@@ -1178,7 +1178,7 @@ Planned scope:
 
 ### 7.3 PHASE 6 — PYTHON RUNTIME INTEGRATION & LIVE MODEM FLEET (Current Runtime Track)
 
-**Status:** IN PROGRESS (Phase 6.1 + 6.2 implemented checkpoints; Phase 6 remains open)
+**Status:** IN PROGRESS (Phase 6.1 + 6.2 implemented checkpoints + real runtime send validated; Phase 6 remains open)
 **Validation:** current full suite green (286 passed)
 
 Phase 6.1 foundation implemented in current repo:
@@ -1202,10 +1202,22 @@ Phase 6.2 send-execution bridge implemented in current repo:
 - runtime diagnostics are persisted to `outbound_messages.metadata`
 - controlled dashboard send-test surface added for manual runtime verification
 
+Phase 6 runtime validation milestone achieved in live environment:
+- real end-to-end Laravel→Python→modem send validated
+- destination device SMS delivery confirmed from dashboard-triggered runtime send-test
+- runtime UI safety guardrails active:
+  - full discovery rows rendered
+  - send-test blocked on non-send-ready rows
+  - explicit disabled reasons shown for operator safety
+- runtime SIM identity mapping lesson now explicit:
+  - Runtime SIM ID (Python discovery IMSI/fallback identifier) is not Tenant SIM DB ID (`sims.id`)
+  - Laravel dashboard send-test and Laravel-side actions must use Tenant SIM DB ID
+  - mixing IDs causes `sim_not_found`; mapping resolution + UI distinction fix this
+
 Current Phase 6 boundary:
-- Phase 6.1/6.2 provide runtime health/discovery + first structured send bridge
+- Phase 6.1/6.2 + runtime validation milestone provide runtime health/discovery + first structured send bridge + proven real send path
 - Python runtime remains external to this Laravel repo
-- this does not claim full production send hardening/real-world fleet maturity completion
+- this does not claim full production send hardening/complete fleet maturity
 - this does not include broader scale-path hardening (Phase 5B/later work)
 
 Open follow-up for later Phase 6 slices:

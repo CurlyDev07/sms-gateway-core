@@ -1,6 +1,6 @@
 # TASKS
 
-Last Updated: 2026-04-10 (Phase 6.2 status checkpoint)
+Last Updated: 2026-04-11 (Phase 6 runtime validation milestone)
 
 ---
 
@@ -757,7 +757,7 @@ Validate:
 
 # PHASE 6 — PYTHON RUNTIME INTEGRATION & LIVE MODEM FLEET
 
-Phase 6 Status: IN PROGRESS (Phase 6.1 foundation + Phase 6.2 send bridge implemented; Phase 6 remains open)
+Phase 6 Status: IN PROGRESS (Phase 6.1 foundation + Phase 6.2 send bridge + real runtime send validation milestone; Phase 6 remains open)
 Current Validation Baseline: full suite green (286 passed)
 
 ## TASK 029 — PHASE 6.1 LARAVEL ↔ PYTHON RUNTIME CONTRACT FOUNDATION
@@ -804,11 +804,28 @@ Boundary of this task:
 ---
 
 ## TASK 031 — PHASE 6 LIVE FLEET VALIDATION / RUNTIME HARDENING FOLLOW-UPS
-Status: OPEN
+Status: IN PROGRESS (validation milestone achieved; hardening follow-ups remain open)
 
 Goal:
 - perform broader real-world runtime/fleet validation on top of Phase 6.1/6.2 baseline
 - deepen runtime/send-path hardening and operational recovery behavior
+
+Current milestone achieved:
+- real end-to-end Laravel→Python→modem send validated in live environment
+- runtime discovery + dashboard send-test flow verified against real hardware
+- physical SMS delivery confirmed
+- runtime UI safety guardrails verified in use:
+  - full discovery rows visible
+  - non-send-ready rows blocked from send-test
+  - disabled reasons shown to operators
+- critical SIM identity lesson captured:
+  - Runtime SIM ID (Python discovery IMSI/fallback identifier) is distinct from Tenant SIM DB ID (`sims.id`)
+  - dashboard send-test must use Tenant SIM DB ID
+  - mixing IDs caused `sim_not_found`; mapping + UI distinction resolved it
+
+Remaining in this task:
+- continue runtime reliability hardening beyond this milestone
+- expand fleet-level validation coverage and failure-recovery depth
 
 ---
 
