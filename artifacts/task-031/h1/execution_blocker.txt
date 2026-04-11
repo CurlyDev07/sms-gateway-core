@@ -1,0 +1,4 @@
+H1 evidence collection could not be fully executed from this Codex environment.
+Reason: `docker` command is not available (`command not found`).
+Attempted command: docker compose exec sms-app php artisan tinker ...
+Timestamp: 2026-04-11T22:47:37+08:00
