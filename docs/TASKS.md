@@ -954,7 +954,13 @@ TASK 031 Evidence Ledger:
   - Dashboard note: `dashboard_api_status=302` expected in script context (session-protected dashboard API without login cookie)
   - Result: PASS
 - H4 artifact links + pass/fail
-  - Result: PENDING
+  - Scenario: invalid response classification path (missing `success` in runtime payload)
+  - Artifacts: `artifacts/task-031/h4/runs.log`, `artifacts/task-031/h4/runtime_invalid_response.txt`, `artifacts/task-031/h4/retry_classification.txt`, `artifacts/task-031/h4/invalid_response_rows_sample.txt`, `artifacts/task-031/h4/sms-app.log`, `artifacts/task-031/h4/config_snapshot.txt`, `artifacts/task-031/h4/commit.txt`, `artifacts/task-031/h4/timestamps.txt`
+  - Run summary: fake 200 payload missing `success` produced `error=invalid_response`, `error_layer=python_api`, and `is_invalid_response=true`
+  - Retry policy summary: classifier marks `INVALID_RESPONSE` + `python_api` as `non_retryable` while keeping `RUNTIME_TIMEOUT` + `transport` retryable
+  - Persistence note: `invalid_response_rows` may be empty in artifact query when no recent persisted invalid-response rows exist from worker/dashboard execution paths
+  - Dashboard note: `dashboard_api_status=302` expected in script context (session-protected dashboard API without login cookie)
+  - Result: PASS
 - H5 artifact links + pass/fail
   - Result: PENDING
 - H6 artifact links + pass/fail
