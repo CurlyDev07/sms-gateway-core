@@ -935,13 +935,25 @@ Done / Closure Gate:
 
 TASK 031 Evidence Ledger:
 - H1 artifact links + pass/fail
+  - Scenario: multi-modem discovery reliability matrix (repeat runs)
+  - Artifacts: `artifacts/task-031/h1/runs.log`, `artifacts/task-031/h1/python_discover_*.json`, `artifacts/task-031/h1/config_snapshot.txt`, `artifacts/task-031/h1/sms-app.log`, `artifacts/task-031/h1/commit.txt`, `artifacts/task-031/h1/timestamps.txt`
+  - Run summary: 10/10 runs completed with `python_discover_status=ok` at 20s cadence (validation speed run), runtime timeout config captured as `90`
+  - Dashboard note: `dashboard_api_status=302` is expected in script context (session-protected dashboard API without login cookie) and is not counted as runtime discovery failure
+  - Result: PASS
 - H2 artifact links + pass/fail
+  - Result: PENDING
 - H3 artifact links + pass/fail
+  - Result: PENDING
 - H4 artifact links + pass/fail
+  - Result: PENDING
 - H5 artifact links + pass/fail
+  - Result: PENDING
 - H6 artifact links + pass/fail
+  - Result: PENDING
 - H7 artifact links + pass/fail
+  - Result: PENDING
 - H8 artifact links + pass/fail
+  - Result: PENDING
 
 ---
 
