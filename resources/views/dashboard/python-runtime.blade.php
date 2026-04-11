@@ -269,6 +269,10 @@
         Controlled verification path using <code>POST /dashboard/api/runtime/python/send-test</code>.
         This directly calls Python send and persists the result on one outbound row.
     </p>
+    <p class="muted">
+        Tip: If send test fails with <code>error_layer=network</code> and <code>error=SEND_FAILED</code>,
+        check SIM load/balance and carrier service state.
+    </p>
 
     <div class="send-grid">
         <label>
@@ -743,8 +747,14 @@
 
                 const result = payload.result || {};
                 const error = payload.error || 'runtime_send_failed';
+                const failureError = asText(result.error);
+                const failureLayer = asText(result.error_layer);
+                const likelyLoadIssue = failureError === 'SEND_FAILED' && failureLayer === 'network';
+                const operatorHint = likelyLoadIssue
+                    ? ' Likely SIM load/balance or carrier-side issue.'
+                    : '';
                 setSendStatus(
-                    `Send test failed (${error}). message_id=${asText(result.message_id)} error=${asText(result.error)} error_layer=${asText(result.error_layer)}`,
+                    `Send test failed (${error}). message_id=${asText(result.message_id)} error=${failureError} error_layer=${failureLayer}.${operatorHint}`,
                     'error'
                 );
             } catch (error) {

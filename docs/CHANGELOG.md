@@ -24,6 +24,9 @@ Phase 6 remains active. This milestone records real-world runtime validation in 
   - dashboard send-test and Laravel-side actions must use tenant `sims.id` (Tenant SIM DB ID)
   - mixing identifiers produced `sim_not_found`; mapping and UI clarification resolved this
 - runtime UI now distinguishes runtime SIM identity from tenant SIM DB identity for safer operator use
+- operational troubleshooting lesson captured:
+  - send-test failures with `error=SEND_FAILED` + `error_layer=network` may indicate SIM load/balance/carrier issue
+  - runtime send-test UI now includes a direct operator tip for this case
 
 ### Validation
 - Laravel full-suite baseline remains as last documented checkpoint: 286 passed

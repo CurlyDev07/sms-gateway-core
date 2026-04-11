@@ -22,6 +22,8 @@ class PythonRuntimeDashboardPageTest extends TestCase
             ->assertSee('POST /dashboard/api/runtime/python/send-test')
             ->assertSee('Check Python Runtime')
             ->assertSee('Send Runtime Test SMS')
+            ->assertSee('error_layer=network')
+            ->assertSee('check SIM load/balance')
             ->assertSee('Discovered Total')
             ->assertSee('Tenant Visible')
             ->assertSee('Runtime SIM ID (IMSI/device)')
