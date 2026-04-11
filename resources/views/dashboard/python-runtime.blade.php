@@ -136,6 +136,54 @@
         color: #7f1d1d;
     }
 
+    .snapshot-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 8px;
+        margin-top: 8px;
+    }
+
+    .snapshot-item {
+        border: 1px solid #e5e7eb;
+        border-radius: 6px;
+        padding: 8px;
+        background: #f9fafb;
+    }
+
+    .snapshot-item strong {
+        display: block;
+        color: #374151;
+        font-size: 12px;
+        margin-bottom: 3px;
+    }
+
+    .snapshot-item span {
+        font-size: 18px;
+        font-weight: 600;
+    }
+
+    .state-badge {
+        display: inline-block;
+        border-radius: 999px;
+        padding: 2px 6px;
+        font-size: 11px;
+    }
+
+    .state-good {
+        background: #dcfce7;
+        color: #166534;
+    }
+
+    .state-warn {
+        background: #ffedd5;
+        color: #9a3412;
+    }
+
+    .state-danger {
+        background: #fee2e2;
+        color: #991b1b;
+    }
+
     .send-panel {
         border: 1px solid #e5e7eb;
         border-radius: 6px;
@@ -261,6 +309,36 @@
             <span id="tenantImsiMapped">-</span>
         </div>
     </section>
+
+    <section class="card">
+        <h2>Fleet Snapshot</h2>
+        <div class="snapshot-grid">
+            <div class="snapshot-item">
+                <strong>Total Discovered</strong>
+                <span id="fleetTotal">-</span>
+            </div>
+            <div class="snapshot-item">
+                <strong>Mapped</strong>
+                <span id="fleetMapped">-</span>
+            </div>
+            <div class="snapshot-item">
+                <strong>Unmapped</strong>
+                <span id="fleetUnmapped">-</span>
+            </div>
+            <div class="snapshot-item">
+                <strong>Send-Ready</strong>
+                <span id="fleetSendReady">-</span>
+            </div>
+            <div class="snapshot-item">
+                <strong>Probe Errors</strong>
+                <span id="fleetProbeError">-</span>
+            </div>
+            <div class="snapshot-item">
+                <strong>Fallback IDs</strong>
+                <span id="fleetFallback">-</span>
+            </div>
+        </div>
+    </section>
 </div>
 
 <section class="send-panel">
@@ -307,6 +385,9 @@
                 <th>Actions</th>
                 <th>Runtime SIM ID (IMSI/device)</th>
                 <th>Tenant SIM DB ID</th>
+                <th>Mapping Status</th>
+                <th>Identifier Source</th>
+                <th>Runtime Send-Ready</th>
                 <th>Device ID</th>
                 <th>Port</th>
                 <th>AT OK</th>
@@ -319,7 +400,7 @@
         </thead>
         <tbody id="modemRows">
             <tr>
-                <td colspan="11" class="muted">No modem rows loaded.</td>
+                <td colspan="14" class="muted">No modem rows loaded.</td>
             </tr>
         </tbody>
     </table>
@@ -353,6 +434,12 @@
         const discoveredTotalEl = document.getElementById('discoveredTotal');
         const tenantVisibleTotalEl = document.getElementById('tenantVisibleTotal');
         const tenantImsiMappedEl = document.getElementById('tenantImsiMapped');
+        const fleetTotalEl = document.getElementById('fleetTotal');
+        const fleetMappedEl = document.getElementById('fleetMapped');
+        const fleetUnmappedEl = document.getElementById('fleetUnmapped');
+        const fleetSendReadyEl = document.getElementById('fleetSendReady');
+        const fleetProbeErrorEl = document.getElementById('fleetProbeError');
+        const fleetFallbackEl = document.getElementById('fleetFallback');
         let latestDiscoveryRows = [];
 
         const escapeHtml = (value) => {
@@ -384,6 +471,31 @@
             return value ? 'true' : 'false';
         };
 
+        const hasProbeError = (modem) => {
+            const probeError = modem && modem.probe_error !== null && modem.probe_error !== undefined
+                ? String(modem.probe_error).trim()
+                : '';
+
+            return probeError !== '';
+        };
+
+        const isMappedTenantSim = (modem) => {
+            const tenantSimDbId = String(modem && modem.tenant_sim_db_id !== undefined ? modem.tenant_sim_db_id : '').trim();
+
+            return /^[1-9]\d*$/.test(tenantSimDbId);
+        };
+
+        const runtimeSendReady = (modem) => {
+            if (typeof modem.send_ready === 'boolean') {
+                return modem.send_ready;
+            }
+
+            return !hasProbeError(modem)
+                && modem.at_ok === true
+                && modem.sim_ready === true
+                && modem.creg_registered === true;
+        };
+
         const setStatus = (text, type = 'muted') => {
             statusEl.className = `status ${type}`;
             statusEl.textContent = text;
@@ -412,11 +524,7 @@
         };
 
         const rowState = (modem) => {
-            const probeError = modem && modem.probe_error !== null && modem.probe_error !== undefined
-                ? String(modem.probe_error).trim()
-                : '';
-
-            if (probeError !== '') {
+            if (hasProbeError(modem)) {
                 return 'error';
             }
 
@@ -518,7 +626,7 @@
             latestDiscoveryRows = Array.isArray(modems) ? modems : [];
 
             if (latestDiscoveryRows.length === 0) {
-                modemRowsEl.innerHTML = '<tr><td colspan="11" class="muted">No modem rows returned by discovery.</td></tr>';
+                modemRowsEl.innerHTML = '<tr><td colspan="14" class="muted">No modem rows returned by discovery.</td></tr>';
                 return;
             }
 
@@ -527,6 +635,10 @@
                 const runtimeSimId = asText(modem.sim_id);
                 const tenantSimDbId = asText(modem.tenant_sim_db_id);
                 const sendability = runtimeRowSendability(modem, runtimeSimId, tenantSimDbId);
+                const isMapped = isMappedTenantSim(modem);
+                const identifierSource = asText(modem.identifier_source);
+                const isFallbackIdentifier = String(identifierSource) === 'fallback_device_id';
+                const runtimeReady = runtimeSendReady(modem);
                 const runtimeSimIdAttr = ` data-sim-id="${escapeHtml(runtimeSimId)}"`;
                 const tenantSimDbIdAttr = ` data-tenant-sim-id="${escapeHtml(tenantSimDbId)}"`;
                 const useDisabledAttr = sendability.can_use_in_send_test ? '' : ' disabled';
@@ -537,6 +649,15 @@
                 const sendDisabledReason = sendability.disabled_reason
                     ? `<div class="send-disabled-reason">${escapeHtml(sendability.disabled_reason)}</div>`
                     : '';
+                const mappingBadge = isMapped
+                    ? '<span class="state-badge state-good">mapped</span>'
+                    : '<span class="state-badge state-danger">unmapped</span>';
+                const identifierBadge = isFallbackIdentifier
+                    ? '<span class="state-badge state-warn">fallback_device_id</span>'
+                    : `<span class="state-badge state-good">${escapeHtml(identifierSource)}</span>`;
+                const runtimeReadyBadge = runtimeReady
+                    ? '<span class="state-badge state-good">true</span>'
+                    : '<span class="state-badge state-warn">false</span>';
 
                 return `
                 <tr class="${rowClass(state)}">
@@ -548,6 +669,9 @@
                     </td>
                     <td>${escapeHtml(runtimeSimId)}</td>
                     <td>${escapeHtml(tenantSimDbId)}</td>
+                    <td>${mappingBadge}</td>
+                    <td>${identifierBadge}</td>
+                    <td>${runtimeReadyBadge}</td>
                     <td>${escapeHtml(asText(modem.device_id))}</td>
                     <td>${escapeHtml(asText(modem.port))}</td>
                     <td>${escapeHtml(boolText(modem.at_ok))}</td>
@@ -559,6 +683,42 @@
                 </tr>
             `;
             }).join('');
+        };
+
+        const renderFleetSnapshot = (modems) => {
+            const rows = Array.isArray(modems) ? modems : [];
+            const total = rows.length;
+            let mapped = 0;
+            let sendReady = 0;
+            let probeError = 0;
+            let fallbackIdentifiers = 0;
+
+            rows.forEach((modem) => {
+                if (isMappedTenantSim(modem)) {
+                    mapped += 1;
+                }
+
+                if (runtimeSendReady(modem)) {
+                    sendReady += 1;
+                }
+
+                if (hasProbeError(modem)) {
+                    probeError += 1;
+                }
+
+                if (String(modem && modem.identifier_source !== undefined ? modem.identifier_source : '') === 'fallback_device_id') {
+                    fallbackIdentifiers += 1;
+                }
+            });
+
+            const unmapped = Math.max(total - mapped, 0);
+
+            fleetTotalEl.textContent = String(total);
+            fleetMappedEl.textContent = String(mapped);
+            fleetUnmappedEl.textContent = String(unmapped);
+            fleetSendReadyEl.textContent = String(sendReady);
+            fleetProbeErrorEl.textContent = String(probeError);
+            fleetFallbackEl.textContent = String(fallbackIdentifiers);
         };
 
         const runtimeStatusMeta = (payload) => {
@@ -628,7 +788,9 @@
                 }
 
                 renderSummary(payload);
-                renderModems(payload.discovery && payload.discovery.all_modems ? payload.discovery.all_modems : []);
+                const modemRows = payload.discovery && payload.discovery.all_modems ? payload.discovery.all_modems : [];
+                renderFleetSnapshot(modemRows);
+                renderModems(modemRows);
                 const runtimeStatus = runtimeStatusMeta(payload);
                 setStatus(runtimeStatus.message, runtimeStatus.type);
             } catch (error) {

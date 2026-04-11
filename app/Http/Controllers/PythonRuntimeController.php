@@ -211,6 +211,8 @@ class PythonRuntimeController extends Controller
             'at_ok' => $modem['at_ok'] ?? null,
             'sim_ready' => $modem['sim_ready'] ?? null,
             'creg_registered' => $modem['creg_registered'] ?? null,
+            'send_ready' => is_bool($modem['send_ready'] ?? null) ? $modem['send_ready'] : null,
+            'identifier_source' => $this->firstString($modem, ['identifier_source']),
             'signal' => $modem['signal'] ?? null,
             'probe_error' => $this->firstString($modem, ['probe_error']),
             'last_seen_at' => $this->firstString($modem, ['last_seen_at', 'last_seen']),

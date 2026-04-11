@@ -52,6 +52,8 @@ class PythonRuntimeDashboardApiTest extends TestCase
                         'sim_id' => '515031234567890',
                         'port' => '/dev/ttyUSB0',
                         'at_ok' => true,
+                        'send_ready' => true,
+                        'identifier_source' => 'imsi',
                         'probe_error' => null,
                     ],
                     [
@@ -59,6 +61,8 @@ class PythonRuntimeDashboardApiTest extends TestCase
                         'sim_id' => '515039999999999',
                         'port' => '/dev/ttyUSB1',
                         'at_ok' => true,
+                        'send_ready' => false,
+                        'identifier_source' => 'fallback_device_id',
                         'probe_error' => 'PROBE_TIMEOUT after 12.0s',
                     ],
                 ],
@@ -81,9 +85,13 @@ class PythonRuntimeDashboardApiTest extends TestCase
             ->assertJsonPath('discovery.modems.0.device_id', 'modem-a')
             ->assertJsonPath('discovery.modems.0.sim_id', '515031234567890')
             ->assertJsonPath('discovery.modems.0.tenant_sim_db_id', $tenantSim->id)
+            ->assertJsonPath('discovery.modems.0.send_ready', true)
+            ->assertJsonPath('discovery.modems.0.identifier_source', 'imsi')
             ->assertJsonPath('discovery.modems.0.probe_error', null)
             ->assertJsonPath('discovery.all_modems.1.device_id', 'modem-b')
             ->assertJsonPath('discovery.all_modems.1.tenant_sim_db_id', null)
+            ->assertJsonPath('discovery.all_modems.1.send_ready', false)
+            ->assertJsonPath('discovery.all_modems.1.identifier_source', 'fallback_device_id')
             ->assertJsonPath('discovery.all_modems.1.probe_error', 'PROBE_TIMEOUT after 12.0s');
     }
 
