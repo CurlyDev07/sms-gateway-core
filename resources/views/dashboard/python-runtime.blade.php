@@ -246,6 +246,52 @@
         color: #ffffff;
     }
 
+    .diagnostics-panel {
+        margin-bottom: 10px;
+    }
+
+    .diagnostics-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 8px;
+        margin-top: 8px;
+    }
+
+    .diagnostics-item {
+        border: 1px solid #e5e7eb;
+        border-radius: 6px;
+        background: #f9fafb;
+        padding: 8px;
+    }
+
+    .diagnostics-item strong {
+        display: block;
+        font-size: 12px;
+        color: #374151;
+        margin-bottom: 4px;
+    }
+
+    .diagnostics-item span {
+        font-size: 13px;
+        color: #111827;
+        word-break: break-word;
+    }
+
+    .diagnostics-raw {
+        margin-top: 10px;
+        border: 1px solid #e5e7eb;
+        border-radius: 6px;
+        background: #f9fafb;
+        padding: 8px;
+    }
+
+    .diagnostics-raw pre {
+        margin: 6px 0 0 0;
+        white-space: pre-wrap;
+        word-break: break-word;
+        font-size: 12px;
+    }
+
     .send-panel {
         border: 1px solid #e5e7eb;
         border-radius: 6px;
@@ -455,6 +501,84 @@
 
 <div id="runtimeFilterSummary" class="muted">Showing all rows.</div>
 
+<section class="card diagnostics-panel">
+    <h2>Row Diagnostics</h2>
+    <p class="muted">
+        Select a row and click <strong>View Details</strong> to inspect deeper runtime facts without changing send-test behavior.
+    </p>
+    <div id="runtimeDetailStatus" class="muted">No row selected yet.</div>
+    <div class="diagnostics-grid">
+        <div class="diagnostics-item">
+            <strong>Safety Classification</strong>
+            <span id="diagSafety">-</span>
+        </div>
+        <div class="diagnostics-item">
+            <strong>Safety Reason</strong>
+            <span id="diagSafetyReason">-</span>
+        </div>
+        <div class="diagnostics-item">
+            <strong>Send-Test Actionability</strong>
+            <span id="diagActionability">-</span>
+        </div>
+        <div class="diagnostics-item">
+            <strong>Runtime SIM ID</strong>
+            <span id="diagRuntimeSimId">-</span>
+        </div>
+        <div class="diagnostics-item">
+            <strong>Tenant SIM DB ID</strong>
+            <span id="diagTenantSimDbId">-</span>
+        </div>
+        <div class="diagnostics-item">
+            <strong>Mapping Status</strong>
+            <span id="diagMappingStatus">-</span>
+        </div>
+        <div class="diagnostics-item">
+            <strong>Identifier Source</strong>
+            <span id="diagIdentifierSource">-</span>
+        </div>
+        <div class="diagnostics-item">
+            <strong>Runtime Send-Ready</strong>
+            <span id="diagRuntimeSendReady">-</span>
+        </div>
+        <div class="diagnostics-item">
+            <strong>Probe Error</strong>
+            <span id="diagProbeError">-</span>
+        </div>
+        <div class="diagnostics-item">
+            <strong>AT OK</strong>
+            <span id="diagAtOk">-</span>
+        </div>
+        <div class="diagnostics-item">
+            <strong>SIM Ready</strong>
+            <span id="diagSimReady">-</span>
+        </div>
+        <div class="diagnostics-item">
+            <strong>CREG Registered</strong>
+            <span id="diagCregRegistered">-</span>
+        </div>
+        <div class="diagnostics-item">
+            <strong>Signal</strong>
+            <span id="diagSignal">-</span>
+        </div>
+        <div class="diagnostics-item">
+            <strong>Device ID</strong>
+            <span id="diagDeviceId">-</span>
+        </div>
+        <div class="diagnostics-item">
+            <strong>Port</strong>
+            <span id="diagPort">-</span>
+        </div>
+        <div class="diagnostics-item">
+            <strong>Last Seen At</strong>
+            <span id="diagLastSeenAt">-</span>
+        </div>
+    </div>
+    <details class="diagnostics-raw">
+        <summary>Raw Row JSON</summary>
+        <pre id="diagRawJson">-</pre>
+    </details>
+</section>
+
 <div class="table-wrap">
     <table>
         <thead>
@@ -497,6 +621,24 @@
         const modemRowsEl = document.getElementById('modemRows');
         const runtimeRowFiltersEl = document.getElementById('runtimeRowFilters');
         const runtimeFilterSummaryEl = document.getElementById('runtimeFilterSummary');
+        const runtimeDetailStatusEl = document.getElementById('runtimeDetailStatus');
+        const diagSafetyEl = document.getElementById('diagSafety');
+        const diagSafetyReasonEl = document.getElementById('diagSafetyReason');
+        const diagActionabilityEl = document.getElementById('diagActionability');
+        const diagRuntimeSimIdEl = document.getElementById('diagRuntimeSimId');
+        const diagTenantSimDbIdEl = document.getElementById('diagTenantSimDbId');
+        const diagMappingStatusEl = document.getElementById('diagMappingStatus');
+        const diagIdentifierSourceEl = document.getElementById('diagIdentifierSource');
+        const diagRuntimeSendReadyEl = document.getElementById('diagRuntimeSendReady');
+        const diagProbeErrorEl = document.getElementById('diagProbeError');
+        const diagAtOkEl = document.getElementById('diagAtOk');
+        const diagSimReadyEl = document.getElementById('diagSimReady');
+        const diagCregRegisteredEl = document.getElementById('diagCregRegistered');
+        const diagSignalEl = document.getElementById('diagSignal');
+        const diagDeviceIdEl = document.getElementById('diagDeviceId');
+        const diagPortEl = document.getElementById('diagPort');
+        const diagLastSeenAtEl = document.getElementById('diagLastSeenAt');
+        const diagRawJsonEl = document.getElementById('diagRawJson');
 
         const sendSimIdEl = document.getElementById('sendSimId');
         const sendCustomerPhoneEl = document.getElementById('sendCustomerPhone');
@@ -521,6 +663,7 @@
         const fleetProbeErrorEl = document.getElementById('fleetProbeError');
         const fleetFallbackEl = document.getElementById('fleetFallback');
         let latestDiscoveryRows = [];
+        let currentRenderedRows = [];
         let activeRowFilter = 'all';
 
         const escapeHtml = (value) => {
@@ -811,18 +954,79 @@
             });
         };
 
+        const setDiagnosticsField = (element, value) => {
+            element.textContent = asText(value);
+        };
+
+        const clearDiagnostics = (message = 'No row selected yet.') => {
+            runtimeDetailStatusEl.textContent = message;
+            setDiagnosticsField(diagSafetyEl, '-');
+            setDiagnosticsField(diagSafetyReasonEl, '-');
+            setDiagnosticsField(diagActionabilityEl, '-');
+            setDiagnosticsField(diagRuntimeSimIdEl, '-');
+            setDiagnosticsField(diagTenantSimDbIdEl, '-');
+            setDiagnosticsField(diagMappingStatusEl, '-');
+            setDiagnosticsField(diagIdentifierSourceEl, '-');
+            setDiagnosticsField(diagRuntimeSendReadyEl, '-');
+            setDiagnosticsField(diagProbeErrorEl, '-');
+            setDiagnosticsField(diagAtOkEl, '-');
+            setDiagnosticsField(diagSimReadyEl, '-');
+            setDiagnosticsField(diagCregRegisteredEl, '-');
+            setDiagnosticsField(diagSignalEl, '-');
+            setDiagnosticsField(diagDeviceIdEl, '-');
+            setDiagnosticsField(diagPortEl, '-');
+            setDiagnosticsField(diagLastSeenAtEl, '-');
+            diagRawJsonEl.textContent = '-';
+        };
+
+        const showRowDiagnostics = (modem) => {
+            if (!modem || typeof modem !== 'object') {
+                clearDiagnostics();
+                return;
+            }
+
+            const safety = rowSafetyMeta(modem);
+            const runtimeSimId = asText(modem.sim_id);
+            const tenantSimDbId = asText(modem.tenant_sim_db_id);
+            const sendability = runtimeRowSendability(modem, runtimeSimId, tenantSimDbId);
+            const actionability = sendability.can_use_in_send_test
+                ? 'Send test enabled via Tenant SIM DB ID mapping.'
+                : sendability.disabled_reason;
+
+            runtimeDetailStatusEl.textContent = `Showing diagnostics for runtime SIM ID: ${runtimeSimId}`;
+            setDiagnosticsField(diagSafetyEl, safety.label);
+            setDiagnosticsField(diagSafetyReasonEl, safety.description);
+            setDiagnosticsField(diagActionabilityEl, actionability);
+            setDiagnosticsField(diagRuntimeSimIdEl, runtimeSimId);
+            setDiagnosticsField(diagTenantSimDbIdEl, tenantSimDbId);
+            setDiagnosticsField(diagMappingStatusEl, isMappedTenantSim(modem) ? 'mapped' : 'unmapped');
+            setDiagnosticsField(diagIdentifierSourceEl, modem.identifier_source);
+            setDiagnosticsField(diagRuntimeSendReadyEl, boolText(runtimeSendReady(modem)));
+            setDiagnosticsField(diagProbeErrorEl, modem.probe_error);
+            setDiagnosticsField(diagAtOkEl, boolText(modem.at_ok));
+            setDiagnosticsField(diagSimReadyEl, boolText(modem.sim_ready));
+            setDiagnosticsField(diagCregRegisteredEl, boolText(modem.creg_registered));
+            setDiagnosticsField(diagSignalEl, modem.signal);
+            setDiagnosticsField(diagDeviceIdEl, modem.device_id);
+            setDiagnosticsField(diagPortEl, modem.port);
+            setDiagnosticsField(diagLastSeenAtEl, modem.last_seen_at);
+            diagRawJsonEl.textContent = JSON.stringify(modem, null, 2);
+        };
+
         const renderModems = (modems) => {
             latestDiscoveryRows = Array.isArray(modems) ? modems : [];
             const filteredRows = applyRuntimeRowFilter(latestDiscoveryRows);
+            currentRenderedRows = filteredRows;
             runtimeFilterSummaryEl.textContent = `Showing ${filteredRows.length} of ${latestDiscoveryRows.length} rows (${filterLabel(activeRowFilter)}).`;
             updateFilterChips();
 
             if (filteredRows.length === 0) {
                 modemRowsEl.innerHTML = '<tr><td colspan="15" class="muted">No modem rows match the selected filter.</td></tr>';
+                clearDiagnostics('No row selected. Load runtime rows and click View Details.');
                 return;
             }
 
-            modemRowsEl.innerHTML = filteredRows.map((modem) => {
+            modemRowsEl.innerHTML = filteredRows.map((modem, index) => {
                 const state = rowState(modem);
                 const runtimeSimId = asText(modem.sim_id);
                 const tenantSimDbId = asText(modem.tenant_sim_db_id);
@@ -834,6 +1038,7 @@
                 const safety = rowSafetyMeta(modem);
                 const runtimeSimIdAttr = ` data-sim-id="${escapeHtml(runtimeSimId)}"`;
                 const tenantSimDbIdAttr = ` data-tenant-sim-id="${escapeHtml(tenantSimDbId)}"`;
+                const rowIndexAttr = ` data-row-index="${index}"`;
                 const useDisabledAttr = sendability.can_use_in_send_test ? '' : ' disabled';
                 const useTitleAttr = sendability.disabled_reason ? ` title="${escapeHtml(sendability.disabled_reason)}"` : '';
                 const sendBadge = sendability.can_use_in_send_test
@@ -857,6 +1062,7 @@
                 return `
                 <tr class="${rowClass(state)}">
                     <td>
+                        <button type="button" class="mini-button view-details"${rowIndexAttr}>View Details</button>
                         <button type="button" class="mini-button copy-sim-id"${runtimeSimIdAttr}>Copy SIM ID</button>
                         <button type="button" class="mini-button use-sim-id"${runtimeSimIdAttr}${tenantSimDbIdAttr}${useDisabledAttr}${useTitleAttr}>Use in Send Test</button>
                         ${sendBadge}
@@ -963,6 +1169,8 @@
             };
         };
 
+        clearDiagnostics();
+
         runtimeRowFiltersEl.addEventListener('click', (event) => {
             const target = event.target;
 
@@ -1019,6 +1227,18 @@
             const target = event.target;
 
             if (!(target instanceof HTMLButtonElement)) {
+                return;
+            }
+
+            if (target.classList.contains('view-details')) {
+                const rowIndex = Number(target.dataset.rowIndex || -1);
+
+                if (!Number.isInteger(rowIndex) || rowIndex < 0 || rowIndex >= currentRenderedRows.length) {
+                    setStatus('Could not load diagnostics for this row.', 'warn');
+                    return;
+                }
+
+                showRowDiagnostics(currentRenderedRows[rowIndex]);
                 return;
             }
 
