@@ -17,7 +17,7 @@ docker compose exec sms-app php artisan tinker --execute='dump(["python_api_url"
 
 DASHBOARD_RUNTIME_URL="${H1_DASHBOARD_RUNTIME_URL:-http://127.0.0.1:8081/dashboard/api/runtime/python}"
 H1_RUNS="${H1_RUNS:-10}"
-H1_INTERVAL_SECONDS="${H1_INTERVAL_SECONDS:-180}"
+H1_INTERVAL_SECONDS="${H1_INTERVAL_SECONDS:-20}"
 DISCOVER_CMD='curl -sS -m 120 -H "X-Gateway-Token: $SMS_PYTHON_API_TOKEN" "$SMS_PYTHON_API_URL/modems/discover"'
 
 echo "[H1] ${H1_RUNS} discovery runs (${H1_INTERVAL_SECONDS}s interval)"
