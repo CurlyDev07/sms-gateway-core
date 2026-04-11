@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-set -euo pipefail
+set -uo pipefail
 
 ROOT_DIR="$(cd "$(dirname "$0")/../../.." && pwd)"
 OUT_DIR="$ROOT_DIR/artifacts/task-031/h1"
@@ -16,9 +16,12 @@ docker compose exec sms-app php artisan tinker --execute='dump(["python_api_url"
   | tee "$OUT_DIR/config_snapshot.txt"
 
 DASHBOARD_RUNTIME_URL="${H1_DASHBOARD_RUNTIME_URL:-http://127.0.0.1:8081/dashboard/api/runtime/python}"
+H1_RUNS="${H1_RUNS:-10}"
+H1_INTERVAL_SECONDS="${H1_INTERVAL_SECONDS:-180}"
+DISCOVER_CMD='curl -sS -m 120 -H "X-Gateway-Token: $SMS_PYTHON_API_TOKEN" "$SMS_PYTHON_API_URL/modems/discover"'
 
-echo "[H1] 10 discovery runs (3m interval)"
-for i in $(seq 1 10); do
+echo "[H1] ${H1_RUNS} discovery runs (${H1_INTERVAL_SECONDS}s interval)"
+for i in $(seq 1 "$H1_RUNS"); do
   ts=$(date +%Y%m%dT%H%M%S)
   echo "RUN $i $ts" | tee -a "$OUT_DIR/runs.log"
 
@@ -28,13 +31,22 @@ for i in $(seq 1 10); do
   fi
   echo "dashboard_api_status=$dashboard_status url=$DASHBOARD_RUNTIME_URL" | tee -a "$OUT_DIR/runs.log"
 
-  docker compose exec -T sms-app sh -lc 'curl -sS -m 120 -H "X-Gateway-Token: $SMS_PYTHON_API_TOKEN" "$SMS_PYTHON_API_URL/modems/discover"' \
-    > "$OUT_DIR/python_discover_${ts}.json"
+  if docker compose exec -T sms-app sh -lc "$DISCOVER_CMD" > "$OUT_DIR/python_discover_${ts}.json"; then
+    echo "python_discover_status=ok file=python_discover_${ts}.json" | tee -a "$OUT_DIR/runs.log"
+  else
+    discover_exit=$?
+    echo "python_discover_status=failed exit_code=$discover_exit file=python_discover_${ts}.json" | tee -a "$OUT_DIR/runs.log"
+  fi
 
-  sleep 180
+  sleep "$H1_INTERVAL_SECONDS"
 done
 
 echo "[H1] app logs snapshot"
-docker compose logs --since=60m sms-app > "$OUT_DIR/sms-app.log"
+if docker compose logs --since=60m sms-app > "$OUT_DIR/sms-app.log"; then
+  echo "sms_app_log_capture=ok file=sms-app.log" | tee -a "$OUT_DIR/runs.log"
+else
+  logs_exit=$?
+  echo "sms_app_log_capture=failed exit_code=$logs_exit file=sms-app.log" | tee -a "$OUT_DIR/runs.log"
+fi
 
 echo "[H1] done. Artifacts in $OUT_DIR"
