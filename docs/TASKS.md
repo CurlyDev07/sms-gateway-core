@@ -969,7 +969,13 @@ TASK 031 Evidence Ledger:
   - Dashboard note: `dashboard_api_status=302` expected in script context (session-protected dashboard API without login cookie)
   - Result: PASS
 - H6 artifact links + pass/fail
-  - Result: PENDING
+  - Scenario: suppression/cooldown recovery after fault window clears
+  - Artifacts: `artifacts/task-031/h6/runs.log`, `artifacts/task-031/h6/recovery_simulation.txt`, `artifacts/task-031/h6/recovery_rows_sample.txt`, `artifacts/task-031/h6/sms-app.log`, `artifacts/task-031/h6/commit.txt`, `artifacts/task-031/h6/timestamps.txt`
+  - Run summary: suppression state reached at threshold, then cleared after failure window expiry + cooldown expiry; SIM normalized for sending
+  - Recovery summary: `suppressed_snapshot.suppressed=true` -> `post_window_snapshot.suppressed=false`, `can_send_after_recovery=true`, `final_sim_mode=NORMAL`, `final_cooldown_until=null`
+  - Health-log summary: expected error logs plus cooldown transition log present for test SIM
+  - Dashboard note: `dashboard_api_status=302` expected in script context (session-protected dashboard API without login cookie)
+  - Result: PASS
 - H7 artifact links + pass/fail
   - Result: PENDING
 - H8 artifact links + pass/fail
