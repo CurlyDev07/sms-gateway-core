@@ -1120,7 +1120,13 @@ TASK 032 Evidence Ledger:
   - Guardrail summary: `probe_row_count=1` confirms no duplicate outbound DB row creation from duplicate queue entries
   - Result: PASS
 - S6 artifact links + pass/fail
-  - Result: PENDING
+  - Scenario: cross-surface observability parity between dashboard-triggered and worker-triggered runtime send paths
+  - Artifacts: `artifacts/task-032/s6/cross_surface_parity_snapshot.txt`
+  - Run summary: parity snapshot captured both surfaces (`dashboard=11`, `worker=3`) with consistent runtime error envelopes and source attribution
+  - Dashboard summary: dashboard failures remain terminal `SEND_FAILED` + `error_layer=network`; dashboard success rows remain `sent` with clean success metadata
+  - Worker summary: worker failures remain retryable `RUNTIME_TIMEOUT` + `error_layer=transport` with `retry_decision` and `sim_runtime_control` metadata present
+  - Parity summary: no material semantic drift observed between surfaces for failure interpretation; surface-specific metadata remains consistent with execution model
+  - Result: PASS
 - S7 artifact links + pass/fail
   - Result: PENDING
 - S8 artifact links + pass/fail
