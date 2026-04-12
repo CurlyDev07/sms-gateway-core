@@ -1098,7 +1098,12 @@ TASK 032 Evidence Ledger:
   - Integrity summary: no contradictory terminal+rescheduled state observed in captured snapshots
   - Result: PASS
 - S3 artifact links + pass/fail
-  - Result: PENDING
+  - Scenario: runtime metadata completeness and correlation across success/failure paths
+  - Artifacts: `artifacts/task-032/s3/metadata_correlation_snapshot.txt`
+  - Run summary: latest snapshot shows `with_python_runtime=13/13` rows with populated runtime envelope fields (`source`, `success`, `error`, `error_layer`, `processed_at`, `provider_message_id` where applicable)
+  - Correlation summary: dashboard success/failure rows include `raw.meta` linkage (`execution_surface`, `message_id`, `company_id`) while worker failure rows consistently include `retry_decision` and `sim_runtime_control` metadata
+  - Traceability summary: failure rows remain correlatable by `python_runtime.source` (`worker_send_failure` / `dashboard_runtime_send_test`) with deterministic runtime error-layer context
+  - Result: PASS
 - S4 artifact links + pass/fail
   - Result: PENDING
 - S5 artifact links + pass/fail
