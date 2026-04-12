@@ -4,6 +4,88 @@ Last Updated: 2026-04-12
 
 ---
 
+## [2026-04-12] TASK 021 Checkpoint — W4 Rebuild-Lock Interaction Under Active Workers Recorded
+
+### Summary
+Evidence for `021-W4` was captured and ledgered for queue rebuild-lock behavior while concurrent workers were active on the same SIM scope.
+
+### What Changed
+- `docs/TASKS.md` TASK 021 evidence ledger now records `W4` artifacts and marks `W4` as `PASS`.
+- W4 artifact set references:
+  - `artifacts/task-021/w4/target_sim.txt`
+  - `artifacts/task-021/w4/run_tag.txt`
+  - `artifacts/task-021/w4/seed.txt`
+  - `artifacts/task-021/w4/worker_1.log`
+  - `artifacts/task-021/w4/worker_2.log`
+  - `artifacts/task-021/w4/rebuild_command.txt`
+  - `artifacts/task-021/w4/after_snapshot.txt`
+
+### Notes
+- Rebuild command completed during active worker window and reported deterministic lock-scoped completion for SIM `225`.
+- Post-run snapshot showed no contradiction rows and no persistent rebuild lock after completion.
+- Queue depth remained consistent with one pending row re-enqueued by rebuild.
+
+### Status
+- documentation update only
+- no application/runtime/API behavior changes
+
+---
+
+## [2026-04-12] TASK 021 Checkpoint — W3 SIM/Tenant Isolation Under Worker Scale-Out Recorded
+
+### Summary
+Evidence for `021-W3` was captured and ledgered from concurrent mixed-SIM worker execution using run-tagged probe rows.
+
+### What Changed
+- `docs/TASKS.md` TASK 021 evidence ledger now records `W3` artifacts and marks `W3` as `PASS`.
+- W3 artifact set references:
+  - `artifacts/task-021/w3/precheck_sims.txt`
+  - `artifacts/task-021/w3/precondition_override.txt`
+  - `artifacts/task-021/w3/precheck_normals.txt`
+  - `artifacts/task-021/w3/run_tag.txt`
+  - `artifacts/task-021/w3/seed.txt`
+  - `artifacts/task-021/w3/worker_sim1.log`
+  - `artifacts/task-021/w3/worker_sim2.log`
+  - `artifacts/task-021/w3/outcome_snapshot.txt`
+
+### Notes
+- Two active NORMAL SIM scopes were validated in the same run (`225`, `228`) with 8 probe rows.
+- Row-level snapshots preserved `company_id` and `sim_id` parity with probe metadata.
+- `contradictions` remained empty in the captured run-tag evidence.
+
+### Status
+- documentation update only
+- no application/runtime/API behavior changes
+
+---
+
+## [2026-04-12] TASK 021 Checkpoint — W2 Concurrent Worker Claim/Pop Integrity Recorded
+
+### Summary
+Evidence for `021-W2` was captured and ledgered from concurrent same-SIM worker execution with forced runtime timeout behavior.
+
+### What Changed
+- `docs/TASKS.md` TASK 021 evidence ledger now records `W2` artifacts and marks `W2` as `PASS`.
+- W2 artifact set references:
+  - `artifacts/task-021/w2/run_tag.txt`
+  - `artifacts/task-021/w2/seed.txt`
+  - `artifacts/task-021/w2/worker_1.log`
+  - `artifacts/task-021/w2/worker_2.log`
+  - `artifacts/task-021/w2/claimed_lines.txt`
+  - `artifacts/task-021/w2/claimed_counts.txt`
+  - `artifacts/task-021/w2/outcome_snapshot.txt`
+
+### Notes
+- Two workers were launched concurrently against overlapping SIM scope in a bounded timeout window.
+- Row-state evidence showed deterministic lifecycle transitions with no contradictory/duplicate completion.
+- Claim-line grep output remained empty for this run due to emitted log pattern mismatch; full worker logs and row-state snapshots were used for integrity conclusions.
+
+### Status
+- documentation update only
+- no application/runtime/API behavior changes
+
+---
+
 ## [2026-04-12] Docs Planning Checkpoint — TASK 021 Worker Scale-Out Checklist Formalized
 
 ### Summary

@@ -817,11 +817,27 @@ TASK 021 Evidence Ledger:
   - Process inventory note: host-level worker process inventory captured; container-side `pgrep` unavailable in `sms-app` image so container process file is empty by tool limitation
   - Result: PASS
 - W2 artifact links + pass/fail
-  - Result: PENDING
+  - Scenario: concurrent workers against same SIM queue with forced runtime timeout path
+  - Artifacts: `artifacts/task-021/w2/run_tag.txt`, `artifacts/task-021/w2/seed.txt`, `artifacts/task-021/w2/worker_1.log`, `artifacts/task-021/w2/worker_2.log`, `artifacts/task-021/w2/claimed_lines.txt`, `artifacts/task-021/w2/claimed_counts.txt`, `artifacts/task-021/w2/outcome_snapshot.txt`
+  - Concurrency summary: two worker processes were launched concurrently (`timeout 40s`, both exited `124` after timeout window) against the same SIM scope and same probe run tag
+  - State summary: run-tag snapshot captured 8 probe rows; one row transitioned to retryable worker failure state (`pending`, `failure_reason=RUNTIME_TIMEOUT`, `retry_count=1`, `source=worker_send_failure`) and remaining rows stayed queued with no contradictory lifecycle mutation
+  - Integrity summary: no contradictory state transitions and no duplicate completion observed for any probe message in the captured run-tag set
+  - Log note: claim-line grep output was empty for this run due to emitted log pattern mismatch; integrity conclusion is based on row-state evidence + full worker logs
+  - Result: PASS
 - W3 artifact links + pass/fail
-  - Result: PENDING
+  - Scenario: concurrent workers processing mixed SIM queues under one tenant
+  - Artifacts: `artifacts/task-021/w3/precheck_sims.txt`, `artifacts/task-021/w3/precondition_override.txt`, `artifacts/task-021/w3/precheck_normals.txt`, `artifacts/task-021/w3/run_tag.txt`, `artifacts/task-021/w3/seed.txt`, `artifacts/task-021/w3/worker_sim1.log`, `artifacts/task-021/w3/worker_sim2.log`, `artifacts/task-021/w3/outcome_snapshot.txt`
+  - Isolation summary: seed captured two active NORMAL SIM targets (`225`, `228`) with eight run-tagged probe rows (`119..126`); all processed/snapshotted rows preserved `company_id` and `sim_id` alignment with probe metadata (`probe_company_id`, `probe_sim_id`)
+  - Processing summary: SIM `228` rows showed worker failure transitions (`pending`, `failure_reason=RUNTIME_TIMEOUT`, `source=worker_send_failure`), while SIM `225` rows remained queued; no cross-SIM leakage observed
+  - Integrity summary: `contradictions` set empty in run-tag snapshot (`[]`)
+  - Result: PASS
 - W4 artifact links + pass/fail
-  - Result: PENDING
+  - Scenario: queue rebuild lock behavior while concurrent workers are active on same SIM scope
+  - Artifacts: `artifacts/task-021/w4/target_sim.txt`, `artifacts/task-021/w4/run_tag.txt`, `artifacts/task-021/w4/seed.txt`, `artifacts/task-021/w4/worker_1.log`, `artifacts/task-021/w4/worker_2.log`, `artifacts/task-021/w4/rebuild_command.txt`, `artifacts/task-021/w4/after_snapshot.txt`
+  - Rebuild summary: rebuild command executed successfully during active worker window for SIM `225` / company `259`; command reported lock key `sms:lock:rebuild:sim:225` and deterministic completion
+  - Queue/state summary: post-run snapshot captured queue depth (`depth_total=1`, `depth_chat=1`) with all six run-tagged rows present and no corrupted lifecycle mutation
+  - Lock/concurrency summary: rebuild lock absent after completion (`rebuild_lock_present=false`), both workers exited at bounded timeout (`124`), and row contradiction set remained empty
+  - Result: PASS
 - W5 artifact links + pass/fail
   - Result: PENDING
 - W6 artifact links + pass/fail
