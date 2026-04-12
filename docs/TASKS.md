@@ -810,7 +810,12 @@ Done / Closure Gate:
 
 TASK 021 Evidence Ledger:
 - W1 artifact links + pass/fail
-  - Result: PENDING
+  - Scenario: baseline worker topology + concurrency assumptions snapshot
+  - Artifacts: `artifacts/task-021/w1/commit.txt`, `artifacts/task-021/w1/timestamps.txt`, `artifacts/task-021/w1/docker_compose_ps.txt`, `artifacts/task-021/w1/host_worker_processes.txt`, `artifacts/task-021/w1/container_worker_processes.txt`, `artifacts/task-021/w1/config_snapshot.txt`, `artifacts/task-021/w1/queue_inventory.txt`
+  - Baseline summary: app env `local`, sms driver `python`, runtime send timeout `90`, token configured, active SIM inventory captured (`active=4`, modes `NORMAL=3`, `COOLDOWN=1`)
+  - Queue summary: per-SIM Redis keys and tier depths captured for active SIMs; baseline sample showed zero queue depth across chat/followup/blasting tiers at capture time
+  - Process inventory note: host-level worker process inventory captured; container-side `pgrep` unavailable in `sms-app` image so container process file is empty by tool limitation
+  - Result: PASS
 - W2 artifact links + pass/fail
   - Result: PENDING
 - W3 artifact links + pass/fail
