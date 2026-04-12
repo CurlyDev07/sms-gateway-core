@@ -10,6 +10,7 @@ REFRESH_SECONDS="${REFRESH_SECONDS:-2}"
 SAFE_MODE="${SAFE_MODE:-1}"
 RUNTIME_TIMEOUT_URL="${RUNTIME_TIMEOUT_URL:-http://10.255.255.1:9000}"
 RUNTIME_TIMEOUT_SECONDS="${RUNTIME_TIMEOUT_SECONDS:-2}"
+USE_COLOR="${USE_COLOR:-1}"
 
 RUN_TAG="task023_live_$(date +%Y%m%d%H%M%S)"
 OUT_DIR="artifacts/task-023/live/${RUN_TAG}"
@@ -17,6 +18,24 @@ mkdir -p "$OUT_DIR"
 
 WORKER_PIDS=()
 SIM_IDS_CSV=""
+
+C_RESET=""
+C_BOLD=""
+C_CYAN=""
+C_GREEN=""
+C_YELLOW=""
+C_RED=""
+C_BLUE=""
+
+if [ -t 1 ] && [ "$USE_COLOR" = "1" ]; then
+  C_RESET="$(printf '\033[0m')"
+  C_BOLD="$(printf '\033[1m')"
+  C_CYAN="$(printf '\033[36m')"
+  C_GREEN="$(printf '\033[32m')"
+  C_YELLOW="$(printf '\033[33m')"
+  C_RED="$(printf '\033[31m')"
+  C_BLUE="$(printf '\033[34m')"
+fi
 
 cleanup() {
   for pid in "${WORKER_PIDS[@]:-}"; do
@@ -148,6 +167,8 @@ $sent = (clone $base)->where("status", "sent")->count();
 $failed = (clone $base)->where("status", "failed")->count();
 $processed = $pending + $sent + $failed;
 
+$rows = (clone $base)->get(["sim_id", "status"]);
+
 $redis = app(\App\Services\RedisQueueService::class);
 $depth = 0;
 foreach ($simIds as $sid) {
@@ -161,6 +182,16 @@ echo "SENT=".$sent."\n";
 echo "FAILED=".$failed."\n";
 echo "PROCESSED=".$processed."\n";
 echo "CHAT_DEPTH=".$depth."\n";
+
+foreach ($simIds as $sid) {
+  $queuedBySim = $rows->where("sim_id", $sid)->where("status", "queued")->count();
+  $pendingBySim = $rows->where("sim_id", $sid)->where("status", "pending")->count();
+  $sentBySim = $rows->where("sim_id", $sid)->where("status", "sent")->count();
+  $failedBySim = $rows->where("sim_id", $sid)->where("status", "failed")->count();
+  $chatDepthBySim = (int) $redis->depth($sid, "chat");
+
+  echo "SIMROW=".$sid."|".$queuedBySim."|".$pendingBySim."|".$sentBySim."|".$failedBySim."|".$chatDepthBySim."\n";
+}
 '
 }
 
@@ -174,6 +205,7 @@ print_ui() {
   local failed="$7"
   local processed="$8"
   local depth="$9"
+  local sim_rows="${10:-}"
 
   local left_to_process
   left_to_process=$((total - processed))
@@ -197,28 +229,40 @@ print_ui() {
   local bar
   bar="$(printf '%*s' "$fill" '' | tr ' ' '#')$(printf '%*s' "$empty" '' | tr ' ' '-')"
 
-  if command -v tput >/dev/null 2>&1; then
+  if command -v tput >/dev/null 2>&1 && [ -t 1 ]; then
     tput clear
   fi
 
-  printf "TASK023 LIVE 10-MIN TEST DASHBOARD\n"
+  printf "%s%sTASK023 LIVE 10-MIN TEST DASHBOARD%s\n" "$C_BOLD" "$C_CYAN" "$C_RESET"
   printf "Run Tag        : %s\n" "$RUN_TAG"
-  printf "Mode           : %s\n" "$( [ "$SAFE_MODE" = "1" ] && echo "SAFE (runtime timeout simulation)" || echo "LIVE" )"
+  printf "Mode           : %s%s%s\n" "$C_BLUE" "$( [ "$SAFE_MODE" = "1" ] && echo "SAFE (runtime timeout simulation)" || echo "LIVE" )" "$C_RESET"
   printf "SIM IDs        : %s\n" "$SIM_IDS_CSV"
   printf "Duration       : %ss\n" "$DURATION_SECONDS"
   printf "Elapsed        : %ss\n" "$elapsed"
   printf "Remaining      : %ss\n" "$remaining"
-  printf "Progress       : [%s] %3d%%\n" "$bar" "$pct"
+  printf "Progress       : %s[%s] %3d%%%s\n" "$C_CYAN" "$bar" "$pct" "$C_RESET"
   printf "\n"
   printf "Total Rows     : %s\n" "$total"
   printf "Processed      : %s\n" "$processed"
-  printf "Sent           : %s\n" "$sent"
-  printf "Pending        : %s\n" "$pending"
-  printf "Failed         : %s\n" "$failed"
-  printf "Queued         : %s\n" "$queued"
+  printf "Sent           : %s%s%s\n" "$C_GREEN" "$sent" "$C_RESET"
+  printf "Pending        : %s%s%s\n" "$C_YELLOW" "$pending" "$C_RESET"
+  printf "Failed         : %s%s%s\n" "$C_RED" "$failed" "$C_RESET"
+  printf "Queued         : %s%s%s\n" "$C_CYAN" "$queued" "$C_RESET"
   printf "Left to Process: %s\n" "$left_to_process"
   printf "Queue Depth    : %s\n" "$depth"
   printf "Proc Rate/s    : %s\n" "$rate"
+  printf "\n"
+  printf "%sPer-SIM Mini Table%s\n" "$C_BOLD" "$C_RESET"
+  printf "%-8s %-8s %-8s %-8s %-8s %-10s\n" "SIM_ID" "QUEUED" "PENDING" "SENT" "FAILED" "CHAT_DEPTH"
+  printf "%-8s %-8s %-8s %-8s %-8s %-10s\n" "------" "------" "-------" "----" "------" "----------"
+  if [ -n "$sim_rows" ]; then
+    while IFS= read -r row; do
+      [ -z "$row" ] && continue
+      row="${row#SIMROW=}"
+      IFS='|' read -r sid q p s f d <<< "$row"
+      printf "%-8s %-8s %-8s %-8s %-8s %-10s\n" "$sid" "$q" "$p" "$s" "$f" "$d"
+    done <<< "$sim_rows"
+  fi
   printf "\n"
   printf "Artifacts      : %s\n" "$OUT_DIR"
   printf "Press Ctrl+C to stop early (artifacts kept).\n"
@@ -265,6 +309,7 @@ while true; do
   failed="$(printf '%s\n' "$stats_output" | sed -n 's/^FAILED=//p' | tail -n1)"
   processed="$(printf '%s\n' "$stats_output" | sed -n 's/^PROCESSED=//p' | tail -n1)"
   depth="$(printf '%s\n' "$stats_output" | sed -n 's/^CHAT_DEPTH=//p' | tail -n1)"
+  sim_rows="$(printf '%s\n' "$stats_output" | grep '^SIMROW=' || true)"
 
   total="${total:-0}"
   queued="${queued:-0}"
@@ -274,7 +319,7 @@ while true; do
   processed="${processed:-0}"
   depth="${depth:-0}"
 
-  print_ui "$elapsed" "$remaining" "$total" "$queued" "$pending" "$sent" "$failed" "$processed" "$depth"
+  print_ui "$elapsed" "$remaining" "$total" "$queued" "$pending" "$sent" "$failed" "$processed" "$depth" "$sim_rows"
 
   printf "%s elapsed=%s remaining=%s total=%s processed=%s sent=%s pending=%s failed=%s queued=%s depth=%s\n" \
     "$(date -Iseconds)" "$elapsed" "$remaining" "$total" "$processed" "$sent" "$pending" "$failed" "$queued" "$depth" \
