@@ -1084,7 +1084,12 @@ Done / Closure Gate:
 
 TASK 032 Evidence Ledger:
 - S1 artifact links + pass/fail
-  - Result: PENDING
+  - Scenario: runtime send classification parity matrix across dashboard + worker execution surfaces
+  - Artifacts: `artifacts/task-032/s1/runtime_client_unreachable.txt`, `artifacts/task-032/s1/runtime_send_timeout.txt`, `artifacts/task-032/s1/runtime_invalid_response.txt`, `artifacts/task-032/s1/retry_classification_h3.txt`, `artifacts/task-032/s1/retry_classification_h4.txt`, `artifacts/task-032/s1/parity_rows.txt`, `artifacts/task-032/s1/worker_source_rows.txt`, `artifacts/task-032/s1/outbound_rows.txt`
+  - Run summary: dashboard surface evidence captured with `execution_surface=dashboard_runtime_send_test`; worker surface evidence captured with `source=worker_send_failure`, `error=RUNTIME_TIMEOUT`, `error_layer=transport`
+  - Classification summary: unreachable/timeout/invalid-response scenarios remain deterministic and aligned with existing retryability rules; `SEND_FAILED` network failures remain visible in parity rows
+  - Dashboard note: `dashboard_api_status=302` is expected in script context (session-protected dashboard API without login cookie) and is not treated as a send-path classification failure
+  - Result: PASS
 - S2 artifact links + pass/fail
   - Result: PENDING
 - S3 artifact links + pass/fail
