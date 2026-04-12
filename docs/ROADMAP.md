@@ -3,7 +3,7 @@
 ---
 
 ## CURRENT PHASE
-Phase 5B – IN PROGRESS (TASK 021 closed; TASK 022/023 follow)
+Phase 5B – IN PROGRESS (TASK 021/022 closed; TASK 023 follow)
 
 ### Phase Status
 - Phase 0: COMPLETE (Locked)
@@ -12,7 +12,7 @@ Phase 5B – IN PROGRESS (TASK 021 closed; TASK 022/023 follow)
 - Phase 3: COMPLETE (absorbed into Phase 2 — see Phase 3 section)
 - Phase 4: COMPLETE (Locked) — tenant-safe operator API + core dashboard/operator surfaces implemented
 - Phase 5A: COMPLETE (Locked) — dashboard/auth/operator system
-- Phase 5B: IN PROGRESS — scale/infrastructure/throughput path (`TASK 021` complete; `TASK 022/023` pending)
+- Phase 5B: IN PROGRESS — scale/infrastructure/throughput path (`TASK 021/022` complete; `TASK 023` pending)
 - Phase 6: COMPLETE (Locked) — Python Runtime Integration & Live Modem Fleet (`TASK 029`..`TASK 032` closure complete)
 - Phase 1 lock result: manual migration baseline + failover/reassign hardening complete
 - Phase 2 lock result: Redis transport + rebuild + retry + worker/controller/event wiring + Laravel-side Python integration + errorLayer-aware retry policy + live smoke-test proven + last_success_at bug fix + bootstrap seeders + Python API authentication + SimHealthService validation — all complete and locked
@@ -316,8 +316,8 @@ Status: IN PROGRESS
 
 ### Phase 5B Active Scale Path (Open)
 - TASK 021 (DONE): worker scale-out closure completed via strict checklist `021-W1`..`021-W8` with closure gate `AC-021-01`..`AC-021-08`
-- TASK 022 (FUTURE): Python execution scale-out (starts after TASK 021 readiness)
-- TASK 023 (FUTURE): throughput/load testing (100k/500k/1M targets) after TASK 021/022 completion
+- TASK 022 (DONE): Python execution scale-out readiness validated via `W1`..`W6` evidence closure (see `docs/TASKS.md`)
+- TASK 023 (FUTURE): throughput/load testing (100k/500k/1M targets) after TASK 021/022 closure
 
 ---
 

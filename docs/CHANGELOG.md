@@ -4,6 +4,34 @@ Last Updated: 2026-04-12
 
 ---
 
+## [2026-04-12] TASK 022 Closure Checkpoint — Python Execution Scale-Out Readiness Recorded
+
+### Summary
+`TASK 022` closure evidence is now documented. Python execution-node readiness validation was completed for the current single-runtime deployment path.
+
+### What Changed
+- `docs/TASKS.md` now marks `TASK 022` as `DONE` and records `W1`..`W6` evidence outcomes:
+  - W1 baseline endpoint readiness (`health`/`discover` baseline)
+  - W2 moderate concurrent probe burst
+  - W3 high concurrent probe burst
+  - W4 runtime restart recovery
+  - W5 soak stability
+  - W6 closure ledger consolidation
+- `docs/ROADMAP.md` now reflects `TASK 021` and `TASK 022` as complete, with `TASK 023` as the remaining Phase 5B open item.
+- `IMPLEMENTATION_PLAN.md` now reflects `TASK 022` closure and `TASK 023` pending status.
+
+### Notes
+- W2 evidence: health/discover `60/60` status `200`
+- W3 evidence: health/discover `200/200` status `200`
+- W4 evidence: runtime restart path validated with post-restart probe health/discover `12/12` status `200`
+- W5 evidence: in-container soak run health/discover `60/60` status `200` with no `000` failures
+
+### Status
+- documentation update only
+- no application/runtime/API behavior changes
+
+---
+
 ## [2026-04-12] TASK 021 Checkpoint — W7 Runbook Dry-Run Validation Recorded
 
 ### Summary

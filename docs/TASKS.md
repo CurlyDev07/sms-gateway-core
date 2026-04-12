@@ -1,6 +1,6 @@
 # TASKS
 
-Last Updated: 2026-04-12 (TASK 021 W1-W8 closure checkpoint)
+Last Updated: 2026-04-12 (TASK 022 W1-W6 closure checkpoint)
 
 ---
 
@@ -871,7 +871,7 @@ TASK 021 Evidence Ledger:
 ---
 
 ## TASK 022 — PYTHON EXECUTION SCALE-OUT
-Status: FUTURE
+Status: DONE (runtime-node readiness checklist closure satisfied)
 
 Goal:
 - scale Python nodes as needed
@@ -880,6 +880,32 @@ Goal:
 
 Scope note:
 - deferred scale-path work (not a blocker for current Phase 6 implemented runtime/UI maturity documentation)
+
+TASK 022 Evidence Ledger:
+- W1 Baseline endpoint readiness
+  - Artifacts: `artifacts/task-022/w1/config_snapshot.txt`, `artifacts/task-022/w1/health_status_counts.txt`, `artifacts/task-022/w1/discover_status_counts.txt`
+  - Summary: baseline config captured; health `10/10` status `200`; discover `10/10` status `200`
+  - Result: PASS
+- W2 Concurrent probe burst (moderate)
+  - Artifacts: `artifacts/task-022/w2/probe.log`, `artifacts/task-022/w2/health_status_counts.txt`, `artifacts/task-022/w2/discover_status_counts.txt`, `artifacts/task-022/w2/latency_summary.txt`
+  - Summary: health `60/60` status `200`; discover `60/60` status `200`; burst stability validated
+  - Result: PASS
+- W3 Concurrent probe burst (high)
+  - Artifacts: `artifacts/task-022/w3/probe.log`, `artifacts/task-022/w3/health_status_counts.txt`, `artifacts/task-022/w3/discover_status_counts.txt`, `artifacts/task-022/w3/latency_summary.txt`
+  - Summary: health `200/200` status `200`; discover `200/200` status `200`; high-burst stability validated
+  - Result: PASS
+- W4 Runtime restart recovery
+  - Artifacts: `artifacts/task-022/w4/runtime_process_before.txt`, `artifacts/task-022/w4/restart_output.txt`, `artifacts/task-022/w4/runtime_process_after.txt`, `artifacts/task-022/w4/runtime_manual_restart.log`, `artifacts/task-022/w4/health_status_counts_after_restart.txt`, `artifacts/task-022/w4/discover_status_counts_after_restart.txt`
+  - Summary: runtime process restart path validated; post-restart probes remained healthy (`12/12` health/discover status `200`)
+  - Result: PASS
+- W5 Soak stability
+  - Artifacts: `artifacts/task-022/w5/soak.log`, `artifacts/task-022/w5/health_counts.txt`, `artifacts/task-022/w5/discover_counts.txt`, `artifacts/task-022/w5/fail_lines.txt`
+  - Summary: in-container soak run completed with health `60/60` status `200` and discover `60/60` status `200`, with no `000` failures
+  - Result: PASS
+- W6 Closure review
+  - Artifacts: `artifacts/task-022/w6/commit.txt`, `artifacts/task-022/w6/timestamps.txt`, `artifacts/task-022/w6/evidence_ledger.md`
+  - Summary: W1..W5 PASS evidence consolidated and closure statement captured
+  - Result: PASS
 
 ---
 
