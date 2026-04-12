@@ -1,0 +1,4 @@
+S1 status: PASS
+- dashboard surface evidence: artifacts/task-032/s1/parity_rows.txt
+- worker surface evidence: artifacts/task-032/s1/worker_source_rows.txt
+- classification scenarios reused: runtime_unreachable, runtime_timeout, invalid_response, SEND_FAILED

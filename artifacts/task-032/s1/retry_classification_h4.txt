@@ -1,0 +1,16 @@
+array:2 [
+  "invalid_response_python_api" => array:5 [
+    "retryable" => false
+    "classification" => "non_retryable"
+    "reason" => "explicit_non_retryable_error_code"
+    "error" => "INVALID_RESPONSE"
+    "error_layer" => "python_api"
+  ]
+  "runtime_timeout_transport" => array:5 [
+    "retryable" => true
+    "classification" => "retryable"
+    "reason" => "explicit_retryable_error_code"
+    "error" => "RUNTIME_TIMEOUT"
+    "error_layer" => "transport"
+  ]
+]

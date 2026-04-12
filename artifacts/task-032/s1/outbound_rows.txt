@@ -1,0 +1,543 @@
+array:11 [
+  0 => array:6 [
+    "id" => 101
+    "status" => "sent"
+    "failure_reason" => null
+    "retry_count" => 0
+    "scheduled_at" => null
+    "metadata" => array:2 [
+      "python_runtime" => array:7 [
+        "raw" => array:6 [
+          "meta" => array:5 [
+            "sim_id" => 225
+            "company_id" => 259
+            "message_id" => 101
+            "client_message_id" => null
+            "execution_surface" => "dashboard_runtime_send_test"
+          ]
+          "port" => "/dev/ttyUSB14"
+          "sim_id" => "515039219149367"
+          "status" => "success"
+          "modem_id" => "866358071697796"
+          "modem_response" => """
+            OK\r\n
+            \n
+            ATE0\r\r\n
+            OK\r\n
+            \n
+            \r\n
+            OK\r\n
+            \n
+            \r\n
+            > \n
+            +CMGS: 167\r\n
+            \r\n
+            OK
+            """
+        ]
+        "error" => null
+        "source" => "dashboard_runtime_send_test"
+        "success" => true
+        "error_layer" => null
+        "processed_at" => "2026-04-11T14:39:29+00:00"
+        "provider_message_id" => "101"
+      ]
+      "runtime_send_test" => array:2 [
+        "source" => "dashboard_runtime_send_test"
+        "requested_at" => "2026-04-11T14:39:05+00:00"
+      ]
+    ]
+  ]
+  1 => array:6 [
+    "id" => 100
+    "status" => "sent"
+    "failure_reason" => null
+    "retry_count" => 0
+    "scheduled_at" => null
+    "metadata" => array:2 [
+      "python_runtime" => array:7 [
+        "raw" => array:6 [
+          "meta" => array:5 [
+            "sim_id" => 225
+            "company_id" => 259
+            "message_id" => 100
+            "client_message_id" => null
+            "execution_surface" => "dashboard_runtime_send_test"
+          ]
+          "port" => "/dev/ttyUSB14"
+          "sim_id" => "515039219149367"
+          "status" => "success"
+          "modem_id" => "866358071697796"
+          "modem_response" => """
+            OK\r\n
+            \n
+            ATE0\r\r\n
+            OK\r\n
+            \n
+            \r\n
+            OK\r\n
+            \n
+            \r\n
+            > \n
+            +CMGS: 166\r\n
+            \r\n
+            OK
+            """
+        ]
+        "error" => null
+        "source" => "dashboard_runtime_send_test"
+        "success" => true
+        "error_layer" => null
+        "processed_at" => "2026-04-11T14:38:28+00:00"
+        "provider_message_id" => "100"
+      ]
+      "runtime_send_test" => array:2 [
+        "source" => "dashboard_runtime_send_test"
+        "requested_at" => "2026-04-11T14:38:04+00:00"
+      ]
+    ]
+  ]
+  2 => array:6 [
+    "id" => 99
+    "status" => "sent"
+    "failure_reason" => null
+    "retry_count" => 0
+    "scheduled_at" => null
+    "metadata" => array:2 [
+      "python_runtime" => array:7 [
+        "raw" => array:6 [
+          "meta" => array:5 [
+            "sim_id" => 225
+            "company_id" => 259
+            "message_id" => 99
+            "client_message_id" => null
+            "execution_surface" => "dashboard_runtime_send_test"
+          ]
+          "port" => "/dev/ttyUSB2"
+          "sim_id" => "515039219149367"
+          "status" => "success"
+          "modem_id" => "866358071697796"
+          "modem_response" => """
+            OK\r\n
+            \n
+            ATE0\r\r\n
+            OK\r\n
+            \n
+            \r\n
+            OK\r\n
+            \n
+            \r\n
+            > \n
+            +CMGS: 157\r\n
+            \r\n
+            OK
+            """
+        ]
+        "error" => null
+        "source" => "dashboard_runtime_send_test"
+        "success" => true
+        "error_layer" => null
+        "processed_at" => "2026-04-11T06:51:19+00:00"
+        "provider_message_id" => "99"
+      ]
+      "runtime_send_test" => array:2 [
+        "source" => "dashboard_runtime_send_test"
+        "requested_at" => "2026-04-11T06:50:55+00:00"
+      ]
+    ]
+  ]
+  3 => array:6 [
+    "id" => 98
+    "status" => "sent"
+    "failure_reason" => null
+    "retry_count" => 0
+    "scheduled_at" => null
+    "metadata" => array:2 [
+      "python_runtime" => array:7 [
+        "raw" => array:6 [
+          "meta" => array:5 [
+            "sim_id" => 225
+            "company_id" => 259
+            "message_id" => 98
+            "client_message_id" => null
+            "execution_surface" => "dashboard_runtime_send_test"
+          ]
+          "port" => "/dev/ttyUSB2"
+          "sim_id" => "515039219149367"
+          "status" => "success"
+          "modem_id" => "866358071697796"
+          "modem_response" => """
+            OK\r\n
+            \n
+            ATE0\r\r\n
+            OK\r\n
+            \n
+            \r\n
+            OK\r\n
+            \n
+            \r\n
+            > \n
+            +CMGS: 156\r\n
+            \r\n
+            OK
+            """
+        ]
+        "error" => null
+        "source" => "dashboard_runtime_send_test"
+        "success" => true
+        "error_layer" => null
+        "processed_at" => "2026-04-11T06:25:16+00:00"
+        "provider_message_id" => "98"
+      ]
+      "runtime_send_test" => array:2 [
+        "source" => "dashboard_runtime_send_test"
+        "requested_at" => "2026-04-11T06:24:52+00:00"
+      ]
+    ]
+  ]
+  4 => array:6 [
+    "id" => 97
+    "status" => "sent"
+    "failure_reason" => null
+    "retry_count" => 0
+    "scheduled_at" => null
+    "metadata" => array:2 [
+      "python_runtime" => array:7 [
+        "raw" => array:6 [
+          "meta" => array:5 [
+            "sim_id" => 225
+            "company_id" => 259
+            "message_id" => 97
+            "client_message_id" => null
+            "execution_surface" => "dashboard_runtime_send_test"
+          ]
+          "port" => "/dev/ttyUSB2"
+          "sim_id" => "515039219149367"
+          "status" => "success"
+          "modem_id" => "866358071697796"
+          "modem_response" => """
+            OK\r\n
+            \n
+            ATE0\r\r\n
+            OK\r\n
+            \n
+            \r\n
+            OK\r\n
+            \n
+            \r\n
+            > \n
+            +CMGS: 155\r\n
+            \r\n
+            OK
+            """
+        ]
+        "error" => null
+        "source" => "dashboard_runtime_send_test"
+        "success" => true
+        "error_layer" => null
+        "processed_at" => "2026-04-11T03:11:32+00:00"
+        "provider_message_id" => "97"
+      ]
+      "runtime_send_test" => array:2 [
+        "source" => "dashboard_runtime_send_test"
+        "requested_at" => "2026-04-11T03:11:08+00:00"
+      ]
+    ]
+  ]
+  5 => array:6 [
+    "id" => 96
+    "status" => "sent"
+    "failure_reason" => null
+    "retry_count" => 0
+    "scheduled_at" => null
+    "metadata" => array:2 [
+      "python_runtime" => array:7 [
+        "raw" => array:6 [
+          "meta" => array:5 [
+            "sim_id" => 225
+            "company_id" => 259
+            "message_id" => 96
+            "client_message_id" => null
+            "execution_surface" => "dashboard_runtime_send_test"
+          ]
+          "port" => "/dev/ttyUSB2"
+          "sim_id" => "515039219149367"
+          "status" => "success"
+          "modem_id" => "866358071697796"
+          "modem_response" => """
+            OK\r\n
+            \n
+            ATE0\r\r\n
+            OK\r\n
+            \n
+            \r\n
+            OK\r\n
+            \n
+            \r\n
+            > \n
+            +CMGS: 151\r\n
+            \r\n
+            OK
+            """
+        ]
+        "error" => null
+        "source" => "dashboard_runtime_send_test"
+        "success" => true
+        "error_layer" => null
+        "processed_at" => "2026-04-11T02:50:34+00:00"
+        "provider_message_id" => "96"
+      ]
+      "runtime_send_test" => array:2 [
+        "source" => "dashboard_runtime_send_test"
+        "requested_at" => "2026-04-11T02:50:10+00:00"
+      ]
+    ]
+  ]
+  6 => array:6 [
+    "id" => 95
+    "status" => "sent"
+    "failure_reason" => null
+    "retry_count" => 0
+    "scheduled_at" => null
+    "metadata" => array:2 [
+      "python_runtime" => array:7 [
+        "raw" => array:6 [
+          "meta" => array:5 [
+            "sim_id" => 225
+            "company_id" => 259
+            "message_id" => 95
+            "client_message_id" => null
+            "execution_surface" => "dashboard_runtime_send_test"
+          ]
+          "port" => "/dev/ttyUSB2"
+          "sim_id" => "515039219149367"
+          "status" => "success"
+          "modem_id" => "866358071697796"
+          "modem_response" => """
+            OK\r\n
+            \n
+            ATE0\r\r\n
+            OK\r\n
+            \n
+            \r\n
+            OK\r\n
+            \n
+            \r\n
+            > \n
+            +CMGS: 148\r\n
+            \r\n
+            OK
+            """
+        ]
+        "error" => null
+        "source" => "dashboard_runtime_send_test"
+        "success" => true
+        "error_layer" => null
+        "processed_at" => "2026-04-11T02:46:18+00:00"
+        "provider_message_id" => "95"
+      ]
+      "runtime_send_test" => array:2 [
+        "source" => "dashboard_runtime_send_test"
+        "requested_at" => "2026-04-11T02:45:54+00:00"
+      ]
+    ]
+  ]
+  7 => array:6 [
+    "id" => 94
+    "status" => "failed"
+    "failure_reason" => "SEND_FAILED"
+    "retry_count" => 0
+    "scheduled_at" => null
+    "metadata" => array:2 [
+      "python_runtime" => array:7 [
+        "raw" => array:8 [
+          "meta" => array:5 [
+            "sim_id" => 225
+            "company_id" => 259
+            "message_id" => 94
+            "client_message_id" => null
+            "execution_surface" => "dashboard_runtime_send_test"
+          ]
+          "port" => "/dev/ttyUSB2"
+          "sim_id" => "515039219149367"
+          "modem_id" => "866358071697796"
+          "error_layer" => "network"
+          "cme_error_code" => null
+          "cms_error_code" => 350
+          "modem_response" => """
+            OK\r\n
+            \n
+            ATE0\r\r\n
+            OK\r\n
+            \n
+            \r\n
+            OK\r\n
+            \n
+            \r\n
+            > \n
+            +CMS ERROR: 350\n
+            +CMS ERROR: 350
+            """
+        ]
+        "error" => "SEND_FAILED"
+        "source" => "dashboard_runtime_send_test"
+        "success" => false
+        "error_layer" => "network"
+        "processed_at" => "2026-04-11T02:07:37+00:00"
+        "provider_message_id" => null
+      ]
+      "runtime_send_test" => array:2 [
+        "source" => "dashboard_runtime_send_test"
+        "requested_at" => "2026-04-11T02:07:13+00:00"
+      ]
+    ]
+  ]
+  8 => array:6 [
+    "id" => 93
+    "status" => "failed"
+    "failure_reason" => "SEND_FAILED"
+    "retry_count" => 0
+    "scheduled_at" => null
+    "metadata" => array:2 [
+      "python_runtime" => array:7 [
+        "raw" => array:8 [
+          "meta" => array:5 [
+            "sim_id" => 225
+            "company_id" => 259
+            "message_id" => 93
+            "client_message_id" => null
+            "execution_surface" => "dashboard_runtime_send_test"
+          ]
+          "port" => "/dev/ttyUSB2"
+          "sim_id" => "515039219149367"
+          "modem_id" => "866358071697796"
+          "error_layer" => "network"
+          "cme_error_code" => null
+          "cms_error_code" => 350
+          "modem_response" => """
+            OK\r\n
+            \n
+            ATE0\r\r\n
+            OK\r\n
+            \n
+            \r\n
+            OK\r\n
+            \n
+            \r\n
+            > \n
+            +CMS ERROR: 350\n
+            +CMS ERROR: 350
+            """
+        ]
+        "error" => "SEND_FAILED"
+        "source" => "dashboard_runtime_send_test"
+        "success" => false
+        "error_layer" => "network"
+        "processed_at" => "2026-04-11T02:06:44+00:00"
+        "provider_message_id" => null
+      ]
+      "runtime_send_test" => array:2 [
+        "source" => "dashboard_runtime_send_test"
+        "requested_at" => "2026-04-11T02:06:20+00:00"
+      ]
+    ]
+  ]
+  9 => array:6 [
+    "id" => 92
+    "status" => "sent"
+    "failure_reason" => null
+    "retry_count" => 0
+    "scheduled_at" => null
+    "metadata" => array:2 [
+      "python_runtime" => array:7 [
+        "raw" => array:6 [
+          "meta" => array:5 [
+            "sim_id" => 225
+            "company_id" => 259
+            "message_id" => 92
+            "client_message_id" => null
+            "execution_surface" => "dashboard_runtime_send_test"
+          ]
+          "port" => "/dev/ttyUSB2"
+          "sim_id" => "515039219149367"
+          "status" => "success"
+          "modem_id" => "866358071697796"
+          "modem_response" => """
+            OK\r\n
+            \n
+            ATE0\r\r\n
+            OK\r\n
+            \n
+            \r\n
+            OK\r\n
+            \n
+            \r\n
+            > \n
+            +CMGS: 136\r\n
+            \r\n
+            OK
+            """
+        ]
+        "error" => null
+        "source" => "dashboard_runtime_send_test"
+        "success" => true
+        "error_layer" => null
+        "processed_at" => "2026-04-10T16:22:34+00:00"
+        "provider_message_id" => "92"
+      ]
+      "runtime_send_test" => array:2 [
+        "source" => "dashboard_runtime_send_test"
+        "requested_at" => "2026-04-10T16:22:10+00:00"
+      ]
+    ]
+  ]
+  10 => array:6 [
+    "id" => 91
+    "status" => "sent"
+    "failure_reason" => null
+    "retry_count" => 0
+    "scheduled_at" => null
+    "metadata" => array:2 [
+      "python_runtime" => array:7 [
+        "raw" => array:6 [
+          "meta" => array:5 [
+            "sim_id" => 225
+            "company_id" => 259
+            "message_id" => 91
+            "client_message_id" => null
+            "execution_surface" => "dashboard_runtime_send_test"
+          ]
+          "port" => "/dev/ttyUSB2"
+          "sim_id" => "515039219149367"
+          "status" => "success"
+          "modem_id" => "866358071697796"
+          "modem_response" => """
+            OK\r\n
+            \n
+            ATE0\r\r\n
+            OK\r\n
+            \n
+            \r\n
+            OK\r\n
+            \n
+            \r\n
+            > \n
+            +CMGS: 135\r\n
+            \r\n
+            OK
+            """
+        ]
+        "error" => null
+        "source" => "dashboard_runtime_send_test"
+        "success" => true
+        "error_layer" => null
+        "processed_at" => "2026-04-10T16:11:11+00:00"
+        "provider_message_id" => "91"
+      ]
+      "runtime_send_test" => array:2 [
+        "source" => "dashboard_runtime_send_test"
+        "requested_at" => "2026-04-10T16:10:47+00:00"
+      ]
+    ]
+  ]
+]

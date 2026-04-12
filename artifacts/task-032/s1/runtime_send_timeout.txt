@@ -1,0 +1,17 @@
+array:4 [
+  "override_python_api_url" => "http://10.255.255.1:9000"
+  "override_timeout_seconds" => 2
+  "send_result" => array:8 [
+    "ok" => false
+    "status" => null
+    "error" => "runtime_timeout"
+    "error_layer" => null
+    "send_success" => null
+    "send_error" => null
+    "data" => []
+    "raw" => array:1 [
+      "exception" => "cURL error 28: Connection timed out after 2001 milliseconds (see https://curl.haxx.se/libcurl/c/libcurl-errors.html) for http://10.255.255.1:9000/send"
+    ]
+  ]
+  "is_runtime_timeout" => true
+]

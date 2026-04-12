@@ -1,0 +1,22 @@
+array:2 [
+  0 => array:8 [
+    "id" => 94
+    "status" => "failed"
+    "failure_reason" => "SEND_FAILED"
+    "retry_count" => 0
+    "scheduled_at" => null
+    "runtime_error" => "SEND_FAILED"
+    "error_layer" => "network"
+    "execution_surface" => "dashboard_runtime_send_test"
+  ]
+  1 => array:8 [
+    "id" => 93
+    "status" => "failed"
+    "failure_reason" => "SEND_FAILED"
+    "retry_count" => 0
+    "scheduled_at" => null
+    "runtime_error" => "SEND_FAILED"
+    "error_layer" => "network"
+    "execution_surface" => "dashboard_runtime_send_test"
+  ]
+]

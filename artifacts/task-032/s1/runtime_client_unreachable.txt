@@ -1,0 +1,22 @@
+array:3 [
+  "override_python_api_url" => "http://127.0.0.1:65534"
+  "health" => array:5 [
+    "ok" => false
+    "status" => null
+    "error" => "connection_failed"
+    "data" => []
+    "raw" => array:1 [
+      "exception" => "cURL error 7: Failed to connect to 127.0.0.1 port 65534 after 0 ms: Could not connect to server (see https://curl.haxx.se/libcurl/c/libcurl-errors.html) for http://127.0.0.1:65534/health"
+    ]
+  ]
+  "discover" => array:6 [
+    "ok" => false
+    "status" => null
+    "error" => "connection_failed"
+    "modems" => []
+    "data" => []
+    "raw" => array:1 [
+      "exception" => "cURL error 7: Failed to connect to 127.0.0.1 port 65534 after 0 ms: Could not connect to server (see https://curl.haxx.se/libcurl/c/libcurl-errors.html) for http://127.0.0.1:65534/modems/discover"
+    ]
+  ]
+]

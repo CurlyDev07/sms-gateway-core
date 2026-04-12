@@ -1,0 +1,104 @@
+array:2 [
+  0 => array:7 [
+    "id" => 94
+    "status" => "failed"
+    "failure_reason" => "SEND_FAILED"
+    "retry_count" => 0
+    "scheduled_at" => null
+    "metadata" => array:2 [
+      "python_runtime" => array:7 [
+        "raw" => array:8 [
+          "meta" => array:5 [
+            "sim_id" => 225
+            "company_id" => 259
+            "message_id" => 94
+            "client_message_id" => null
+            "execution_surface" => "dashboard_runtime_send_test"
+          ]
+          "port" => "/dev/ttyUSB2"
+          "sim_id" => "515039219149367"
+          "modem_id" => "866358071697796"
+          "error_layer" => "network"
+          "cme_error_code" => null
+          "cms_error_code" => 350
+          "modem_response" => """
+            OK\r\n
+            \n
+            ATE0\r\r\n
+            OK\r\n
+            \n
+            \r\n
+            OK\r\n
+            \n
+            \r\n
+            > \n
+            +CMS ERROR: 350\n
+            +CMS ERROR: 350
+            """
+        ]
+        "error" => "SEND_FAILED"
+        "source" => "dashboard_runtime_send_test"
+        "success" => false
+        "error_layer" => "network"
+        "processed_at" => "2026-04-11T02:07:37+00:00"
+        "provider_message_id" => null
+      ]
+      "runtime_send_test" => array:2 [
+        "source" => "dashboard_runtime_send_test"
+        "requested_at" => "2026-04-11T02:07:13+00:00"
+      ]
+    ]
+    "updated_at" => "2026-04-11T02:07:37.000000Z"
+  ]
+  1 => array:7 [
+    "id" => 93
+    "status" => "failed"
+    "failure_reason" => "SEND_FAILED"
+    "retry_count" => 0
+    "scheduled_at" => null
+    "metadata" => array:2 [
+      "python_runtime" => array:7 [
+        "raw" => array:8 [
+          "meta" => array:5 [
+            "sim_id" => 225
+            "company_id" => 259
+            "message_id" => 93
+            "client_message_id" => null
+            "execution_surface" => "dashboard_runtime_send_test"
+          ]
+          "port" => "/dev/ttyUSB2"
+          "sim_id" => "515039219149367"
+          "modem_id" => "866358071697796"
+          "error_layer" => "network"
+          "cme_error_code" => null
+          "cms_error_code" => 350
+          "modem_response" => """
+            OK\r\n
+            \n
+            ATE0\r\r\n
+            OK\r\n
+            \n
+            \r\n
+            OK\r\n
+            \n
+            \r\n
+            > \n
+            +CMS ERROR: 350\n
+            +CMS ERROR: 350
+            """
+        ]
+        "error" => "SEND_FAILED"
+        "source" => "dashboard_runtime_send_test"
+        "success" => false
+        "error_layer" => "network"
+        "processed_at" => "2026-04-11T02:06:44+00:00"
+        "provider_message_id" => null
+      ]
+      "runtime_send_test" => array:2 [
+        "source" => "dashboard_runtime_send_test"
+        "requested_at" => "2026-04-11T02:06:20+00:00"
+      ]
+    ]
+    "updated_at" => "2026-04-11T02:06:44.000000Z"
+  ]
+]

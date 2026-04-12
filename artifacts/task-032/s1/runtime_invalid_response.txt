@@ -1,0 +1,22 @@
+  <warning> DEPRECATED </warning> Creation of dynamic property Illuminate\Http\Client\Response::$cookies is deprecated in vendor/laravel/framework/src/Illuminate/Http/Client/PendingRequest.php on line 810.
+  <warning> DEPRECATED </warning> Creation of dynamic property Illuminate\Http\Client\Response::$transferStats is deprecated in vendor/laravel/framework/src/Illuminate/Http/Client/PendingRequest.php on line 812.
+array:3 [
+  "send_result" => array:8 [
+    "ok" => false
+    "status" => 200
+    "error" => "invalid_response"
+    "error_layer" => "python_api"
+    "send_success" => null
+    "send_error" => null
+    "data" => array:2 [
+      "status" => "ok"
+      "note" => "missing_success_field"
+    ]
+    "raw" => array:2 [
+      "status" => "ok"
+      "note" => "missing_success_field"
+    ]
+  ]
+  "is_invalid_response" => true
+  "error_layer" => "python_api"
+]
