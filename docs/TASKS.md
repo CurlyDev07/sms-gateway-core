@@ -1105,7 +1105,13 @@ TASK 032 Evidence Ledger:
   - Traceability summary: failure rows remain correlatable by `python_runtime.source` (`worker_send_failure` / `dashboard_runtime_send_test`) with deterministic runtime error-layer context
   - Result: PASS
 - S4 artifact links + pass/fail
-  - Result: PENDING
+  - Scenario: send outcome persistence semantics across sent/failed/retry-pending states
+  - Artifacts: `artifacts/task-032/s4/persistence_semantics_snapshot.txt`
+  - Run summary: snapshot shows deterministic persistence envelopes for all sampled outcomes (`sent=9`, `failed=2`, `pending_with_failure_reason=0`)
+  - Sent-state summary: sent rows consistently keep `failure_reason=null`, `scheduled_at=null`, and runtime success metadata with provider message IDs where available
+  - Failed-state summary: `SEND_FAILED` + `error_layer=network` rows remain terminal with `status=failed`, `scheduled_at=null`, and preserved failure runtime metadata
+  - Integrity summary: contradiction scan returned empty set (`contradictions=[]`) for invalid terminal/retry state overlaps
+  - Result: PASS
 - S5 artifact links + pass/fail
   - Result: PENDING
 - S6 artifact links + pass/fail
