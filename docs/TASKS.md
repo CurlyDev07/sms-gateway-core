@@ -1091,7 +1091,12 @@ TASK 032 Evidence Ledger:
   - Dashboard note: `dashboard_api_status=302` is expected in script context (session-protected dashboard API without login cookie) and is not treated as a send-path classification failure
   - Result: PASS
 - S2 artifact links + pass/fail
-  - Result: PENDING
+  - Scenario: retry scheduling and state-transition integrity for retryable vs non-retryable outcomes
+  - Artifacts: `artifacts/task-032/s2/seed.txt`, `artifacts/task-032/s2/state_snapshot.txt`, `artifacts/task-032/s2/runs.log`
+  - Run summary: isolated worker timeout probe produced retryable transition with `status=pending`, `retry_count=1`, `failure_reason=RUNTIME_TIMEOUT`, and non-null `scheduled_at`
+  - Non-retryable summary: `SEND_FAILED` + `error_layer=network` samples remain terminal with `status=failed` and `scheduled_at=null`
+  - Integrity summary: no contradictory terminal+rescheduled state observed in captured snapshots
+  - Result: PASS
 - S3 artifact links + pass/fail
   - Result: PENDING
 - S4 artifact links + pass/fail
