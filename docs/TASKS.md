@@ -839,7 +839,7 @@ Boundary:
 ---
 
 ## TASK 031 — PHASE 6 LIVE FLEET VALIDATION / RUNTIME HARDENING FOLLOW-UPS
-Status: IN PROGRESS (strict hardening checklist active)
+Status: DONE (strict hardening checklist completed; closure gate satisfied)
 
 Objective:
 - complete runtime hardening and live-fleet reliability depth beyond the validated baseline using evidence-based pass/fail gates
@@ -977,9 +977,16 @@ TASK 031 Evidence Ledger:
   - Dashboard note: `dashboard_api_status=302` expected in script context (session-protected dashboard API without login cookie)
   - Result: PASS
 - H7 artifact links + pass/fail
-  - Result: PENDING
+  - Scenario: runbook-grade operator expectations with independent second-operator dry run
+  - Artifacts: `artifacts/task-031/h7/runs.log`, `artifacts/task-031/h7/primary_operator_dry_run.md`, `artifacts/task-031/h7/second_operator_dry_run.md`, `artifacts/task-031/h7/h7_completion_checklist.txt`, `artifacts/task-031/h7/config_snapshot.txt`, `artifacts/task-031/h7/runtime_snapshot.txt`, `artifacts/task-031/h7/sms-app.log`, `artifacts/task-031/h7/commit.txt`, `artifacts/task-031/h7/timestamps.txt`
+  - Run summary: primary and second operator both completed scenario walkthroughs for H2/H3/H4/H5/H6 with PASS outcomes and no undocumented tribal knowledge requirement
+  - Dashboard note: `dashboard_api_status=302` expected in script context (session-protected dashboard API without login cookie)
+  - Result: PASS
 - H8 artifact links + pass/fail
-  - Result: PENDING
+  - Scenario: evidence ledger and closure review
+  - Artifacts: this `TASK 031 Evidence Ledger` block + `artifacts/task-031/h1/*`, `artifacts/task-031/h2/*`, `artifacts/task-031/h3/*`, `artifacts/task-031/h4/*`, `artifacts/task-031/h5/*`, `artifacts/task-031/h6/*`, `artifacts/task-031/h7/*`
+  - Closure summary: H1..H7 all PASS; acceptance criteria `AC-031-01`..`AC-031-07` satisfied with artifact-linked evidence
+  - Result: PASS
 
 ---
 
