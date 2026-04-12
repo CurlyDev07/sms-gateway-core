@@ -1,7 +1,7 @@
 # SMS Gateway Core – Implementation Plan (Revised)
 
-**Last Updated:** 2026-04-12 (TASK 021 strict checklist kickoff checkpoint)
-**Status:** Phase 0/1/2/4 Complete (Locked) — Phase 5A Complete (Locked), Phase 6 Complete (Locked), Phase 5B In Progress (`TASK 021` active)
+**Last Updated:** 2026-04-12 (TASK 021 closure checkpoint)
+**Status:** Phase 0/1/2/4 Complete (Locked) — Phase 5A Complete (Locked), Phase 6 Complete (Locked), Phase 5B In Progress (`TASK 021` complete; `TASK 022/023` pending)
 **Alignment:** Validated against all 9 locked docs with phase-boundary corrections
 
 ---
@@ -1242,7 +1242,7 @@ Phase 6 closure summary:
   - completed under strict send-path checklist `032-S1`..`032-S8` with `AC-032-01`..`AC-032-08` closure gate in `docs/TASKS.md`
 
 Active Phase 5B follow-up:
-- TASK 021 (IN PROGRESS): worker scale-out via strict checklist `021-W1`..`021-W8` and acceptance gate `AC-021-01`..`AC-021-08`
+- TASK 021 (DONE): worker scale-out closure completed via strict checklist `021-W1`..`021-W8` and acceptance gate `AC-021-01`..`AC-021-08`
 - TASK 022 (FUTURE): Python execution scale-out after TASK 021 readiness
 - TASK 023 (FUTURE): throughput/load testing after TASK 021/022 completion
 

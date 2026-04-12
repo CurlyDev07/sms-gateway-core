@@ -4,6 +4,110 @@ Last Updated: 2026-04-12
 
 ---
 
+## [2026-04-12] TASK 021 Checkpoint — W7 Runbook Dry-Run Validation Recorded
+
+### Summary
+Evidence for `021-W7` was captured and ledgered with primary and secondary operator dry runs completed.
+
+### What Changed
+- `docs/TASKS.md` TASK 021 evidence ledger now records `W7` artifacts and marks `W7` as `PASS`.
+- W7 artifact set references:
+  - `artifacts/task-021/w7/primary_operator_dry_run.md`
+  - `artifacts/task-021/w7/second_operator_dry_run.md`
+  - `artifacts/task-021/w7/w7_completion_checklist.txt`
+
+### Notes
+- Both operator dry runs reported PASS across W2/W3/W4/W5/W6 procedures.
+- Second-operator report confirmed execution without undocumented tribal knowledge.
+
+### Status
+- documentation update only
+- no application/runtime/API behavior changes
+
+---
+
+## [2026-04-12] TASK 021 Closure Checkpoint — W8 Evidence Ledger Gate Satisfied
+
+### Summary
+`TASK 021` closure review (`021-W8`) is completed. The evidence ledger is complete and acceptance criteria are satisfied.
+
+### What Changed
+- `docs/TASKS.md` now marks:
+  - `TASK 021` status as `DONE`
+  - `W8` as `PASS`
+  - `W7` as `PASS` with linked runbook artifacts
+- `docs/ROADMAP.md` updated Phase 5B active-path wording to reflect:
+  - `TASK 021` closed
+  - `TASK 022/023` remaining
+- `IMPLEMENTATION_PLAN.md` updated to reflect `TASK 021` closure and remaining Phase 5B sequence.
+
+### Notes
+- `W1`..`W8` are all PASS in the TASK 021 ledger.
+- `AC-021-01`..`AC-021-08` are satisfied by linked artifacts.
+
+### Status
+- documentation update only
+- no application/runtime/API behavior changes
+
+---
+
+## [2026-04-12] TASK 021 Checkpoint — W6 Worker Crash/Restart Recovery Semantics Recorded
+
+### Summary
+Evidence for `021-W6` was captured and ledgered for worker interruption recovery via stale-lock cleanup and restart-safe message-state reconciliation.
+
+### What Changed
+- `docs/TASKS.md` TASK 021 evidence ledger now records `W6` artifacts and marks `W6` as `PASS`.
+- W6 artifact set references:
+  - `artifacts/task-021/w6/run_tag.txt`
+  - `artifacts/task-021/w6/target_sim.txt`
+  - `artifacts/task-021/w6/seed.txt`
+  - `artifacts/task-021/w6/worker_before_interrupt.log`
+  - `artifacts/task-021/w6/forced_stale.txt`
+  - `artifacts/task-021/w6/before_recovery_snapshot.txt`
+  - `artifacts/task-021/w6/recover_command.txt`
+  - `artifacts/task-021/w6/after_recovery_snapshot.txt`
+  - `artifacts/task-021/w6/worker_after_restart.log`
+
+### Notes
+- Recovery command reported `Recovered stale outbound messages: 3`.
+- Run-tag rows reconciled into pending retry-safe state with `locked_at` cleared and no contradiction rows.
+
+### Status
+- documentation update only
+- no application/runtime/API behavior changes
+
+---
+
+## [2026-04-12] TASK 021 Checkpoint — W5 Retry Scheduler + Worker Interaction Recorded
+
+### Summary
+Evidence for `021-W5` was captured and ledgered for retry scheduler behavior while concurrent workers were active on the same SIM queue scope.
+
+### What Changed
+- `docs/TASKS.md` TASK 021 evidence ledger now records `W5` artifacts and marks `W5` as `PASS`.
+- W5 artifact set references:
+  - `artifacts/task-021/w5/run_tag.txt`
+  - `artifacts/task-021/w5/target_sim.txt`
+  - `artifacts/task-021/w5/seed.txt`
+  - `artifacts/task-021/w5/before_snapshot.txt`
+  - `artifacts/task-021/w5/worker_1.log`
+  - `artifacts/task-021/w5/worker_2.log`
+  - `artifacts/task-021/w5/retry_scheduler.txt`
+  - `artifacts/task-021/w5/after_snapshot.txt`
+  - `artifacts/task-021/w5/sms_app_15m.log`
+  - `artifacts/task-021/w5/scheduler_log_lines.txt`
+
+### Notes
+- Retry scheduler completed with deterministic counters (`due=6`, `claimed=6`, `enqueued=6`, `failures=0`) during active worker processing.
+- Probe rows showed coherent retry-state progression with updated retry count and next scheduled retry timestamp.
+
+### Status
+- documentation update only
+- no application/runtime/API behavior changes
+
+---
+
 ## [2026-04-12] TASK 021 Checkpoint — W4 Rebuild-Lock Interaction Under Active Workers Recorded
 
 ### Summary

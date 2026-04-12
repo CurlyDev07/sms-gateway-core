@@ -1,6 +1,6 @@
 # TASKS
 
-Last Updated: 2026-04-11 (Phase 6 realignment checkpoint)
+Last Updated: 2026-04-12 (TASK 021 W1-W8 closure checkpoint)
 
 ---
 
@@ -718,7 +718,7 @@ Completed:
 # PHASE 5B — SCALE PATH
 
 ## TASK 021 — WORKER SCALE-OUT
-Status: IN PROGRESS (strict scale-out checklist active)
+Status: DONE (strict scale-out checklist closure gate satisfied)
 
 Objective:
 - scale Laravel worker execution safely under multi-worker concurrency without breaking SIM isolation or message-state correctness
@@ -839,13 +839,34 @@ TASK 021 Evidence Ledger:
   - Lock/concurrency summary: rebuild lock absent after completion (`rebuild_lock_present=false`), both workers exited at bounded timeout (`124`), and row contradiction set remained empty
   - Result: PASS
 - W5 artifact links + pass/fail
-  - Result: PENDING
+  - Scenario: retry scheduler enqueues due retry rows while concurrent workers actively consume the same SIM queue
+  - Artifacts: `artifacts/task-021/w5/run_tag.txt`, `artifacts/task-021/w5/target_sim.txt`, `artifacts/task-021/w5/seed.txt`, `artifacts/task-021/w5/before_snapshot.txt`, `artifacts/task-021/w5/worker_1.log`, `artifacts/task-021/w5/worker_2.log`, `artifacts/task-021/w5/retry_scheduler.txt`, `artifacts/task-021/w5/after_snapshot.txt`, `artifacts/task-021/w5/sms_app_15m.log`, `artifacts/task-021/w5/scheduler_log_lines.txt`
+  - Scheduler summary: retry scheduler completed successfully during active worker window (`limit=50`, `due_rows_scanned=6`, `eligible_rows_claimed=6`, `enqueued=6`, `skipped=0`, `enqueue_failures=0`)
+  - State summary: run-tag snapshot captured 6 probe rows with coherent retry evolution (`retry_count` advanced to `2`, `status=pending`, `failure_reason=RUNTIME_TIMEOUT`, next `scheduled_at` present, worker failure source metadata retained)
+  - Queue interaction summary: post-run queue depth remained deterministic (`depth_total=1`, `depth_chat=1`) with no lost retry evidence in captured probe set
+  - Result: PASS
 - W6 artifact links + pass/fail
-  - Result: PENDING
+  - Scenario: worker interruption/crash simulation followed by stale-lock recovery and restart path validation
+  - Artifacts: `artifacts/task-021/w6/run_tag.txt`, `artifacts/task-021/w6/target_sim.txt`, `artifacts/task-021/w6/seed.txt`, `artifacts/task-021/w6/worker_before_interrupt.log`, `artifacts/task-021/w6/forced_stale.txt`, `artifacts/task-021/w6/before_recovery_snapshot.txt`, `artifacts/task-021/w6/recover_command.txt`, `artifacts/task-021/w6/after_recovery_snapshot.txt`, `artifacts/task-021/w6/worker_after_restart.log`
+  - Recovery summary: `gateway:recover-outbound --limit=50` recovered all 3 forced stale `sending` rows (`Recovered stale outbound messages: 3`) and rescheduled them to retryable pending state
+  - State summary: run-tag rows `140..142` converged to `status=pending`, `failure_reason="Recovered stale locked message (sending timeout)"`, `retry_count=1`, non-null `scheduled_at`, and `locked_at=null`
+  - Integrity summary: post-recovery contradiction set remained empty (`contradictions=[]`)
+  - Interruption note: host-side `pkill` reported permission warnings for unrelated PIDs during the interruption window, but controlled stale-state recovery evidence is complete and reproducible in captured artifacts
+  - Result: PASS
 - W7 artifact links + pass/fail
-  - Result: PENDING
+  - Scenario: runbook-grade worker scale-out operations validated across primary and secondary operators
+  - Artifacts: `artifacts/task-021/w7/primary_operator_dry_run.md`, `artifacts/task-021/w7/second_operator_dry_run.md`, `artifacts/task-021/w7/w7_completion_checklist.txt`
+  - Dry-run summary: both operators reported PASS across W2/W3/W4/W5/W6 procedures using captured artifact references
+  - Operational summary: second-operator report explicitly confirmed no undocumented tribal knowledge requirement (`YES` to reproducibility without hidden steps)
+  - Checklist summary: W7 completion checklist fully marked complete with all required gates checked
+  - Result: PASS
 - W8 artifact links + pass/fail
-  - Result: PENDING
+  - Scenario: closure review for TASK 021 evidence ledger and acceptance gate
+  - Artifacts: this `TASK 021 Evidence Ledger` block plus linked artifacts for `W1`..`W7`
+  - Closure summary: `W1`..`W7` all marked PASS with artifact-linked evidence and explicit pass/fail rationale
+  - Acceptance summary: `AC-021-01`..`AC-021-08` satisfied via completed checklist and two-operator dry-run confirmation
+  - Done-gate summary: closure gate condition met (`W1`..`W8` PASS, acceptance criteria satisfied, ledger auditable)
+  - Result: PASS
 
 ---
 
