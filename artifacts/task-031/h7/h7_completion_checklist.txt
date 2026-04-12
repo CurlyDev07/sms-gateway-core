@@ -1,0 +1,7 @@
+TASK 031-H7 completion checklist
+--------------------------------
+[x] primary_operator_dry_run.md completed and PASS
+[ ] second_operator_dry_run.md completed and PASS
+[ ] no undocumented tribal knowledge required (second operator confirmation pending)
+[ ] any identified gaps captured and corrected
+[x] attach references to H2/H3/H4/H5/H6 artifacts
