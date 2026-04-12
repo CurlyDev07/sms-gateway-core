@@ -1,7 +1,7 @@
 # SMS Gateway Core – Implementation Plan (Revised)
 
-**Last Updated:** 2026-04-11 (Phase 6 realignment checkpoint)
-**Status:** Phase 0/1/2/4 Complete (Locked) — Phase 5A Complete (Locked), Phase 5B Not Started, Phase 6 In Progress (implemented through 6.6.b; hardening/maturity open)
+**Last Updated:** 2026-04-12 (TASK 032 strict checklist kickoff checkpoint)
+**Status:** Phase 0/1/2/4 Complete (Locked) — Phase 5A Complete (Locked), Phase 5B Not Started, Phase 6 In Progress (implemented through 6.6.b; TASK 031 done, TASK 032 maturity open)
 **Alignment:** Validated against all 9 locked docs with phase-boundary corrections
 
 ---
@@ -1235,12 +1235,13 @@ Current Phase 6 boundary:
 - this does not include broader scale-path hardening (Phase 5B/later work)
 
 Open follow-up for later Phase 6 slices:
-- TASK 031 (IN PROGRESS): live-fleet reliability hardening follow-ups
-  - governed by strict hardening checklist `031-H1`..`031-H8` in `docs/TASKS.md`
-  - closure gated by `AC-031-01`..`AC-031-07` with artifact-linked evidence ledger
-  - retains hardening-only boundary (no runtime-page polish scope)
-- TASK 032 (OPEN): deeper send-path maturity beyond current validated bridge + later scale handoff boundary
+- TASK 031 (DONE): live-fleet reliability hardening follow-ups closed
+  - completed under strict hardening checklist `031-H1`..`031-H8` with `AC-031-01`..`AC-031-07` closure gate
+  - artifact-linked evidence ledger retained in `docs/TASKS.md`
+- TASK 032 (IN PROGRESS): deeper send-path maturity beyond current validated bridge + later scale handoff boundary
+  - governed by strict send-path checklist `032-S1`..`032-S8` with `AC-032-01`..`AC-032-08` closure gate in `docs/TASKS.md`
   - explicitly not runtime-page polish scope
+  - includes explicit Phase 5B handoff boundary definition without executing scale/load path inside this task
 - TASK 021/022/023 remain deferred under Phase 5B scale/load path
 
 ---

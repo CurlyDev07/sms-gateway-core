@@ -3,7 +3,7 @@
 ---
 
 ## CURRENT PHASE
-Phase 6 – IN PROGRESS (6.1 + 6.2 + 6.3 + 6.4/6.5/6.6 Runtime/UI Maturity Implemented; Hardening Still Open)
+Phase 6 – IN PROGRESS (6.1 + 6.2 + 6.3 + 6.4/6.5/6.6 Runtime/UI Maturity Implemented; Send-Path Maturity Still Open)
 
 ### Phase Status
 - Phase 0: COMPLETE (Locked)
@@ -13,7 +13,7 @@ Phase 6 – IN PROGRESS (6.1 + 6.2 + 6.3 + 6.4/6.5/6.6 Runtime/UI Maturity Imple
 - Phase 4: COMPLETE (Locked) — tenant-safe operator API + core dashboard/operator surfaces implemented
 - Phase 5A: COMPLETE (Locked) — dashboard/auth/operator system
 - Phase 5B: NOT STARTED — scale/infrastructure/throughput path
-- Phase 6: IN PROGRESS — Python Runtime Integration & Live Modem Fleet (implemented through 6.6.b; TASK 031/032 remain open)
+- Phase 6: IN PROGRESS — Python Runtime Integration & Live Modem Fleet (implemented through 6.6.b; TASK 031 done, TASK 032 open)
 - Phase 1 lock result: manual migration baseline + failover/reassign hardening complete
 - Phase 2 lock result: Redis transport + rebuild + retry + worker/controller/event wiring + Laravel-side Python integration + errorLayer-aware retry policy + live smoke-test proven + last_success_at bug fix + bootstrap seeders + Python API authentication + SimHealthService validation — all complete and locked
 - Phase 2 lock validation: full suite green (120 passed)
@@ -307,13 +307,13 @@ Status: IN PROGRESS
   - mixing IDs causes `sim_not_found`; mapping and UI distinction resolve the issue
 
 ### Phase 6 Follow-Up (Open)
-- TASK 031 (IN PROGRESS): broader runtime/fleet reliability hardening after initial real-world validation milestone
-  - executed through strict checklist items `031-H1`..`031-H8` (see `docs/TASKS.md`)
-  - closure controlled by explicit acceptance gate `AC-031-01`..`AC-031-07`
-  - evidence ledger required before closure (artifact-linked pass/fail per hardening item)
-- TASK 032 (OPEN): deeper send-path maturity beyond the current validated bridge
+- TASK 031 (DONE): runtime/fleet hardening closure completed
+  - completed via strict checklist `031-H1`..`031-H8` with `AC-031-01`..`AC-031-07` closure gate
+  - artifact-linked evidence ledger retained in `docs/TASKS.md`
+- TASK 032 (IN PROGRESS): deeper send-path maturity beyond the current validated bridge
+  - now executed via strict checklist `032-S1`..`032-S8` with acceptance gate `AC-032-01`..`AC-032-08` (see `docs/TASKS.md`)
   - explicit scope boundary: this is not runtime-page polish scope
-  - later scale/performance handoff remains in Phase 5B
+  - includes explicit Phase 5B handoff boundary definition (no scale/load execution inside TASK 032)
 - TASK 021/022/023 remain deferred under Phase 5B scale/load path and are not blockers for documenting implemented Phase 6 maturity
 
 ---

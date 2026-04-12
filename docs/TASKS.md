@@ -767,7 +767,7 @@ Scope note:
 
 # PHASE 6 — PYTHON RUNTIME INTEGRATION & LIVE MODEM FLEET
 
-Phase 6 Status: IN PROGRESS (implemented through 6.6.b runtime/operator maturity; hardening and deeper send-path maturity remain open)
+Phase 6 Status: IN PROGRESS (implemented through 6.6.b runtime/operator maturity; TASK 031 hardening closed, TASK 032 send-path maturity open)
 Current Validation Baseline: full suite green (286 passed)
 
 ## TASK 029 — PHASE 6.1 LARAVEL ↔ PYTHON RUNTIME CONTRACT FOUNDATION
@@ -991,19 +991,114 @@ TASK 031 Evidence Ledger:
 ---
 
 ## TASK 032 — PHASE 6 DEEPER SEND-PATH MATURITY + LATER SCALE HANDOFF
-Status: OPEN
+Status: IN PROGRESS (strict send-path maturity checklist active)
 
-Goal:
-- complete deeper send-path maturity work beyond the currently validated bridge baseline
-- define clean handoff boundary from send-path maturity to Phase 5B scale/load work
+Objective:
+- complete deeper send-path maturity beyond the validated bridge baseline using deterministic evidence-backed pass/fail gates
+- define explicit readiness boundary for later Phase 5B scale/load handoff
 
-Scope in this task:
-- deeper send-path maturity and recovery behavior not yet finalized by TASK 031 hardening closure
-- explicit boundary-setting for what remains Phase 6 vs what moves to Phase 5B scale path
+Scope In:
+- send-path maturity only (post-TASK 031 hardening closure)
+- deterministic runtime-send classification parity across execution surfaces
+- retry scheduling/state transition correctness for retryable vs terminal outcomes
+- outbound message metadata/traceability completeness for runtime send paths
+- duplicate-send/idempotency guardrail validation at Laravel send-path level
+- explicit evidence-backed handoff boundary to Phase 5B scale/load tasks
 
-Explicitly out of this task:
-- additional runtime page UI polish/operator UX slices (not TASK 032 scope)
-- Phase 5B scale/load execution (remains TASK 021/022/023)
+Scope Out:
+- runtime page UI polish/operator UX slices (already implemented in 6.4/6.5/6.6)
+- runtime hardening checklist already closed in TASK 031
+- Phase 5B scale/load execution (TASK 021/022/023)
+- mapping-write workflow changes
+
+Send-Path Maturity Checklist:
+
+032-S1 Runtime send classification parity matrix
+- Scenario: controlled send-path simulations across key runtime outcomes (`runtime_timeout`, `runtime_unreachable`, `invalid_response`, `runtime_send_failed`) on dashboard send-test and worker-driven execution surfaces.
+- Expected behavior: classification/retryability mapping remains deterministic and policy-consistent across surfaces.
+- Evidence to collect: artifact matrix + classifier snapshots + row samples from both execution surfaces.
+- Pass condition: each planned outcome maps to one consistent classification/retryability result across surfaces.
+- Failure/follow-up condition: open send-classification defect with reproducible mismatch evidence.
+
+032-S2 Retry scheduling and state-transition integrity
+- Scenario: retryable and non-retryable outcomes across first attempt and follow-up attempts.
+- Expected behavior: `retry_count`, `scheduled_at`, and terminal status transitions follow policy without contradictory state.
+- Evidence to collect: timestamped outbound row timeline + retry metadata + queue/runtime logs.
+- Pass condition: no contradictory transitions (for example terminal + rescheduled) in validated scenarios.
+- Failure/follow-up condition: open retry-state integrity defect with timeline evidence.
+
+032-S3 Runtime metadata completeness and correlation
+- Scenario: successful and failed runtime sends are inspected for persistence payload completeness.
+- Expected behavior: runtime metadata fields required for operator/debug traceability are consistently present.
+- Evidence to collect: outbound metadata samples + correlation notes to runtime logs for each scenario.
+- Pass condition: each validated scenario is traceable end-to-end from outbound row to runtime artifact/log evidence.
+- Failure/follow-up condition: document missing metadata keys/correlation gaps and open corrective sub-item.
+
+032-S4 Send outcome persistence semantics
+- Scenario: success and failure outcomes are checked for persistence consistency (`status`, `failure_reason`, `provider_message_id`, metadata envelope).
+- Expected behavior: persistence semantics are deterministic and aligned with current contracts.
+- Evidence to collect: per-outcome outbound row snapshots + runtime raw-response snippets.
+- Pass condition: no ambiguous persistence state for validated outcomes.
+- Failure/follow-up condition: open persistence-semantics defect with exact row/state evidence.
+
+032-S5 Duplicate-send/idempotency guardrail validation
+- Scenario: repeated/duplicate execution attempts against same message context are validated.
+- Expected behavior: guardrails prevent ambiguous duplicate terminalization/send-path corruption.
+- Evidence to collect: controlled duplicate-attempt artifacts + outbound state timeline + runtime log correlation.
+- Pass condition: duplicate-attempt behavior is deterministic and policy-consistent for validated cases.
+- Failure/follow-up condition: open idempotency guardrail defect with reproducible steps.
+
+032-S6 Cross-surface observability parity
+- Scenario: same send-path scenarios are compared across dashboard-triggered and queue/worker-triggered execution surfaces.
+- Expected behavior: operator-visible and stored outcomes remain semantically aligned despite surface differences.
+- Evidence to collect: paired scenario artifacts (dashboard vs worker) + comparison notes.
+- Pass condition: no material semantic drift in classification/retry/final state interpretation.
+- Failure/follow-up condition: open cross-surface parity defect and lock reconciliation rule.
+
+032-S7 Phase 5B handoff boundary definition
+- Scenario: send-path maturity closure review and handoff scoping.
+- Expected behavior: remaining open work is explicitly categorized as Phase 5B scale/load (021/022/023) vs closed Phase 6 send-path maturity.
+- Evidence to collect: boundary decision table + explicit deferred-item mapping.
+- Pass condition: no ambiguous overlap between TASK 032 closure scope and deferred Phase 5B tasks.
+- Failure/follow-up condition: keep TASK 032 open until unresolved boundary items are explicitly assigned.
+
+032-S8 Evidence ledger and closure review
+- Scenario: final closure decision for TASK 032.
+- Expected behavior: all checklist items map to explicit artifacts and pass/fail outcomes.
+- Evidence to collect: single ledger linking artifacts for S1–S7 + closure notes.
+- Pass condition: ledger complete; all acceptance criteria satisfied.
+- Failure/follow-up condition: keep TASK 032 open with explicit remaining checklist items.
+
+Acceptance Criteria:
+- AC-032-01: Runtime send classification parity matrix completed across planned outcomes and execution surfaces.
+- AC-032-02: Retry scheduling/state transitions validated as policy-consistent and contradiction-free in validated scenarios.
+- AC-032-03: Runtime metadata/correlation traceability is evidence-backed for success and failure paths.
+- AC-032-04: Send outcome persistence semantics are deterministic and contract-aligned.
+- AC-032-05: Duplicate-send/idempotency guardrails are validated with reproducible evidence.
+- AC-032-06: Cross-surface observability parity is validated without material semantic drift.
+- AC-032-07: Phase 5B handoff boundary is explicit and ambiguity-free.
+- AC-032-08: Evidence ledger is complete and auditable for closure.
+
+Done / Closure Gate:
+- TASK 032 can be marked DONE only when all checklist items (S1–S8) pass and all acceptance criteria (AC-032-01..08) are satisfied with linked evidence.
+
+TASK 032 Evidence Ledger:
+- S1 artifact links + pass/fail
+  - Result: PENDING
+- S2 artifact links + pass/fail
+  - Result: PENDING
+- S3 artifact links + pass/fail
+  - Result: PENDING
+- S4 artifact links + pass/fail
+  - Result: PENDING
+- S5 artifact links + pass/fail
+  - Result: PENDING
+- S6 artifact links + pass/fail
+  - Result: PENDING
+- S7 artifact links + pass/fail
+  - Result: PENDING
+- S8 artifact links + pass/fail
+  - Result: PENDING
 
 ---
 

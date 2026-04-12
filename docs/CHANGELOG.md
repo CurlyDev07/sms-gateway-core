@@ -1,6 +1,37 @@
 # CHANGELOG
 
-Last Updated: 2026-04-11
+Last Updated: 2026-04-12
+
+---
+
+## [2026-04-12] Docs Planning Checkpoint — TASK 032 Send-Path Maturity Checklist Formalized
+
+### Summary
+Documentation-only planning update. TASK 032 is now formalized as a strict execution checklist with evidence requirements, pass/fail conditions, acceptance criteria, and an explicit closure gate.
+
+### What Changed
+- `docs/TASKS.md` now defines TASK 032 with:
+  - objective
+  - scope in / scope out
+  - send-path maturity checklist items `032-S1`..`032-S8`
+  - evidence required per item
+  - pass/failure follow-up conditions
+  - acceptance criteria `AC-032-01`..`AC-032-08`
+  - done/closure gate + evidence ledger location
+- `docs/ROADMAP.md` now reflects:
+  - TASK 031 marked DONE (artifact-backed closure)
+  - TASK 032 moved to IN PROGRESS under strict checklist governance
+- `IMPLEMENTATION_PLAN.md` now reflects TASK 032 strict-checklist governance and explicit Phase 5B handoff-boundary responsibility.
+
+### Boundary Preserved
+- TASK 032 remains deeper send-path maturity only.
+- Runtime page UI/operator maturity slices remain implemented (6.4/6.5/6.6) and are not reopened.
+- TASK 021/022/023 remain deferred under Phase 5B scale/load work.
+- Runtime SIM ID and Tenant SIM DB ID boundaries remain unchanged.
+
+### Status
+- docs/planning alignment update only
+- no product/runtime/API/auth behavior changes
 
 ---
 
