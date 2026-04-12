@@ -1113,7 +1113,12 @@ TASK 032 Evidence Ledger:
   - Integrity summary: contradiction scan returned empty set (`contradictions=[]`) for invalid terminal/retry state overlaps
   - Result: PASS
 - S5 artifact links + pass/fail
-  - Result: PENDING
+  - Scenario: duplicate-send/idempotency guardrail validation under duplicate queue enqueue conditions
+  - Artifacts: `artifacts/task-032/s5/seed_duplicate_enqueue.txt`, `artifacts/task-032/s5/requeue_duplicate.txt`, `artifacts/task-032/s5/message_outcome.txt`
+  - Run summary: same probe message ID was intentionally enqueued twice, worker processed failure path with unreachable runtime, and row converged to deterministic retryable state
+  - Idempotency summary: probe row `id=104` ended as `status=pending`, `failure_reason=RUNTIME_TIMEOUT`, `retry_count=1`, non-null `scheduled_at`, with `python_runtime.source=worker_send_failure`
+  - Guardrail summary: `probe_row_count=1` confirms no duplicate outbound DB row creation from duplicate queue entries
+  - Result: PASS
 - S6 artifact links + pass/fail
   - Result: PENDING
 - S7 artifact links + pass/fail
