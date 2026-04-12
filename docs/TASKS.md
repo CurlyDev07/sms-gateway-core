@@ -962,7 +962,12 @@ TASK 031 Evidence Ledger:
   - Dashboard note: `dashboard_api_status=302` expected in script context (session-protected dashboard API without login cookie)
   - Result: PASS
 - H5 artifact links + pass/fail
-  - Result: PENDING
+  - Scenario: repeated runtime failures trigger temporary SIM runtime suppression/cooldown
+  - Artifacts: `artifacts/task-031/h5/runs.log`, `artifacts/task-031/h5/runtime_suppression_simulation.txt`, `artifacts/task-031/h5/runtime_control_rows_sample.txt`, `artifacts/task-031/h5/sms-app.log`, `artifacts/task-031/h5/config_snapshot.txt`, `artifacts/task-031/h5/commit.txt`, `artifacts/task-031/h5/timestamps.txt`
+  - Run summary: isolated test SIM moved from unsuppressed state to suppressed state after 3 runtime-timeout failures within window; `mode=COOLDOWN`, `cooldown_until` set, cooldown health log created
+  - Runtime-control summary: `before_runtime_control.suppressed=false` and `after_runtime_control.suppressed=true` with `recent_failure_count=3`, `threshold=3`, `last_error=RUNTIME_TIMEOUT`, `last_error_layer=transport`
+  - Dashboard note: `dashboard_api_status=302` expected in script context (session-protected dashboard API without login cookie)
+  - Result: PASS
 - H6 artifact links + pass/fail
   - Result: PENDING
 - H7 artifact links + pass/fail
