@@ -991,7 +991,7 @@ TASK 031 Evidence Ledger:
 ---
 
 ## TASK 032 — PHASE 6 DEEPER SEND-PATH MATURITY + LATER SCALE HANDOFF
-Status: IN PROGRESS (strict send-path maturity checklist active)
+Status: DONE (strict send-path maturity checklist completed; closure gate satisfied)
 
 Objective:
 - complete deeper send-path maturity beyond the validated bridge baseline using deterministic evidence-backed pass/fail gates
@@ -1128,9 +1128,18 @@ TASK 032 Evidence Ledger:
   - Parity summary: no material semantic drift observed between surfaces for failure interpretation; surface-specific metadata remains consistent with execution model
   - Result: PASS
 - S7 artifact links + pass/fail
-  - Result: PENDING
+  - Scenario: Phase 5B handoff boundary definition for remaining open items
+  - Artifacts: `artifacts/task-032/s7/boundary_decision_table.md`
+  - Boundary summary: decision table explicitly maps send-path maturity closure items to TASK 032 and keeps throughput/load/infra items deferred to TASK 021/022/023
+  - Scope summary: runtime-page polish and mapping-write workflow changes remain outside TASK 032 scope
+  - Handoff summary: no ambiguous overlap remains between TASK 032 closure scope and deferred Phase 5B scale/load scope
+  - Result: PASS
 - S8 artifact links + pass/fail
-  - Result: PENDING
+  - Scenario: evidence ledger and closure review
+  - Artifacts: this `TASK 032 Evidence Ledger` block + `artifacts/task-032/s1/*`, `artifacts/task-032/s2/*`, `artifacts/task-032/s3/*`, `artifacts/task-032/s4/*`, `artifacts/task-032/s5/*`, `artifacts/task-032/s6/*`, `artifacts/task-032/s7/*`
+  - Closure summary: S1..S7 all PASS; acceptance criteria `AC-032-01`..`AC-032-08` satisfied with artifact-linked evidence
+  - Boundary summary: remaining scale/load concerns are explicitly deferred to TASK 021/022/023 with no ambiguous overlap
+  - Result: PASS
 
 ---
 
