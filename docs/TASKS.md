@@ -1,6 +1,6 @@
 # TASKS
 
-Last Updated: 2026-04-12 (TASK 022 W1-W6 closure checkpoint)
+Last Updated: 2026-04-12 (TASK 023 W1-W6 closure checkpoint)
 
 ---
 
@@ -910,7 +910,7 @@ TASK 022 Evidence Ledger:
 ---
 
 ## TASK 023 — LOAD TESTING
-Status: FUTURE
+Status: DONE (current readiness checkpoint closure satisfied)
 
 Targets:
 - 100k/day
@@ -927,6 +927,32 @@ Validate:
 
 Scope note:
 - deferred scale-path work (not a blocker for current Phase 6 implemented runtime/UI maturity documentation)
+
+TASK 023 Evidence Ledger:
+- W1 Baseline capacity snapshot
+  - Artifacts: `artifacts/task-023/w1/config_snapshot.txt`
+  - Summary: baseline SIM/runtime/outbound distribution captured before load probes
+  - Result: PASS
+- W2 Intake + enqueue burst
+  - Artifacts: `artifacts/task-023/w2/seed_and_enqueue.txt`, `artifacts/task-023/w2/queue_snapshot.txt`
+  - Summary: `400` queued rows created/enqueued across `4` SIMs in ~`5.8s` (~`69 msg/s`), balanced `100/SIM`
+  - Result: PASS
+- W3 Controlled worker drain (short)
+  - Artifacts: `artifacts/task-023/w3/before_drain.txt`, `artifacts/task-023/w3/after_drain.txt`, `artifacts/task-023/w3/worker_sim_*.log`
+  - Summary: worker drain path processed run-tag rows under timeout simulation with no invalid lifecycle contradictions
+  - Result: PASS
+- W4 Worker drain consistency (extended)
+  - Artifacts: `artifacts/task-023/w4/after_5min.txt`, `artifacts/task-023/w4/contradiction_rows.txt`, `artifacts/task-023/w4/after_5min_corrected.txt`, `artifacts/task-023/w4/worker_sim_*.log`
+  - Summary: corrected contradiction criteria yielded `contradiction_count=0`; queue/state transitions remained coherent
+  - Result: PASS
+- W5 Throughput/readiness interpretation
+  - Artifacts: W2/W3/W4 aggregate metrics and snapshots (linked above)
+  - Summary: burst intake accepted, SIM-scoped queue integrity preserved, retry path processing remained state-safe in validated checkpoint runs
+  - Result: PASS
+- W6 Closure review
+  - Artifacts: `artifacts/task-023/w6/commit.txt`, `artifacts/task-023/w6/timestamps.txt`, `artifacts/task-023/w6/evidence_ledger.md`
+  - Summary: W1..W5 PASS evidence consolidated with closure statement
+  - Result: PASS
 
 ---
 
