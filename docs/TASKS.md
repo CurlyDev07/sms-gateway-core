@@ -718,16 +718,113 @@ Completed:
 # PHASE 5B — SCALE PATH
 
 ## TASK 021 — WORKER SCALE-OUT
-Status: FUTURE
+Status: IN PROGRESS (strict scale-out checklist active)
 
-Goal:
-- scale per-SIM workers
-- scale Redis transport
-- scale Laravel control plane
-- preserve SIM isolation
+Objective:
+- scale Laravel worker execution safely under multi-worker concurrency without breaking SIM isolation or message-state correctness
+- validate worker scale-out readiness before Python node scale-out (`TASK 022`) and throughput load targets (`TASK 023`)
 
-Scope note:
-- deferred scale-path work (not a blocker for current Phase 6 implemented runtime/UI maturity documentation)
+Scope In:
+- multi-worker concurrency behavior on existing per-SIM Redis queue model
+- safe claim/pop/state transitions under concurrent workers
+- SIM and tenant isolation preservation under scale-out conditions
+- retry scheduler + worker interaction correctness under concurrent processing
+- operational runbook for worker scale-out rollout/recovery
+
+Scope Out:
+- Python execution node scaling (TASK 022)
+- throughput/load benchmark closure (TASK 023)
+- runtime page UI/operator polish
+- transport architecture redesign
+
+Scale-Out Checklist:
+
+021-W1 Baseline worker topology + concurrency assumptions
+- Scenario: document baseline worker topology, queue key model, and current single/multi-worker assumptions.
+- Expected behavior: one explicit baseline snapshot exists before scale testing.
+- Evidence to collect: config/env snapshot + worker process inventory + queue key inventory sample.
+- Pass condition: baseline is reproducible and referenced by later checklist artifacts.
+- Failure/follow-up condition: block W2+ until baseline ambiguity is removed.
+
+021-W2 Concurrent worker claim/pop integrity
+- Scenario: run concurrent workers against overlapping SIM queues.
+- Expected behavior: claimed message lifecycle remains deterministic (`queued -> sending -> sent|pending|failed`) with no duplicate terminalization.
+- Evidence to collect: message timeline samples + worker logs + row-level state snapshots.
+- Pass condition: no contradictory state transitions and no duplicate completion for same message.
+- Failure/follow-up condition: open worker-claim integrity defect with reproducible artifact set.
+
+021-W3 SIM/tenant isolation under worker scale-out
+- Scenario: concurrent workers process mixed tenant/SIM queues.
+- Expected behavior: no cross-tenant or cross-SIM message handling leakage.
+- Evidence to collect: sampled processed rows including `company_id`, `sim_id`, runtime metadata source tags.
+- Pass condition: all processed rows remain tenant+SIM correct for validated runs.
+- Failure/follow-up condition: open isolation defect and halt scale progression.
+
+021-W4 Queue rebuild lock interaction with active workers
+- Scenario: trigger queue rebuild while workers are active on same SIM scope.
+- Expected behavior: workers respect rebuild lock behavior without corrupting queue/message state.
+- Evidence to collect: rebuild command logs + worker logs + before/after queue depth snapshots.
+- Pass condition: no queue corruption, no stuck lock side effects, deterministic recovery.
+- Failure/follow-up condition: open rebuild-lock concurrency defect.
+
+021-W5 Retry scheduler + worker interaction correctness
+- Scenario: due retries are enqueued while workers actively consume queues.
+- Expected behavior: retry scheduling remains policy-consistent and race-safe.
+- Evidence to collect: retry scheduler run logs + message retry timeline + queue events.
+- Pass condition: no lost retries, no contradictory pending/queued states, retry counts remain coherent.
+- Failure/follow-up condition: open retry-scheduler interaction defect.
+
+021-W6 Worker crash/restart recovery semantics
+- Scenario: worker process interruption and restart during active processing.
+- Expected behavior: system recovers without permanent stuck `sending` rows or silent message loss.
+- Evidence to collect: controlled interruption timeline + recovery command output + message state reconciliation.
+- Pass condition: interrupted flow resumes safely with explicit recovery path evidence.
+- Failure/follow-up condition: open crash-recovery hardening defect.
+
+021-W7 Runbook-grade worker scale-out operations
+- Scenario: primary and secondary operator execute worker scale-out and rollback playbook.
+- Expected behavior: repeatable outcomes without undocumented tribal knowledge.
+- Evidence to collect: two-operator dry-run records + checklist completion notes.
+- Pass condition: second-operator dry run passes with no hidden steps.
+- Failure/follow-up condition: revise runbook and rerun validation.
+
+021-W8 Evidence ledger and closure review
+- Scenario: closure review for TASK 021.
+- Expected behavior: all checklist items map to explicit pass/fail artifacts.
+- Evidence to collect: single `TASK 021` evidence ledger linking W1–W7 artifacts.
+- Pass condition: ledger complete and acceptance criteria satisfied.
+- Failure/follow-up condition: keep TASK 021 open with explicit remaining items.
+
+Acceptance Criteria:
+- AC-021-01: Baseline worker/concurrency assumptions are documented and reproducible.
+- AC-021-02: Concurrent worker claim/pop integrity is evidence-backed and contradiction-free.
+- AC-021-03: Tenant/SIM isolation remains intact during scale-out runs.
+- AC-021-04: Queue rebuild lock interaction is validated under active workers.
+- AC-021-05: Retry scheduler + worker interaction remains race-safe and policy-consistent.
+- AC-021-06: Worker crash/restart recovery behavior is validated and reproducible.
+- AC-021-07: Runbook dry-run succeeds for independent secondary operator.
+- AC-021-08: Evidence ledger is complete and auditable for closure.
+
+Done / Closure Gate:
+- TASK 021 can be marked DONE only when all checklist items (W1–W8) pass and acceptance criteria (AC-021-01..08) are satisfied with linked evidence.
+
+TASK 021 Evidence Ledger:
+- W1 artifact links + pass/fail
+  - Result: PENDING
+- W2 artifact links + pass/fail
+  - Result: PENDING
+- W3 artifact links + pass/fail
+  - Result: PENDING
+- W4 artifact links + pass/fail
+  - Result: PENDING
+- W5 artifact links + pass/fail
+  - Result: PENDING
+- W6 artifact links + pass/fail
+  - Result: PENDING
+- W7 artifact links + pass/fail
+  - Result: PENDING
+- W8 artifact links + pass/fail
+  - Result: PENDING
 
 ---
 
@@ -767,7 +864,7 @@ Scope note:
 
 # PHASE 6 — PYTHON RUNTIME INTEGRATION & LIVE MODEM FLEET
 
-Phase 6 Status: IN PROGRESS (implemented through 6.6.b runtime/operator maturity; TASK 031 hardening closed, TASK 032 send-path maturity open)
+Phase 6 Status: COMPLETE (implemented through 6.6.b runtime/operator maturity; TASK 031 and TASK 032 closure gates satisfied)
 Current Validation Baseline: full suite green (286 passed)
 
 ## TASK 029 — PHASE 6.1 LARAVEL ↔ PYTHON RUNTIME CONTRACT FOUNDATION

@@ -4,6 +4,38 @@ Last Updated: 2026-04-12
 
 ---
 
+## [2026-04-12] Docs Planning Checkpoint — TASK 021 Worker Scale-Out Checklist Formalized
+
+### Summary
+Documentation-only planning update. TASK 021 is now formalized as a strict execution checklist and activated as the current Phase 5B entry point.
+
+### What Changed
+- `docs/TASKS.md` now defines TASK 021 with:
+  - objective
+  - scope in / scope out
+  - worker scale-out checklist items `021-W1`..`021-W8`
+  - evidence required per item
+  - pass/failure follow-up conditions
+  - acceptance criteria `AC-021-01`..`AC-021-08`
+  - done/closure gate + evidence ledger location
+- `docs/TASKS.md` Phase 6 status text now reflects closure of TASK 031 and TASK 032.
+- `docs/ROADMAP.md` now reflects:
+  - Phase 6 follow-up closure (`TASK 031` + `TASK 032` done)
+  - Phase 5B as active path with `TASK 021` in progress and `TASK 022/023` queued.
+- `IMPLEMENTATION_PLAN.md` now reflects Phase 6 closure and TASK 021 kickoff under Phase 5B.
+
+### Boundary Preserved
+- TASK 021 remains Laravel worker scale-out only.
+- TASK 022 remains Python execution scale-out only.
+- TASK 023 remains load/throughput validation only.
+- No runtime page UI/operator maturity scope was reopened.
+
+### Status
+- docs/planning alignment update only
+- no product/runtime/API/auth behavior changes
+
+---
+
 ## [2026-04-12] Docs Planning Checkpoint — TASK 032 Send-Path Maturity Checklist Formalized
 
 ### Summary
