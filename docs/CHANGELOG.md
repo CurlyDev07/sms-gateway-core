@@ -4,6 +4,29 @@ Last Updated: 2026-04-13
 
 ---
 
+## [2026-04-13] Inbound Architecture Planning Checkpoint — Laravel-Owned Resolution + Durable Ingest
+
+### Summary
+Inbound reply architecture direction is now explicitly documented: Python stays standalone/transport-generic, while Laravel owns runtime-identity-to-tenant-SIM resolution and durable idempotent ingest semantics.
+
+### What Changed
+- `docs/DECISIONS.md` updated with two new decisions:
+  - inbound runtime identity is Laravel-resolved (`runtime_sim_id`/`imsi` -> `sims.id`)
+  - inbound reliability policy uses ACK-gated delete + durable spool + retry/backoff + idempotency key
+- `docs/TASKS.md` updated:
+  - added `TASK 036` (OPEN): inbound push-listener reliability and Laravel runtime-ID resolution
+  - updated `Last Updated` metadata to include `TASK 036`
+
+### Notes
+- This is planning/documentation only; no runtime/API behavior changed in this commit.
+- Laravel DB remains the inbound system-of-record; spool is temporary reliability buffering.
+
+### Status
+- documentation update only
+- no application/runtime/API behavior changes
+
+---
+
 ## [2026-04-13] Backlog Planning Checkpoint — TASK 033/034 Added
 
 ### Summary
@@ -18,6 +41,27 @@ Two explicit follow-on backlog tasks were added for future execution: realistic 
 ### Notes
 - `TASK 033` is explicitly scoped to real execution path validation (`Laravel -> Python -> modem -> carrier`) and separates physical send capability from synthetic backend throughput.
 - `TASK 034` closes the current mapping-write gap by defining a UI/API-backed manual mapping flow instead of CLI-only updates.
+
+### Status
+- documentation update only
+- no application/runtime/API behavior changes
+
+---
+
+## [2026-04-13] Backlog Planning Checkpoint — TASK 035 OTP Priority Lane Added
+
+### Summary
+An explicit future backlog task was added for `OTP` as a first-class message type with priority-lane behavior and deterministic policy coverage.
+
+### What Changed
+- `docs/TASKS.md` updated:
+  - added `TASK 035` (OPEN): OTP message type + priority lane
+  - scope includes schema/validation, queue pop-priority, throttle/state policy, sticky-safe assignment behavior, and observability coverage
+  - updated `Last Updated` metadata to include `TASK 035`
+
+### Notes
+- This is planning/documentation only; no runtime behavior changed in this commit.
+- Python runtime remains transport-focused; OTP behavior is planned in Laravel control/routing layers.
 
 ### Status
 - documentation update only

@@ -1,6 +1,6 @@
 # SMS GATEWAY CORE – DECISIONS LOG
 
-Last Updated: 2026-03-29
+Last Updated: 2026-04-13
 
 ---
 
@@ -615,6 +615,50 @@ Reason:
 Impact:
 - request body company_id must be ignored
 - controller logic must resolve company via authenticated context only
+
+---
+
+## Decision: Inbound Runtime Identity Is Laravel-Resolved (Python Remains Generic)
+
+Date: 2026-04-13
+
+Rule:
+- Python inbound payloads should remain runtime-native and transport-focused.
+- Laravel owns mapping from runtime SIM identity (IMSI/runtime_sim_id/device identity) to tenant `sims.id`.
+- Python must not be customized per-tenant for DB SIM ID translation logic.
+
+Reason:
+- Preserves clean control/execution boundary.
+- Keeps Python engine reusable as a standalone transport component.
+- Avoids tenant/business mapping drift outside Laravel.
+
+Impact:
+- Inbound contract should support runtime identity fields (`runtime_sim_id` / `imsi`) and Laravel-side resolution.
+- Laravel remains authoritative for tenant-safe SIM mapping.
+- Current strict `sim_id` integer-only paths should be evolved toward Laravel-resolved runtime identity handling.
+
+---
+
+## Decision: Inbound Reliability Uses ACK-Gated Delete + Durable Spool + Idempotency
+
+Date: 2026-04-13
+
+Rule:
+- Do not delete inbound SMS from SIM storage until delivery is safely acknowledged.
+- Preferred safe paths:
+  - delete after successful Laravel ACK, or
+  - write to local durable spool first, then delete from SIM, then retry-deliver from spool.
+- Inbound delivery retries must include idempotency keys.
+
+Reason:
+- Prevent inbound message loss during Laravel/network outages.
+- Prevent duplicate inbound DB rows under retry conditions.
+- Support high-volume inbound reliability.
+
+Impact:
+- Python inbound listener requires durable local buffering and retry/backoff behavior.
+- Laravel inbound ingest should enforce idempotent writes (same key => safe duplicate handling).
+- Laravel DB remains the long-term system of record; spool is temporary reliability buffer only.
 
 ---
 

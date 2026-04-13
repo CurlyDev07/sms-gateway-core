@@ -1,6 +1,6 @@
 # TASKS
 
-Last Updated: 2026-04-13 (TASK 033/034 backlog planning added)
+Last Updated: 2026-04-13 (TASK 033/034/035/036 backlog planning added)
 
 ---
 
@@ -1133,6 +1133,160 @@ Acceptance Criteria:
 
 Done / Closure Gate:
 - TASK 034 can be marked DONE only when W1–W8 are PASS and AC-034-01..06 are satisfied with linked artifacts.
+
+---
+
+## TASK 035 — OTP MESSAGE TYPE + PRIORITY LANE
+Status: OPEN (planned)
+
+Objective:
+- add `OTP` as a first-class message type with strict high-priority handling for time-sensitive sends
+
+Scope In:
+- outbound type support for `OTP` across DB validation, routing, queueing, worker processing, and observability
+- queue-tier design introducing OTP-priority behavior above current chat/followup/blasting lanes
+- deterministic fallback behavior when OTP is not enabled for a SIM/tenant policy profile
+
+Scope Out:
+- Python runtime transport contract redesign (engine remains transport-focused)
+- carrier deliverability guarantees beyond modem/network constraints
+- product UX copy/content policy for OTP templates
+
+Validation Checklist:
+
+035-W1 Type contract and schema alignment
+- Scenario: add `OTP` across message-type schema and API validation boundaries.
+- Expected behavior: `OTP` accepted end-to-end where allowed; invalid type usage rejected deterministically.
+- Evidence to collect: migration + validation test artifacts.
+- Pass condition: no ambiguous type handling paths remain.
+- Failure/follow-up condition: open type-contract defect.
+
+035-W2 Queue tier and pop-priority update
+- Scenario: enforce queue pop order with OTP as highest-priority lane.
+- Expected behavior: worker pops OTP before chat/followup/blasting for eligible SIM queues.
+- Evidence to collect: queue service tests + worker claim-order artifacts.
+- Pass condition: deterministic priority order proven under mixed workload.
+- Failure/follow-up condition: open priority-routing defect.
+
+035-W3 Throttle and SIM-state policy for OTP
+- Scenario: define OTP send interval/state behavior relative to existing burst/normal timing.
+- Expected behavior: OTP timing policy is explicit, testable, and non-ambiguous.
+- Evidence to collect: policy table + state-service tests.
+- Pass condition: OTP timing behavior is deterministic under cooldown/daily-limit gates.
+- Failure/follow-up condition: open throttling-policy defect.
+
+035-W4 Intake and assignment behavior with sticky rules
+- Scenario: OTP intake under sticky assignment and multi-SIM tenant conditions.
+- Expected behavior: sticky guarantees remain intact; OTP does not bypass tenant safety constraints.
+- Evidence to collect: assignment/intake test artifacts.
+- Pass condition: no cross-SIM/cross-tenant leakage and no sticky-rule regression.
+- Failure/follow-up condition: open assignment-regression defect.
+
+035-W5 Observability and per-type stats
+- Scenario: capture OTP outcomes in daily stats, message status surfaces, and logs.
+- Expected behavior: operators can distinguish OTP throughput/failures from other types.
+- Evidence to collect: stats field evidence + dashboard/API payload samples.
+- Pass condition: OTP visibility is complete and auditable.
+- Failure/follow-up condition: open observability gap.
+
+035-W6 Evidence ledger and closure review
+- Scenario: closure review for TASK 035.
+- Expected behavior: all checklist items map to explicit pass/fail artifacts.
+- Evidence to collect: one evidence ledger linking W1–W5 artifacts.
+- Pass condition: ledger complete and acceptance criteria satisfied.
+- Failure/follow-up condition: keep TASK 035 open with explicit remaining items.
+
+Acceptance Criteria:
+- AC-035-01: `OTP` type is supported and validated across intake/storage/worker paths.
+- AC-035-02: OTP queue priority behavior is deterministic and evidence-backed.
+- AC-035-03: OTP throttle/state policy is explicit and contradiction-free under gates.
+- AC-035-04: sticky assignment and tenant safety guarantees remain intact.
+- AC-035-05: OTP observability/stats are complete in operator-visible surfaces.
+- AC-035-06: evidence ledger is complete and auditable.
+
+Done / Closure Gate:
+- TASK 035 can be marked DONE only when W1–W6 are PASS and AC-035-01..06 are satisfied with linked artifacts.
+
+---
+
+## TASK 036 — INBOUND PUSH LISTENER RELIABILITY + LARAVEL-RUNTIME ID RESOLUTION
+Status: OPEN (planned)
+
+Objective:
+- formalize near-instant inbound reply ingestion while keeping Python transport-generic and Laravel as authoritative resolver/store
+
+Scope In:
+- push-based inbound listener model (`AT+CNMI`) for modem reply events
+- Laravel-side runtime identity resolution (`runtime_sim_id`/`imsi` -> tenant `sims.id`)
+- durable inbound spool + retry/backoff + idempotency-key semantics
+- strict no-loss/no-duplicate behavior under Laravel/network outages
+
+Scope Out:
+- per-tenant custom Python mapping rules
+- replacing Laravel DB as inbound system-of-record
+- Chat App product-level business workflow redesign
+
+Validation Checklist:
+
+036-W1 Inbound contract definition
+- Scenario: define payload contract for runtime-native inbound events and Laravel response semantics.
+- Expected behavior: contract is explicit for success, retryable failure, and duplicate-idempotent cases.
+- Evidence to collect: contract doc + sample payloads/responses.
+- Pass condition: no ambiguity between runtime identity and tenant DB identity fields.
+- Failure/follow-up condition: keep implementation blocked until contract is clear.
+
+036-W2 Laravel runtime-identity resolution path
+- Scenario: ingest inbound payload with runtime identity (not DB sim ID) and resolve to tenant SIM row.
+- Expected behavior: resolved rows persist correctly; unresolved identity yields deterministic handling.
+- Evidence to collect: controller/service tests + before/after row samples.
+- Pass condition: tenant-safe mapping resolution is deterministic and auditable.
+- Failure/follow-up condition: open inbound-mapping defect.
+
+036-W3 Python durable spool + retry/backoff behavior
+- Scenario: Laravel endpoint unavailable during inbound burst.
+- Expected behavior: inbound events are spooled durably and retried without loss.
+- Evidence to collect: spool lifecycle traces + retry timeline.
+- Pass condition: no message loss in outage/recovery simulation.
+- Failure/follow-up condition: open reliability defect.
+
+036-W4 ACK-gated delete semantics
+- Scenario: confirm deletion from modem storage occurs only after safe persistence/ack path.
+- Expected behavior: early-delete loss is prevented.
+- Evidence to collect: listener logs + controlled failure simulation traces.
+- Pass condition: delete ordering is policy-compliant in all tested paths.
+- Failure/follow-up condition: open delete-ordering defect.
+
+036-W5 Idempotent inbound persistence
+- Scenario: retried delivery of same inbound event.
+- Expected behavior: one logical inbound record only; duplicates are safely acknowledged.
+- Evidence to collect: idempotency-key test artifacts + DB row snapshots.
+- Pass condition: duplicate retries do not create duplicate logical inbound records.
+- Failure/follow-up condition: open idempotency defect.
+
+036-W6 End-to-end latency and stability checkpoint
+- Scenario: live inbound replies under normal and degraded modes.
+- Expected behavior: near-instant ingest in normal mode; graceful durability in degraded mode.
+- Evidence to collect: latency samples + relay/ingest logs + status summary.
+- Pass condition: target behavior demonstrated with traceable evidence.
+- Failure/follow-up condition: keep task open with explicit gap list.
+
+036-W7 Evidence ledger and closure review
+- Scenario: closure review for TASK 036.
+- Expected behavior: all checklist items map to explicit pass/fail artifacts.
+- Evidence to collect: one evidence ledger linking W1–W6 artifacts.
+- Pass condition: ledger complete and acceptance criteria satisfied.
+- Failure/follow-up condition: keep TASK 036 open with explicit remaining items.
+
+Acceptance Criteria:
+- AC-036-01: inbound contract supports runtime-native identity with Laravel-owned resolution.
+- AC-036-02: no inbound loss under tested outage/recovery scenarios.
+- AC-036-03: idempotency protections prevent duplicate logical inbound records.
+- AC-036-04: ACK-gated delete ordering is enforced and evidence-backed.
+- AC-036-05: Laravel DB remains authoritative inbound system-of-record.
+- AC-036-06: evidence ledger is complete and auditable.
+
+Done / Closure Gate:
+- TASK 036 can be marked DONE only when W1–W7 are PASS and AC-036-01..06 are satisfied with linked artifacts.
 
 ---
 
