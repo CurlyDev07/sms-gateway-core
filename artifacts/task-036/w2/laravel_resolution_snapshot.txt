@@ -1,0 +1,18 @@
+TASK 036 W2 — Laravel runtime identity resolution snapshot
+Date: 2026-04-14
+
+Command summary:
+- Query SIM by runtime IMSI (`515039219149367`) in Laravel app DB.
+
+Observed result:
+- sim_id: 1
+- company_id: 1
+- imsi: 515039219149367
+- status: active
+- operator_status: active
+- mode: NORMAL
+
+Conclusion:
+- Runtime identity (`runtime_sim_id`/`imsi`) resolves deterministically to tenant SIM DB row.
+- W2 PASS.
+

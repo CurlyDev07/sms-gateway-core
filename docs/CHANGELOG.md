@@ -1,6 +1,39 @@
 # CHANGELOG
 
-Last Updated: 2026-04-13
+Last Updated: 2026-04-14
+
+---
+
+## [2026-04-14] TASK 036 Closure Checkpoint — Inbound Push Listener Reliability Proven Live
+
+### Summary
+`TASK 036` is now closed with live modem-to-Laravel inbound proof and artifact-backed closure evidence.
+
+### What Changed
+- `docs/TASKS.md` updated:
+  - `TASK 036` moved from `OPEN` to `DONE`
+  - evidence ledger block added with W1..W7 pass outcomes and artifact links
+  - scope explicitly keeps telco/system inbound messages (no blanket sender filtering patch)
+- Added closure artifacts under `artifacts/task-036/`:
+  - `w2/laravel_resolution_snapshot.txt`
+  - `w3/spool_retry_summary.txt`
+  - `w4/ack_gate_summary.txt`
+  - `w5/idempotency_snapshot.txt`
+  - `w6/runtime_proof_snapshot.txt`
+  - `w7/evidence_ledger.md`
+- Added `docs/INBOUND_QUICK_VERIFY.md` for operator rapid validation workflow.
+- `docs/DECISIONS.md` updated with sender-retention policy:
+  - no blanket inbound sender filtering; preserve telco/system advisories as inbound truth
+
+### Notes
+- Live proof includes persisted inbound row for:
+  - `idempotency_key=adc3bc55-9745-4d6e-ab4a-6c7d892dec0d`
+  - runtime SIM identity `515039219149367`
+- Startup SIM-drain ingestion of previously stored carrier/system messages is expected and retained by policy.
+
+### Status
+- documentation + artifact closure update
+- no additional runtime/API behavior change in this commit
 
 ---
 

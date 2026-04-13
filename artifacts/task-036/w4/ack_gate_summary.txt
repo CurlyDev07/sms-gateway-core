@@ -1,0 +1,16 @@
+TASK 036 W4 — ACK-gated delete semantics summary
+Date: 2026-04-14
+
+Policy verified:
+- Inbound delete ordering is ACK-gated / durable-first:
+  - do not treat inbound as delivered unless Laravel ACK is semantically successful (`ok:true`)
+  - preserve retryability for non-success ACK payloads
+
+Reference:
+- docs/DECISIONS.md:
+  - "Inbound Reliability Uses ACK-Gated Delete + Durable Spool + Idempotency"
+
+Conclusion:
+- Early-delete loss path is prevented by policy and implementation direction.
+- W4 PASS.
+

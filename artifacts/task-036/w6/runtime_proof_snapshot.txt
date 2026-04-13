@@ -1,0 +1,18 @@
+TASK 036 W6 — Live inbound proof snapshot
+Date: 2026-04-14
+
+Python runtime log sample:
+- INBOUND_RECEIVED sim=515039219149367 from=+639178025973
+- INBOUND_DELIVERED key=adc3bc55-9745-4d6e-ab4a-6c7d892dec0d sim=515039219149367 from=+639178025973
+
+Laravel DB confirmation:
+- inbound_messages row exists for idempotency_key: adc3bc55-9745-4d6e-ab4a-6c7d892dec0d
+- latest list includes row id 27 with message "Real Test after fixes"
+
+Stability note:
+- Startup drain also ingested prior SIM-stored messages (e.g. `8080` and legacy carrier/system messages), which is expected for SIM truth capture.
+
+Conclusion:
+- End-to-end inbound path (modem -> Python -> Laravel DB) is operational and proven live.
+- W6 PASS.
+

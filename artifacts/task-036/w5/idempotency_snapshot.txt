@@ -1,0 +1,20 @@
+TASK 036 W5 — Idempotency persistence snapshot
+Date: 2026-04-14
+
+Proof key:
+- idempotency_key: adc3bc55-9745-4d6e-ab4a-6c7d892dec0d
+
+Observed Laravel row:
+- id: 27
+- company_id: 1
+- sim_id: 1
+- runtime_sim_id: 515039219149367
+- customer_phone: +639178025973
+- message: Real Test after fixes
+- received_at: 2026-04-14T01:25:52.000000Z
+- created_at: 2026-04-13T17:25:54.000000Z
+
+Conclusion:
+- Inbound event persisted with stable idempotency identity and tenant-safe SIM resolution.
+- W5 PASS.
+

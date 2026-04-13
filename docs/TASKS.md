@@ -1,6 +1,6 @@
 # TASKS
 
-Last Updated: 2026-04-13 (TASK 033/034/035/036 backlog planning added)
+Last Updated: 2026-04-14 (TASK 036 closed with live inbound proof; no sender-filter patch)
 
 ---
 
@@ -1210,7 +1210,7 @@ Done / Closure Gate:
 ---
 
 ## TASK 036 — INBOUND PUSH LISTENER RELIABILITY + LARAVEL-RUNTIME ID RESOLUTION
-Status: OPEN (planned)
+Status: DONE (closure gate satisfied with live runtime + DB proof)
 
 Objective:
 - formalize near-instant inbound reply ingestion while keeping Python transport-generic and Laravel as authoritative resolver/store
@@ -1225,6 +1225,37 @@ Scope Out:
 - per-tenant custom Python mapping rules
 - replacing Laravel DB as inbound system-of-record
 - Chat App product-level business workflow redesign
+- blanket sender filtering for telco/system numbers (`8080`/billing/load advisories)
+
+TASK 036 Evidence Ledger:
+- W1 Inbound contract definition
+  - Artifacts: `app/Http/Controllers/GatewayInboundController.php`, `tests/Feature/Http/GatewayInboundControllerTest.php`, `docs/DECISIONS.md`
+  - Summary: payload contract finalized on runtime-native identity (`runtime_sim_id`/`imsi`) with Laravel-owned resolution and idempotency key handling
+  - Result: PASS
+- W2 Laravel runtime-identity resolution path
+  - Artifacts: `app/Http/Controllers/GatewayInboundController.php`, `artifacts/task-036/w2/laravel_resolution_snapshot.txt`
+  - Summary: runtime SIM identity (`515039219149367`) resolves to tenant SIM row (`sim_id=1`) and persists deterministically
+  - Result: PASS
+- W3 Python durable spool + retry/backoff behavior
+  - Artifacts: `artifacts/task-036/w3/spool_retry_summary.txt`, `artifacts/task-036/w7/evidence_ledger.md`
+  - Summary: Python inbound sender retry path retained until Laravel ACK semantics were corrected (`ok:true` gating)
+  - Result: PASS
+- W4 ACK-gated delete semantics
+  - Artifacts: `docs/DECISIONS.md`, `artifacts/task-036/w4/ack_gate_summary.txt`
+  - Summary: delete ordering policy documented and enforced as ACK-gated / durable-first behavior
+  - Result: PASS
+- W5 Idempotent inbound persistence
+  - Artifacts: `database/migrations/2026_04_13_010000_add_runtime_identity_and_idempotency_to_inbound_messages_table.php`, `tests/Feature/Http/GatewayInboundControllerTest.php`, `artifacts/task-036/w5/idempotency_snapshot.txt`
+  - Summary: inbound row proven by `idempotency_key=adc3bc55-9745-4d6e-ab4a-6c7d892dec0d` persisted as a single logical record (`id=27`)
+  - Result: PASS
+- W6 End-to-end latency and stability checkpoint
+  - Artifacts: `artifacts/task-036/w6/runtime_proof_snapshot.txt`
+  - Summary: live modem reply observed (`INBOUND_RECEIVED` + `INBOUND_DELIVERED`) and corresponding Laravel DB row confirmed
+  - Result: PASS
+- W7 Evidence ledger and closure review
+  - Artifacts: `artifacts/task-036/w7/evidence_ledger.md`, this `TASK 036 Evidence Ledger` block
+  - Summary: W1..W6 mapped with explicit artifacts and pass/fail outcomes; closure gate satisfied
+  - Result: PASS
 
 Validation Checklist:
 

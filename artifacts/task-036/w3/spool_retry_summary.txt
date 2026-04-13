@@ -1,0 +1,17 @@
+TASK 036 W3 — Python spool/retry summary
+Date: 2026-04-14
+
+Observed behavior during validation:
+- Python initially logged HTTP-200 based delivery as success even when Laravel could return `ok:false`.
+- Contract was corrected so delivery success depends on both:
+  - HTTP 2xx
+  - response payload `ok:true`
+
+Resulting behavior:
+- False-positive delivered cases were eliminated.
+- Inbound events are retried until a real ACK-success condition is met.
+
+Conclusion:
+- Durable/retry path remained effective through contract correction and retest.
+- W3 PASS.
+

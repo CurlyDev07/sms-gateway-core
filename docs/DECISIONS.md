@@ -1,6 +1,6 @@
 # SMS GATEWAY CORE – DECISIONS LOG
 
-Last Updated: 2026-04-13
+Last Updated: 2026-04-14
 
 ---
 
@@ -659,6 +659,25 @@ Impact:
 - Python inbound listener requires durable local buffering and retry/backoff behavior.
 - Laravel inbound ingest should enforce idempotent writes (same key => safe duplicate handling).
 - Laravel DB remains the long-term system of record; spool is temporary reliability buffer only.
+
+---
+
+## Decision: Keep Telco/System Inbound Messages (No Blanket Sender Filtering)
+
+Date: 2026-04-14
+
+Rule:
+- Do not apply blanket sender filtering for inbound messages (for example, dropping `8080` or carrier/service senders by default).
+- Preserve these messages in Laravel inbound storage as system truth/events.
+
+Reason:
+- Carrier/system SMS can contain operationally relevant notices (load expiry, balance/billing, service advisories).
+- Blanket filtering risks discarding useful operational and audit context.
+
+Impact:
+- Inbound pipeline stores both customer and telco/system messages by default.
+- Product/UI may classify or present categories differently, but transport/storage layer should not silently discard these messages.
+- Sender filtering, if ever introduced, must be explicit policy with tenant/operator visibility and auditability.
 
 ---
 
