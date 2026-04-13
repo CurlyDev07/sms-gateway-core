@@ -1,6 +1,27 @@
 # CHANGELOG
 
-Last Updated: 2026-04-12
+Last Updated: 2026-04-13
+
+---
+
+## [2026-04-13] Backlog Planning Checkpoint — TASK 033/034 Added
+
+### Summary
+Two explicit follow-on backlog tasks were added for future execution: realistic per-SIM physical send validation and dashboard manual runtime-SIM mapping workflow.
+
+### What Changed
+- `docs/TASKS.md` updated:
+  - added `TASK 033` (OPEN): real modem daily-capacity validation (`4,000/day` profile per SIM), including `CHAT`, `FOLLOW_UP`, `BLASTING`, plus invalid/dummy-number failure-path validation
+  - added `TASK 034` (OPEN): admin UI manual mapping workflow (`company/tenant -> SIM`) with API, RBAC, validation/conflict guards, audit logging, and runtime/send-test integration checks
+  - updated `Last Updated` header metadata to `2026-04-13`
+
+### Notes
+- `TASK 033` is explicitly scoped to real execution path validation (`Laravel -> Python -> modem -> carrier`) and separates physical send capability from synthetic backend throughput.
+- `TASK 034` closes the current mapping-write gap by defining a UI/API-backed manual mapping flow instead of CLI-only updates.
+
+### Status
+- documentation update only
+- no application/runtime/API behavior changes
 
 ---
 

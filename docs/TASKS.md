@@ -1,6 +1,6 @@
 # TASKS
 
-Last Updated: 2026-04-12 (TASK 023 W1-W6 closure checkpoint)
+Last Updated: 2026-04-13 (TASK 033/034 backlog planning added)
 
 ---
 
@@ -953,6 +953,186 @@ TASK 023 Evidence Ledger:
   - Artifacts: `artifacts/task-023/w6/commit.txt`, `artifacts/task-023/w6/timestamps.txt`, `artifacts/task-023/w6/evidence_ledger.md`
   - Summary: W1..W5 PASS evidence consolidated with closure statement
   - Result: PASS
+
+---
+
+## PHASE 5B FOLLOW-ON BACKLOG (OPEN)
+
+## TASK 033 — REAL MODEM DAILY-CAPACITY VALIDATION (4K/SIM/DAY PROFILE)
+Status: OPEN (planned)
+
+Objective:
+- validate realistic physical send capability per SIM using the real execution path (`Laravel -> Python -> modem -> carrier`) rather than queue-only synthetic throughput
+
+Scope In:
+- per-SIM daily profile target: `4,000 SMS/day` (about `1 SMS / 21.6 seconds` average per SIM)
+- scenario coverage across message types: `CHAT`, `FOLLOW_UP`, `BLASTING`
+- controlled invalid/dummy-number scenarios to validate failure handling and state safety
+- per-SIM evidence for send/failed/retry outcomes and queue health over the run window
+
+Scope Out:
+- synthetic queue-only benchmark claims as proof of physical modem capacity
+- cross-country carrier deliverability guarantees
+- hardware redesign/per-modem firmware customization
+
+Validation Checklist:
+
+033-W1 Precheck and runbook baseline
+- Scenario: validate SIM mapping/readiness baseline before daily-profile run.
+- Expected behavior: all target SIMs are explicitly classified (`send-ready` vs `not-ready`) with reasons.
+- Evidence to collect: runtime fleet snapshot + SIM mapping snapshot + pre-run runbook.
+- Pass condition: baseline is reproducible and unambiguous.
+- Failure/follow-up condition: block W2+ until baseline ambiguity is removed.
+
+033-W2 Day-profile scheduler and pacing proof
+- Scenario: enforce per-SIM pace aligned with `4,000/day` target.
+- Expected behavior: pacing control is deterministic and observable per SIM.
+- Evidence to collect: pacing config + timestamped enqueue/send timeline.
+- Pass condition: sustained pacing matches planned profile window.
+- Failure/follow-up condition: open pacing-control defect with timeline.
+
+033-W3 CHAT scenario validation
+- Scenario: run profile window for `CHAT` traffic on each target SIM.
+- Expected behavior: state transitions remain policy-consistent without contradictions.
+- Evidence to collect: per-SIM status counters + sampled row timelines + logs.
+- Pass condition: no invalid lifecycle contradictions in sampled run.
+- Failure/follow-up condition: open CHAT-path defect.
+
+033-W4 FOLLOW_UP scenario validation
+- Scenario: run profile window for `FOLLOW_UP` traffic on each target SIM.
+- Expected behavior: same correctness guarantees as CHAT path under equivalent pacing.
+- Evidence to collect: per-SIM counters + sampled rows + logs.
+- Pass condition: no contradictions and no SIM-isolation leakage.
+- Failure/follow-up condition: open FOLLOW_UP-path defect.
+
+033-W5 BLASTING scenario validation
+- Scenario: run profile window for `BLASTING` traffic on each target SIM.
+- Expected behavior: queue priority/routing remains deterministic under sustained load.
+- Evidence to collect: queue-depth timeline + per-SIM outcome counters + logs.
+- Pass condition: deterministic routing/state behavior is preserved.
+- Failure/follow-up condition: open blasting-path defect.
+
+033-W6 Invalid/dummy-number failure-path validation
+- Scenario: send controlled invalid-number workloads across message types.
+- Expected behavior: failure classifications/persistence are deterministic and retry policy remains coherent.
+- Evidence to collect: failure samples (`error`, `error_layer`, `retry_count`, `scheduled_at`) + logs.
+- Pass condition: no contradictory or ambiguous failure states.
+- Failure/follow-up condition: open failure-classification defect.
+
+033-W7 Per-SIM capacity/readiness interpretation
+- Scenario: interpret observed modem-level throughput and stability per SIM.
+- Expected behavior: report distinguishes backend processing rate vs real modem/carrier delivery rate.
+- Evidence to collect: per-SIM summary table with sent/failed/retried and stability notes.
+- Pass condition: report is explicit, audit-ready, and non-ambiguous.
+- Failure/follow-up condition: keep task open until interpretation gaps are closed.
+
+033-W8 Evidence ledger and closure review
+- Scenario: closure review for TASK 033.
+- Expected behavior: all checklist items map to explicit pass/fail artifacts.
+- Evidence to collect: one evidence ledger linking W1–W7 artifacts.
+- Pass condition: ledger complete and acceptance criteria satisfied.
+- Failure/follow-up condition: keep TASK 033 open with explicit remaining items.
+
+Acceptance Criteria:
+- AC-033-01: precheck baseline and pacing controls are reproducible.
+- AC-033-02: CHAT/FOLLOW_UP/BLASTING paths are validated under daily-profile pacing.
+- AC-033-03: invalid/dummy-number handling is deterministic and policy-consistent.
+- AC-033-04: per-SIM results are clearly separated from synthetic backend throughput metrics.
+- AC-033-05: no contradictory state transitions in validated scenarios.
+- AC-033-06: evidence ledger is complete and auditable.
+
+Done / Closure Gate:
+- TASK 033 can be marked DONE only when W1–W8 are PASS and AC-033-01..06 are satisfied with linked artifacts.
+
+---
+
+## TASK 034 — ADMIN UI MANUAL RUNTIME-SIM MAPPING (TENANT/COMPANY -> SIM)
+Status: OPEN (planned)
+
+Objective:
+- add a safe dashboard workflow for manual mapping between discovered runtime SIM identity and Laravel tenant SIM DB rows, without CLI/tinker usage
+
+Scope In:
+- operator UI mapping workflow with explicit selectors:
+  - company/tenant selector (left)
+  - tenant SIM selector (right)
+- row-level map/unmap action from runtime discovery context
+- persistence through Laravel-owned mapping field updates (`sims.imsi`) with validation guards
+- audit logging for every map/unmap action
+
+Scope Out:
+- automatic remapping heuristics without operator confirmation
+- bypass of tenant/RBAC boundaries
+- hidden/background mapping writes
+
+Validation Checklist:
+
+034-W1 UX/data-contract definition
+- Scenario: define exact mapping model and operator flow.
+- Expected behavior: action target and persistence semantics are explicit.
+- Evidence to collect: UI flow notes + payload contract.
+- Pass condition: no ambiguity between runtime SIM ID and tenant SIM DB ID.
+- Failure/follow-up condition: keep implementation blocked until contract is clear.
+
+034-W2 Mapping write API endpoint
+- Scenario: implement authenticated tenant-safe map/unmap endpoint(s).
+- Expected behavior: only authorized operators can perform writes.
+- Evidence to collect: endpoint spec + request/response samples.
+- Pass condition: endpoint behavior is deterministic and tenant-safe.
+- Failure/follow-up condition: open API safety defect.
+
+034-W3 Validation and conflict guards
+- Scenario: attempt duplicate/conflicting mappings.
+- Expected behavior: safe rejection with explicit reason; no silent overwrite.
+- Evidence to collect: conflict test samples + resulting DB snapshots.
+- Pass condition: uniqueness and conflict rules are enforced.
+- Failure/follow-up condition: open mapping-integrity defect.
+
+034-W4 Dashboard UI integration
+- Scenario: map/unmap from runtime page using dropdown selectors.
+- Expected behavior: operator can complete mapping without CLI.
+- Evidence to collect: UI screenshots/flow captures + action result samples.
+- Pass condition: end-to-end mapping flow works in dashboard session.
+- Failure/follow-up condition: open UI-action defect.
+
+034-W5 RBAC and auditability
+- Scenario: enforce role boundaries and capture operator actions.
+- Expected behavior: unauthorized writes are blocked; successful writes are audit-logged.
+- Evidence to collect: RBAC test outcomes + audit log samples.
+- Pass condition: role + audit controls are verified.
+- Failure/follow-up condition: open security/audit defect.
+
+034-W6 Runtime/send-test integration check
+- Scenario: use new mapping to enable `Use in Send Test` targeting.
+- Expected behavior: mapped row becomes actionable without manual DB edits.
+- Evidence to collect: before/after runtime row snapshots + send-test target evidence.
+- Pass condition: mapping effect is visible and consistent in runtime UI behavior.
+- Failure/follow-up condition: open integration defect.
+
+034-W7 Docs/runbook update
+- Scenario: update operator instructions for manual mapping workflow.
+- Expected behavior: second operator can execute without tribal knowledge.
+- Evidence to collect: updated runbook section + dry-run notes.
+- Pass condition: procedural clarity confirmed.
+- Failure/follow-up condition: revise docs and re-run dry-run.
+
+034-W8 Evidence ledger and closure review
+- Scenario: closure review for TASK 034.
+- Expected behavior: checklist-to-artifact traceability is complete.
+- Evidence to collect: one evidence ledger linking W1–W7 artifacts.
+- Pass condition: ledger complete and acceptance criteria satisfied.
+- Failure/follow-up condition: keep TASK 034 open with explicit remaining items.
+
+Acceptance Criteria:
+- AC-034-01: manual mapping is available in dashboard UI (no CLI dependency).
+- AC-034-02: tenant/RBAC boundaries are enforced for mapping writes.
+- AC-034-03: mapping conflicts are safely rejected with explicit operator feedback.
+- AC-034-04: map/unmap actions are audit-logged and traceable.
+- AC-034-05: runtime/send-test behavior reflects mapping changes deterministically.
+- AC-034-06: evidence ledger is complete and auditable.
+
+Done / Closure Gate:
+- TASK 034 can be marked DONE only when W1–W8 are PASS and AC-034-01..06 are satisfied with linked artifacts.
 
 ---
 
