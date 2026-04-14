@@ -211,8 +211,14 @@ class PythonRuntimeController extends Controller
             'at_ok' => $modem['at_ok'] ?? null,
             'sim_ready' => $modem['sim_ready'] ?? null,
             'creg_registered' => $modem['creg_registered'] ?? null,
+            'effective_send_ready' => is_bool($modem['effective_send_ready'] ?? null) ? $modem['effective_send_ready'] : null,
+            'realtime_probe_ready' => is_bool($modem['realtime_probe_ready'] ?? null) ? $modem['realtime_probe_ready'] : null,
             'send_ready' => is_bool($modem['send_ready'] ?? null) ? $modem['send_ready'] : null,
             'identifier_source' => $this->firstString($modem, ['identifier_source']),
+            'identifier_source_confidence' => $this->firstString($modem, ['identifier_source_confidence']),
+            'consecutive_probe_failures' => $this->extractNullableInt($modem, ['consecutive_probe_failures']),
+            'last_good_probe_at' => $this->firstString($modem, ['last_good_probe_at']),
+            'readiness_reason_code' => $this->firstString($modem, ['readiness_reason_code']),
             'signal' => $modem['signal'] ?? null,
             'probe_error' => $this->firstString($modem, ['probe_error']),
             'last_seen_at' => $this->firstString($modem, ['last_seen_at', 'last_seen']),
@@ -250,6 +256,30 @@ class PythonRuntimeController extends Controller
 
             if (is_scalar($data[$key])) {
                 return (string) $data[$key];
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * @param array<string,mixed> $data
+     * @param array<int,string> $keys
+     * @return int|null
+     */
+    protected function extractNullableInt(array $data, array $keys): ?int
+    {
+        foreach ($keys as $key) {
+            if (!array_key_exists($key, $data) || $data[$key] === null) {
+                continue;
+            }
+
+            if (is_int($data[$key])) {
+                return $data[$key];
+            }
+
+            if (is_numeric($data[$key])) {
+                return (int) $data[$key];
             }
         }
 

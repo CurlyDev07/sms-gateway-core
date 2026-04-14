@@ -728,6 +728,30 @@
             <span id="diagRuntimeSendReady">-</span>
         </div>
         <div class="diagnostics-item">
+            <strong>Effective Send-Ready</strong>
+            <span id="diagEffectiveSendReady">-</span>
+        </div>
+        <div class="diagnostics-item">
+            <strong>Realtime Probe Ready</strong>
+            <span id="diagRealtimeProbeReady">-</span>
+        </div>
+        <div class="diagnostics-item">
+            <strong>Readiness Reason Code</strong>
+            <span id="diagReadinessReasonCode">-</span>
+        </div>
+        <div class="diagnostics-item">
+            <strong>Identifier Confidence</strong>
+            <span id="diagIdentifierConfidence">-</span>
+        </div>
+        <div class="diagnostics-item">
+            <strong>Consecutive Probe Failures</strong>
+            <span id="diagConsecutiveProbeFailures">-</span>
+        </div>
+        <div class="diagnostics-item">
+            <strong>Last Good Probe At</strong>
+            <span id="diagLastGoodProbeAt">-</span>
+        </div>
+        <div class="diagnostics-item">
             <strong>Probe Error</strong>
             <span id="diagProbeError">-</span>
         </div>
@@ -833,6 +857,12 @@
         const diagMappingStatusEl = document.getElementById('diagMappingStatus');
         const diagIdentifierSourceEl = document.getElementById('diagIdentifierSource');
         const diagRuntimeSendReadyEl = document.getElementById('diagRuntimeSendReady');
+        const diagEffectiveSendReadyEl = document.getElementById('diagEffectiveSendReady');
+        const diagRealtimeProbeReadyEl = document.getElementById('diagRealtimeProbeReady');
+        const diagReadinessReasonCodeEl = document.getElementById('diagReadinessReasonCode');
+        const diagIdentifierConfidenceEl = document.getElementById('diagIdentifierConfidence');
+        const diagConsecutiveProbeFailuresEl = document.getElementById('diagConsecutiveProbeFailures');
+        const diagLastGoodProbeAtEl = document.getElementById('diagLastGoodProbeAt');
         const diagProbeErrorEl = document.getElementById('diagProbeError');
         const diagAtOkEl = document.getElementById('diagAtOk');
         const diagSimReadyEl = document.getElementById('diagSimReady');
@@ -928,15 +958,69 @@
             return /^[1-9]\d*$/.test(tenantSimDbId);
         };
 
+        const effectiveSendReady = (modem) => {
+            if (typeof (modem && modem.effective_send_ready) === 'boolean') {
+                return modem.effective_send_ready;
+            }
+
+            return null;
+        };
+
+        const realtimeProbeReady = (modem) => {
+            if (typeof (modem && modem.realtime_probe_ready) === 'boolean') {
+                return modem.realtime_probe_ready;
+            }
+
+            return null;
+        };
+
         const runtimeSendReady = (modem) => {
+            const effective = effectiveSendReady(modem);
+            if (typeof effective === 'boolean') {
+                return effective;
+            }
+
             if (typeof modem.send_ready === 'boolean') {
                 return modem.send_ready;
+            }
+
+            const realtime = realtimeProbeReady(modem);
+            if (typeof realtime === 'boolean') {
+                return realtime;
             }
 
             return !hasProbeError(modem)
                 && modem.at_ok === true
                 && modem.sim_ready === true
                 && modem.creg_registered === true;
+        };
+
+        const readinessReasonCode = (modem) => {
+            const code = String(modem && modem.readiness_reason_code !== undefined ? modem.readiness_reason_code : '')
+                .trim()
+                .toUpperCase();
+
+            return code === '' ? null : code;
+        };
+
+        const readinessReasonText = (modem) => {
+            const code = readinessReasonCode(modem);
+
+            if (code === null) {
+                return null;
+            }
+
+            const dictionary = {
+                SIM_NOT_READY: 'SIM not ready; send test disabled.',
+                CREG_NOT_REGISTERED: 'Modem not registered; send test disabled.',
+                AT_NOT_READY: 'AT not ready; send test disabled.',
+                PROBE_TIMEOUT: 'Probe timed out; send test disabled.',
+                PROBE_FAILED: 'Probe failed; send test disabled.',
+                PROBE_INCOMPLETE: 'Probe incomplete; send test disabled.',
+                RUNTIME_UNHEALTHY: 'Runtime health not stable; send test disabled.',
+            };
+
+            return dictionary[code] || `Runtime not send-ready (${code}).`;
         };
 
         const normalizedIdentifierSource = (modem) => {
@@ -1185,56 +1269,16 @@
         };
 
         const runtimeRowSendability = (modem, runtimeSimId, tenantSimDbId) => {
-            const probeError = modem && modem.probe_error !== null && modem.probe_error !== undefined
-                ? String(modem.probe_error).trim()
-                : '';
+            if (!runtimeSendReady(modem)) {
+                const reasonFromCode = readinessReasonText(modem);
+                const reason = reasonFromCode
+                    || (hasProbeError(modem)
+                        ? 'Probe did not complete; send test disabled.'
+                        : 'Runtime not send-ready; send test disabled.');
 
-            if (probeError !== '') {
                 return {
                     can_use_in_send_test: false,
-                    disabled_reason: 'Probe did not complete; send test disabled.'
-                };
-            }
-
-            if (modem.at_ok === false) {
-                return {
-                    can_use_in_send_test: false,
-                    disabled_reason: 'AT not ready; send test disabled.'
-                };
-            }
-
-            if (modem.sim_ready === false) {
-                return {
-                    can_use_in_send_test: false,
-                    disabled_reason: 'SIM not ready; send test disabled.'
-                };
-            }
-
-            if (modem.creg_registered === false) {
-                return {
-                    can_use_in_send_test: false,
-                    disabled_reason: 'Modem not registered; send test disabled.'
-                };
-            }
-
-            if (modem.at_ok !== true) {
-                return {
-                    can_use_in_send_test: false,
-                    disabled_reason: 'AT not ready; send test disabled.'
-                };
-            }
-
-            if (modem.sim_ready !== true) {
-                return {
-                    can_use_in_send_test: false,
-                    disabled_reason: 'SIM not ready; send test disabled.'
-                };
-            }
-
-            if (modem.creg_registered !== true) {
-                return {
-                    can_use_in_send_test: false,
-                    disabled_reason: 'Modem not registered; send test disabled.'
+                    disabled_reason: reason
                 };
             }
 
@@ -1391,6 +1435,12 @@
             setDiagnosticsField(diagMappingStatusEl, '-');
             setDiagnosticsField(diagIdentifierSourceEl, '-');
             setDiagnosticsField(diagRuntimeSendReadyEl, '-');
+            setDiagnosticsField(diagEffectiveSendReadyEl, '-');
+            setDiagnosticsField(diagRealtimeProbeReadyEl, '-');
+            setDiagnosticsField(diagReadinessReasonCodeEl, '-');
+            setDiagnosticsField(diagIdentifierConfidenceEl, '-');
+            setDiagnosticsField(diagConsecutiveProbeFailuresEl, '-');
+            setDiagnosticsField(diagLastGoodProbeAtEl, '-');
             setDiagnosticsField(diagProbeErrorEl, '-');
             setDiagnosticsField(diagAtOkEl, '-');
             setDiagnosticsField(diagSimReadyEl, '-');
@@ -1430,6 +1480,12 @@
             setDiagnosticsField(diagMappingStatusEl, isMappedTenantSim(modem) ? 'mapped' : 'unmapped');
             setDiagnosticsField(diagIdentifierSourceEl, modem.identifier_source);
             setDiagnosticsField(diagRuntimeSendReadyEl, boolText(runtimeSendReady(modem)));
+            setDiagnosticsField(diagEffectiveSendReadyEl, boolText(effectiveSendReady(modem)));
+            setDiagnosticsField(diagRealtimeProbeReadyEl, boolText(realtimeProbeReady(modem)));
+            setDiagnosticsField(diagReadinessReasonCodeEl, readinessReasonCode(modem));
+            setDiagnosticsField(diagIdentifierConfidenceEl, modem.identifier_source_confidence);
+            setDiagnosticsField(diagConsecutiveProbeFailuresEl, modem.consecutive_probe_failures);
+            setDiagnosticsField(diagLastGoodProbeAtEl, modem.last_good_probe_at);
             setDiagnosticsField(diagProbeErrorEl, modem.probe_error);
             setDiagnosticsField(diagAtOkEl, boolText(modem.at_ok));
             setDiagnosticsField(diagSimReadyEl, boolText(modem.sim_ready));
@@ -1498,7 +1554,11 @@
                 const identifierSource = asText(modem.identifier_source);
                 const fallbackIdentifier = isFallbackIdentifier(modem);
                 const runtimeReady = runtimeSendReady(modem);
+                const readinessCode = asText(readinessReasonCode(modem));
                 const safety = rowSafetyMeta(modem);
+                const identifierConfidence = String(modem && modem.identifier_source_confidence !== undefined ? modem.identifier_source_confidence : '')
+                    .trim()
+                    .toLowerCase();
                 const runtimeSimIdAttr = ` data-sim-id="${escapeHtml(runtimeSimId)}"`;
                 const tenantSimDbIdAttr = ` data-tenant-sim-id="${escapeHtml(tenantSimDbId)}"`;
                 const rowIndexAttr = ` data-row-index="${index}"`;
@@ -1529,9 +1589,19 @@
                 const identifierBadge = fallbackIdentifier
                     ? '<span class="state-badge state-warn">fallback_device_id</span>'
                     : `<span class="state-badge state-good">${escapeHtml(identifierSource)}</span>`;
+                const identifierConfidenceBadge = identifierConfidence === ''
+                    ? ''
+                    : `<div class="safety-note"><span class="state-badge ${escapeHtml(
+                        identifierConfidence === 'high'
+                            ? 'state-good'
+                            : (identifierConfidence === 'medium' ? 'state-warn' : 'state-danger')
+                    )}">${escapeHtml(`confidence:${identifierConfidence}`)}</span></div>`;
                 const runtimeReadyBadge = runtimeReady
                     ? '<span class="state-badge state-good">true</span>'
                     : '<span class="state-badge state-warn">false</span>';
+                const runtimeReadyReason = readinessCode === '-'
+                    ? ''
+                    : `<div class="safety-note">${escapeHtml(readinessCode)}</div>`;
                 const safetyBadge = `<span class="safety-badge ${escapeHtml(safety.badgeClass)}">${escapeHtml(safety.label)}</span>`;
                 const safetyNote = `<div class="safety-note">${escapeHtml(safety.description)}</div>`;
                 const identityKey = rowIdentityKey(modem);
@@ -1555,8 +1625,8 @@
                     <td>${escapeHtml(runtimeSimId)}</td>
                     <td>${escapeHtml(tenantSimDbId)}</td>
                     <td>${mappingBadge}${mappingReviewBadge}</td>
-                    <td>${identifierBadge}</td>
-                    <td>${runtimeReadyBadge}</td>
+                    <td>${identifierBadge}${identifierConfidenceBadge}</td>
+                    <td>${runtimeReadyBadge}${runtimeReadyReason}</td>
                     <td>${escapeHtml(asText(modem.device_id))}</td>
                     <td>${escapeHtml(asText(modem.port))}</td>
                     <td>${escapeHtml(boolText(modem.at_ok))}</td>
