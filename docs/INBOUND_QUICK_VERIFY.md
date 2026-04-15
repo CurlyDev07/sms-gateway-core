@@ -46,4 +46,5 @@ dump(
 Notes:
 - Carrier/system senders (for example `8080`) are retained by policy and may appear in this list.
 - This is expected behavior and can be classified in UI/reporting later.
-
+- For recurring daily ops checks, use:
+  - `docs/GATEWAY_CHATAPP_DAILY_HEALTH_CHECK.md`

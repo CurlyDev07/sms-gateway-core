@@ -1,6 +1,28 @@
 # CHANGELOG
 
-Last Updated: 2026-04-14
+Last Updated: 2026-04-15
+
+---
+
+## [2026-04-15] Operations Runbook — Daily Gateway ↔ ChatApp Health Check Added
+
+### Summary
+A separate daily operator checklist was added to verify Gateway inbound relay health to ChatApp in about one minute.
+
+### What Changed
+- Added:
+  - `docs/GATEWAY_CHATAPP_DAILY_HEALTH_CHECK.md`
+- Includes:
+  - container/service health checks
+  - worker-to-webhook reachability probe
+  - relay status summary SQL checks
+  - quick failure drilldown
+  - optional live probe + pass criteria
+  - incident-oriented log snapshot commands
+
+### Status
+- documentation update only
+- no application/runtime/API behavior changes
 
 ---
 
