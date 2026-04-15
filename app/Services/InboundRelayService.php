@@ -36,16 +36,17 @@ class InboundRelayService
         }
 
         $payload = [
-            'company_id' => $message->company_id,
-            'sim_id' => $message->sim_id,
-            'sim_phone_number' => optional($message->sim)->phone_number,
-            'customer_phone' => $message->customer_phone,
-            'message' => $message->message,
-            'received_at' => $message->received_at !== null ? $message->received_at->toIso8601String() : null,
+            // InfoTxt-compatible contract expected by ChatApp.
+            'ID' => 'GW-IN-'.$message->id,
+            'MOBILE' => (string) $message->customer_phone,
+            'SMS' => (string) $message->message,
+            'RECEIVED' => $message->received_at !== null ? $message->received_at->format('Y-m-d H:i:s') : null,
         ];
 
         try {
-            $response = Http::timeout($timeout)->post($url, $payload);
+            $response = Http::asForm()
+                ->timeout($timeout)
+                ->post($url, array_filter($payload, static fn ($value) => $value !== null));
 
             if ($response->successful()) {
                 $message->update([
