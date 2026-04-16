@@ -199,6 +199,107 @@ class PythonRuntimeController extends Controller
     }
 
     /**
+     * Manually bind a runtime SIM identifier (IMSI) to a tenant-owned SIM row.
+     *
+     * @param \Illuminate\Http\Request $request
+     * @param \App\Services\OperatorAuditLogService $auditLogService
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function mapSim(Request $request, OperatorAuditLogService $auditLogService): JsonResponse
+    {
+        $companyId = TenantContext::companyId($request);
+
+        if ($companyId === null) {
+            return response()->json([
+                'ok' => false,
+                'error' => 'forbidden',
+            ], 403);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'runtime_sim_id' => ['required', 'string', 'regex:/^[0-9]{15}$/'],
+            'tenant_sim_db_id' => ['required', 'integer', 'min:1'],
+        ], [
+            'runtime_sim_id.regex' => 'runtime_sim_id_must_be_15_digit_imsi',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'ok' => false,
+                'error' => 'validation_failed',
+                'details' => $validator->errors()->toArray(),
+            ], 422);
+        }
+
+        $validated = $validator->validated();
+        $runtimeSimId = trim((string) $validated['runtime_sim_id']);
+        $tenantSimDbId = (int) $validated['tenant_sim_db_id'];
+
+        $tenantSim = Sim::query()
+            ->where('company_id', $companyId)
+            ->where('id', $tenantSimDbId)
+            ->first();
+
+        if ($tenantSim === null) {
+            return response()->json([
+                'ok' => false,
+                'error' => 'sim_not_found',
+            ], 404);
+        }
+
+        $sameCompanyConflict = Sim::query()
+            ->where('company_id', $companyId)
+            ->where('imsi', $runtimeSimId)
+            ->where('id', '!=', $tenantSim->id)
+            ->exists();
+
+        if ($sameCompanyConflict) {
+            return response()->json([
+                'ok' => false,
+                'error' => 'runtime_sim_id_already_mapped_in_tenant',
+            ], 409);
+        }
+
+        $otherTenantConflict = Sim::query()
+            ->where('imsi', $runtimeSimId)
+            ->where('company_id', '!=', $companyId)
+            ->exists();
+
+        if ($otherTenantConflict) {
+            return response()->json([
+                'ok' => false,
+                'error' => 'runtime_sim_id_already_mapped_in_other_tenant',
+            ], 409);
+        }
+
+        $previousImsi = trim((string) ($tenantSim->imsi ?? ''));
+        $tenantSim->imsi = $runtimeSimId;
+        $tenantSim->save();
+        $tenantSim->refresh();
+
+        $auditLogService->record(
+            $request,
+            'runtime.python_map_sim',
+            'sim',
+            (int) $tenantSim->id,
+            [
+                'runtime_sim_id' => $runtimeSimId,
+                'previous_imsi' => $previousImsi === '' ? null : $previousImsi,
+                'new_imsi' => $runtimeSimId,
+            ]
+        );
+
+        return response()->json([
+            'ok' => true,
+            'result' => [
+                'tenant_sim_db_id' => (int) $tenantSim->id,
+                'runtime_sim_id' => $runtimeSimId,
+                'imsi' => (string) $tenantSim->imsi,
+            ],
+        ]);
+    }
+
+    /**
      * @param array<string,mixed> $modem
      * @return array<string,mixed>
      */

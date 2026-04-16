@@ -288,4 +288,79 @@ class PythonRuntimeDashboardApiTest extends TestCase
         $this->assertSame('failed', $message->status);
         $this->assertSame('INVALID_RESPONSE', $message->failure_reason);
     }
+
+    public function test_runtime_map_sim_updates_tenant_owned_sim_imsi(): void
+    {
+        $company = $this->createCompany();
+        $sim = $this->createSim($company, [
+            'imsi' => null,
+        ]);
+
+        $user = User::factory()->create([
+            'company_id' => $company->id,
+            'operator_role' => 'admin',
+        ]);
+
+        $this->actingAs($user)
+            ->postJson('/dashboard/api/runtime/python/map-sim', [
+                'runtime_sim_id' => '515039219149367',
+                'tenant_sim_db_id' => $sim->id,
+            ])
+            ->assertOk()
+            ->assertJsonPath('ok', true)
+            ->assertJsonPath('result.tenant_sim_db_id', $sim->id)
+            ->assertJsonPath('result.runtime_sim_id', '515039219149367')
+            ->assertJsonPath('result.imsi', '515039219149367');
+
+        $this->assertDatabaseHas('sims', [
+            'id' => $sim->id,
+            'company_id' => $company->id,
+            'imsi' => '515039219149367',
+        ]);
+    }
+
+    public function test_runtime_map_sim_rejects_cross_tenant_target_sim(): void
+    {
+        $companyA = $this->createCompany();
+        $companyB = $this->createCompany();
+        $otherTenantSim = $this->createSim($companyB, [
+            'imsi' => null,
+        ]);
+
+        $user = User::factory()->create([
+            'company_id' => $companyA->id,
+            'operator_role' => 'admin',
+        ]);
+
+        $this->actingAs($user)
+            ->postJson('/dashboard/api/runtime/python/map-sim', [
+                'runtime_sim_id' => '515039219149367',
+                'tenant_sim_db_id' => $otherTenantSim->id,
+            ])
+            ->assertStatus(404)
+            ->assertJsonPath('ok', false)
+            ->assertJsonPath('error', 'sim_not_found');
+    }
+
+    public function test_runtime_map_sim_validates_imsi_format(): void
+    {
+        $company = $this->createCompany();
+        $sim = $this->createSim($company, [
+            'imsi' => null,
+        ]);
+
+        $user = User::factory()->create([
+            'company_id' => $company->id,
+            'operator_role' => 'admin',
+        ]);
+
+        $this->actingAs($user)
+            ->postJson('/dashboard/api/runtime/python/map-sim', [
+                'runtime_sim_id' => 'not-an-imsi',
+                'tenant_sim_db_id' => $sim->id,
+            ])
+            ->assertStatus(422)
+            ->assertJsonPath('ok', false)
+            ->assertJsonPath('error', 'validation_failed');
+    }
 }

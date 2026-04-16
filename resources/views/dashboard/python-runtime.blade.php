@@ -614,6 +614,34 @@
     <div id="sendStatus" class="send-result muted">No send test executed yet.</div>
 </section>
 
+<section class="send-panel">
+    <h2>Manual Runtime SIM Mapping</h2>
+    <p class="muted">
+        Manual bind path using <code>POST /dashboard/api/runtime/python/map-sim</code>.
+        This links one runtime IMSI to one tenant SIM DB row (<code>sims.id</code>).
+    </p>
+    <p class="muted">
+        Mapping currently accepts IMSI-only runtime identifiers (15 digits).
+    </p>
+
+    <div class="send-grid">
+        <label>
+            Runtime SIM ID (IMSI)
+            <input id="mapRuntimeSimId" type="text" placeholder="e.g. 515039219149367">
+        </label>
+        <label>
+            Tenant SIM DB ID
+            <input id="mapTenantSimId" type="number" min="1" placeholder="e.g. 5">
+        </label>
+    </div>
+
+    <div class="send-actions">
+        <button id="mapSimButton" type="button">Map Runtime SIM to Tenant SIM</button>
+    </div>
+
+    <div id="mapStatus" class="send-result muted">No mapping action executed yet.</div>
+</section>
+
 <div class="row-filters" id="runtimeRowFilters">
     <strong>Quick Filters</strong>
     <button type="button" class="filter-chip active" data-filter="all" aria-pressed="true">All</button>
@@ -634,6 +662,7 @@
     <p>
         <strong>View Details</strong> inspects runtime diagnostics only.
         <strong>Copy SIM ID</strong> copies the runtime <code>sim_id</code>.
+        <strong>Use in Mapping</strong> prefills manual mapping inputs.
         <strong>Use in Send Test</strong> uses Laravel Tenant SIM DB ID (<code>sims.id</code>), never runtime SIM ID.
     </p>
 </section>
@@ -701,7 +730,7 @@
         </div>
         <div class="diagnostics-item">
             <strong>Reconciliation Note</strong>
-            <span id="diagReconciliationNote">Review only: no Laravel mapping action is performed on this page.</span>
+            <span id="diagReconciliationNote">Manual mapping is available via the Manual Runtime SIM Mapping panel.</span>
         </div>
         <div class="diagnostics-item">
             <strong>Send-Test Actionability</strong>
@@ -824,15 +853,18 @@
     (() => {
         const apiPath = '/dashboard/api/runtime/python';
         const sendApiPath = '/dashboard/api/runtime/python/send-test';
+        const mapApiPath = '/dashboard/api/runtime/python/map-sim';
         const csrfToken = @json(csrf_token());
         const refreshButton = document.getElementById('refreshButton');
         const sendTestButton = document.getElementById('sendTestButton');
+        const mapSimButton = document.getElementById('mapSimButton');
         const statusEl = document.getElementById('status');
         const lastRefreshAttemptEl = document.getElementById('lastRefreshAttempt');
         const lastRefreshSuccessEl = document.getElementById('lastRefreshSuccess');
         const runtimeStateLabelEl = document.getElementById('runtimeStateLabel');
         const runtimeStateHelperEl = document.getElementById('runtimeStateHelper');
         const sendStatusEl = document.getElementById('sendStatus');
+        const mapStatusEl = document.getElementById('mapStatus');
         const modemRowsEl = document.getElementById('modemRows');
         const runtimeRowFiltersEl = document.getElementById('runtimeRowFilters');
         const runtimeFilterSummaryEl = document.getElementById('runtimeFilterSummary');
@@ -877,6 +909,8 @@
         const sendCustomerPhoneEl = document.getElementById('sendCustomerPhone');
         const sendClientMessageIdEl = document.getElementById('sendClientMessageId');
         const sendMessageEl = document.getElementById('sendMessage');
+        const mapRuntimeSimIdEl = document.getElementById('mapRuntimeSimId');
+        const mapTenantSimIdEl = document.getElementById('mapTenantSimId');
 
         const healthReachableEl = document.getElementById('healthReachable');
         const healthHttpStatusEl = document.getElementById('healthHttpStatus');
@@ -1082,7 +1116,7 @@
                 status: flags.length > 0 ? 'needs_review' : 'clear',
                 reason,
                 flags: flags.length > 0 ? flags.join(', ') : 'none',
-                note: 'Review only: no Laravel mapping action is performed on this page.',
+                note: 'Manual mapping is available via the Manual Runtime SIM Mapping panel.',
             };
         };
 
@@ -1160,6 +1194,15 @@
             renderSelectedContext();
         };
 
+        const markMappingContext = (modem, runtimeSimId, tenantSimId) => {
+            setSelectedContextFromRow(modem);
+            const safeRuntimeSimId = normalizeNullableValue(runtimeSimId) || '-';
+            const safeTenantSimId = normalizeNullableValue(tenantSimId) || '-';
+            selectedContext.lastAction = 'Use in Mapping';
+            selectedContext.status = `Mapping form loaded with runtime SIM ID ${safeRuntimeSimId} and tenant SIM DB ID ${safeTenantSimId}.`;
+            renderSelectedContext();
+        };
+
         const neutralDiagnosticsMessage = () => {
             if (currentRenderedRows.length > 0) {
                 return 'No row selected yet. Click View Details on any visible row.';
@@ -1225,6 +1268,11 @@
         const setSendStatus = (text, type = 'muted') => {
             sendStatusEl.className = `send-result ${type}`;
             sendStatusEl.textContent = text;
+        };
+
+        const setMapStatus = (text, type = 'muted') => {
+            mapStatusEl.className = `send-result ${type}`;
+            mapStatusEl.textContent = text;
         };
 
         const renderSummary = (payload) => {
@@ -1428,7 +1476,7 @@
             setDiagnosticsField(diagMappingReviewStatusEl, '-');
             setDiagnosticsField(diagNeedsReviewReasonEl, '-');
             setDiagnosticsField(diagReviewFlagsEl, '-');
-            setDiagnosticsField(diagReconciliationNoteEl, 'Review only: no Laravel mapping action is performed on this page.');
+            setDiagnosticsField(diagReconciliationNoteEl, 'Manual mapping is available via the Manual Runtime SIM Mapping panel.');
             setDiagnosticsField(diagActionabilityEl, '-');
             setDiagnosticsField(diagRuntimeSimIdEl, '-');
             setDiagnosticsField(diagTenantSimDbIdEl, '-');
@@ -1613,6 +1661,7 @@
                     <td>
                         <button type="button" class="mini-button view-details"${rowIndexAttr}${detailsTitleAttr}>View Details</button>
                         <button type="button" class="mini-button copy-sim-id"${rowIndexAttr}${runtimeSimIdAttr}${copyTitleAttr}>Copy SIM ID</button>
+                        <button type="button" class="mini-button use-map-sim"${rowIndexAttr}${runtimeSimIdAttr}${tenantSimDbIdAttr} title="Prefill mapping form with this runtime SIM ID and tenant SIM DB ID (if available).">Use in Mapping</button>
                         <button type="button" class="mini-button use-sim-id"${rowIndexAttr}${runtimeSimIdAttr}${tenantSimDbIdAttr}${useDisabledAttr}${useTitleAttr}>Use in Send Test</button>
                         ${sendBadge}
                         ${sendDisabledReason}
@@ -1968,6 +2017,19 @@
                 return;
             }
 
+            if (target.classList.contains('use-map-sim')) {
+                mapRuntimeSimIdEl.value = simId;
+                mapTenantSimIdEl.value = /^[1-9]\d*$/.test(tenantSimId) ? tenantSimId : '';
+
+                if (row) {
+                    markMappingContext(row, simId, mapTenantSimIdEl.value);
+                    renderModems(latestDiscoveryRows);
+                }
+
+                setStatus(`Mapping form loaded for runtime SIM ID ${simId}.`, 'ok');
+                return;
+            }
+
             if (target.classList.contains('copy-sim-id')) {
                 try {
                     if (navigator.clipboard && navigator.clipboard.writeText) {
@@ -2069,6 +2131,69 @@
                 );
             } catch (error) {
                 setSendStatus(`Send test failed: ${error.message}`, 'error');
+            }
+        });
+
+        mapSimButton.addEventListener('click', async () => {
+            const runtimeSimId = (mapRuntimeSimIdEl.value || '').trim();
+            const tenantSimDbId = Number(mapTenantSimIdEl.value || 0);
+
+            if (!/^[0-9]{15}$/.test(runtimeSimId)) {
+                setMapStatus('Mapping failed: Runtime SIM ID must be a 15-digit IMSI.', 'error');
+                return;
+            }
+
+            if (!Number.isInteger(tenantSimDbId) || tenantSimDbId < 1) {
+                setMapStatus('Mapping failed: Tenant SIM DB ID is required.', 'error');
+                return;
+            }
+
+            setMapStatus('Applying manual SIM mapping...', 'muted');
+
+            try {
+                const response = await fetch(mapApiPath, {
+                    method: 'POST',
+                    headers: {
+                        Accept: 'application/json',
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': csrfToken
+                    },
+                    body: JSON.stringify({
+                        runtime_sim_id: runtimeSimId,
+                        tenant_sim_db_id: tenantSimDbId
+                    })
+                });
+
+                let payload = null;
+                try {
+                    payload = await response.json();
+                } catch (_) {
+                    payload = null;
+                }
+
+                if (!payload) {
+                    setMapStatus(`Mapping failed: HTTP ${response.status}`, 'error');
+                    return;
+                }
+
+                if (payload.ok === true) {
+                    const mappedSimId = asText(payload.result && payload.result.tenant_sim_db_id);
+                    setMapStatus(`Mapping success: runtime SIM ID ${runtimeSimId} -> Tenant SIM DB ID ${mappedSimId}.`, 'ok');
+                    sendSimIdEl.value = String(tenantSimDbId);
+                    setStatus('Manual SIM mapping applied. Refreshing runtime snapshot...', 'ok');
+                    refreshButton.click();
+                    return;
+                }
+
+                const details = payload.details && typeof payload.details === 'object'
+                    ? JSON.stringify(payload.details)
+                    : '';
+                const errorText = details !== ''
+                    ? `${asText(payload.error)} ${details}`
+                    : asText(payload.error);
+                setMapStatus(`Mapping failed: ${errorText}`, 'error');
+            } catch (error) {
+                setMapStatus(`Mapping failed: ${error.message}`, 'error');
             }
         });
     })();
