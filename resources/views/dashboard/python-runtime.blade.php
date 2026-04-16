@@ -631,7 +631,9 @@
         </label>
         <label>
             Tenant SIM DB ID
-            <input id="mapTenantSimId" type="number" min="1" placeholder="e.g. 5">
+            <select id="mapTenantSimId">
+                <option value="">Select tenant SIM...</option>
+            </select>
         </label>
     </div>
 
@@ -940,6 +942,7 @@
         let lastRefreshAttemptAt = null;
         let lastRefreshSuccessAt = null;
         let selectedRowKey = null;
+        let currentTenantSims = [];
         let selectedContext = {
             runtimeSimId: null,
             tenantSimDbId: null,
@@ -1275,6 +1278,58 @@
             mapStatusEl.textContent = text;
         };
 
+        const formatTenantSimOptionLabel = (sim) => {
+            const parts = [`#${asText(sim.id)}`];
+            const phone = String(sim && sim.phone_number !== undefined ? sim.phone_number : '').trim();
+            const label = String(sim && sim.sim_label !== undefined ? sim.sim_label : '').trim();
+            const imsi = String(sim && sim.imsi !== undefined ? sim.imsi : '').trim();
+            const status = String(sim && sim.status !== undefined ? sim.status : '').trim();
+            const operatorStatus = String(sim && sim.operator_status !== undefined ? sim.operator_status : '').trim();
+
+            if (phone !== '') {
+                parts.push(phone);
+            }
+
+            if (label !== '') {
+                parts.push(label);
+            }
+
+            if (imsi !== '') {
+                parts.push(`IMSI:${imsi}`);
+            }
+
+            if (status !== '' || operatorStatus !== '') {
+                parts.push(`status:${status || '-'}|op:${operatorStatus || '-'}`);
+            }
+
+            return parts.join(' • ');
+        };
+
+        const renderTenantSimOptions = (tenantSims) => {
+            currentTenantSims = Array.isArray(tenantSims) ? tenantSims : [];
+            const previousValue = String(mapTenantSimIdEl.value || '').trim();
+
+            mapTenantSimIdEl.innerHTML = '<option value="">Select tenant SIM...</option>';
+
+            currentTenantSims.forEach((sim) => {
+                const simId = Number(sim && sim.id !== undefined ? sim.id : 0);
+                if (!Number.isInteger(simId) || simId < 1) {
+                    return;
+                }
+
+                const option = document.createElement('option');
+                option.value = String(simId);
+                option.textContent = formatTenantSimOptionLabel(sim);
+                mapTenantSimIdEl.appendChild(option);
+            });
+
+            if (previousValue !== '' && currentTenantSims.some((sim) => String(sim.id) === previousValue)) {
+                mapTenantSimIdEl.value = previousValue;
+            } else {
+                mapTenantSimIdEl.value = '';
+            }
+        };
+
         const renderSummary = (payload) => {
             const health = payload.health || {};
             const discovery = payload.discovery || {};
@@ -1290,6 +1345,7 @@
             discoveredTotalEl.textContent = asText(discovery.discovered_total);
             tenantVisibleTotalEl.textContent = asText(discovery.tenant_visible_total);
             tenantImsiMappedEl.textContent = asText(discovery.tenant_imsi_mapped);
+            renderTenantSimOptions(discovery.tenant_sims || []);
         };
 
         const rowState = (modem) => {
@@ -1821,6 +1877,7 @@
 
         clearDiagnostics();
         renderMappingReview([]);
+        renderTenantSimOptions([]);
         renderSelectedContext();
         setRuntimeState(
             'not_loaded',

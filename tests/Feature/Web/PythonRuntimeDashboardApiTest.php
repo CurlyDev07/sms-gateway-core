@@ -80,6 +80,8 @@ class PythonRuntimeDashboardApiTest extends TestCase
             ->assertJsonPath('discovery.ok', true)
             ->assertJsonPath('discovery.discovered_total', 2)
             ->assertJsonPath('discovery.tenant_visible_total', 1)
+            ->assertJsonCount(1, 'discovery.tenant_sims')
+            ->assertJsonPath('discovery.tenant_sims.0.id', $tenantSim->id)
             ->assertJsonCount(1, 'discovery.modems')
             ->assertJsonCount(2, 'discovery.all_modems')
             ->assertJsonPath('discovery.modems.0.device_id', 'modem-a')

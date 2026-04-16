@@ -40,9 +40,16 @@ class PythonRuntimeController extends Controller
 
         $tenantSims = Sim::query()
             ->where('company_id', $companyId)
-            ->whereNotNull('imsi')
             ->orderBy('id')
-            ->get(['id', 'imsi']);
+            ->get([
+                'id',
+                'phone_number',
+                'sim_label',
+                'imsi',
+                'status',
+                'operator_status',
+                'accept_new_assignments',
+            ]);
 
         $tenantImsiToSimId = [];
         foreach ($tenantSims as $tenantSim) {
@@ -103,6 +110,17 @@ class PythonRuntimeController extends Controller
                 'tenant_visible_total' => count($visibleModems),
                 'modems' => $visibleModems,
                 'all_modems' => $allModems,
+                'tenant_sims' => $tenantSims->map(function (Sim $sim): array {
+                    return [
+                        'id' => (int) $sim->id,
+                        'phone_number' => $sim->phone_number,
+                        'sim_label' => $sim->sim_label,
+                        'imsi' => $sim->imsi,
+                        'status' => $sim->status,
+                        'operator_status' => $sim->operator_status,
+                        'accept_new_assignments' => (bool) $sim->accept_new_assignments,
+                    ];
+                })->values()->all(),
                 'tenant_imsi_mapped' => count($tenantImsis),
             ],
         ]);
