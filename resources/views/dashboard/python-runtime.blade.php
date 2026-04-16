@@ -1032,6 +1032,18 @@
                 && modem.creg_registered === true;
         };
 
+        const runtimeProbeReadyForSend = (modem) => {
+            const realtime = realtimeProbeReady(modem);
+            if (typeof realtime === 'boolean') {
+                return realtime;
+            }
+
+            return !hasProbeError(modem)
+                && modem.at_ok === true
+                && modem.sim_ready === true
+                && modem.creg_registered === true;
+        };
+
         const readinessReasonCode = (modem) => {
             const code = String(modem && modem.readiness_reason_code !== undefined ? modem.readiness_reason_code : '')
                 .trim()
@@ -1075,7 +1087,7 @@
         };
 
         const unmappedAndSendReady = (modem) => {
-            return !isMappedTenantSim(modem) && runtimeSendReady(modem);
+            return !isMappedTenantSim(modem) && runtimeProbeReadyForSend(modem);
         };
 
         const mappingReviewContext = (modem) => {
@@ -1373,7 +1385,7 @@
         };
 
         const runtimeRowSendability = (modem, runtimeSimId, tenantSimDbId) => {
-            if (!runtimeSendReady(modem)) {
+            if (!runtimeProbeReadyForSend(modem)) {
                 const reasonFromCode = readinessReasonText(modem);
                 const reason = reasonFromCode
                     || (hasProbeError(modem)
