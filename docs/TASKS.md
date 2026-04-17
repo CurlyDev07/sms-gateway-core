@@ -1,6 +1,6 @@
 # TASKS
 
-Last Updated: 2026-04-17 (TASK 037 added: Laravel fail-to-send checklist + Admin Dashboard recovery controls spec)
+Last Updated: 2026-04-18 (TASK 037 operational addendum: SIM worker ID alignment runbook linked)
 
 ---
 
@@ -1340,6 +1340,11 @@ Scope Out:
 - ChatApp endpoint debugging
 - Python runtime/modem hardware diagnosis
 - telco/carrier delivery guarantees
+
+Operational Addendum (2026-04-18):
+- added runbook: `docs/SIM_WORKER_ID_ALIGNMENT_RUNBOOK.md`
+- field finding captured: after SIM/company remap, `gateway:process-sim` workers can remain bound to old SIM IDs, leaving new-ID rows stuck in `queued`/`sending`
+- required post-remap action: restart `sms-worker` and relaunch `gateway:process-sim` for current SIM IDs
 
 Validation Checklist:
 

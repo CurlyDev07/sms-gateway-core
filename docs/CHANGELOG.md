@@ -1,6 +1,30 @@
 # CHANGELOG
 
-Last Updated: 2026-04-17
+Last Updated: 2026-04-18
+
+---
+
+## [2026-04-18] SIM Worker ID Alignment Runbook Added (Post-Remap Outbound Queue Incident)
+
+### Summary
+Added a dedicated runbook documenting the outbound queue issue caused by `gateway:process-sim` workers still running on old SIM IDs after SIM/company remap.
+
+### What Changed
+- Added:
+  - `docs/SIM_WORKER_ID_ALIGNMENT_RUNBOOK.md`
+    - incident signature (`queued`/`sending` drift with mixed send outcomes)
+    - root cause (long-running workers bound to startup SIM ID)
+    - deterministic recovery sequence:
+      - restart `sms-worker`
+      - relaunch workers for current SIM IDs
+      - verify with `docker top`
+      - validate outbound row progression
+    - pre-flight rule after any remap/seed/restore operation
+    - quick validation command pack
+
+### Status
+- documentation update only
+- no application/runtime/API behavior changes
 
 ---
 
