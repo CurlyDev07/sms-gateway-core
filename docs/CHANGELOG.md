@@ -1,6 +1,30 @@
 # CHANGELOG
 
-Last Updated: 2026-04-15
+Last Updated: 2026-04-17
+
+---
+
+## [2026-04-17] Laravel-Only Fail-to-Send Runbook + Admin Dashboard Task Spec Docs
+
+### Summary
+Added documentation for Laravel `sms-gateway-core` fail-to-send troubleshooting only, plus a new task specification for Admin Dashboard recovery controls.
+
+### What Changed
+- Added:
+  - `docs/LARAVEL_FAIL_TO_SEND_CHECKLIST.md`
+    - exact 13-point Laravel-only fail-to-send checklist
+    - terminal command pack (with `cd` context)
+    - one-click recovery bundle command (worker/Redis/pending-queue focused)
+- Updated:
+  - `docs/TASKS.md`
+    - added `TASK 037 — Laravel Fail-to-Send Checklist + Admin Dashboard Recovery Controls` (OPEN)
+    - defines dashboard task-list visibility for all 13 checks
+    - defines one-click bundled action and separate per-action buttons
+    - defines RBAC + audit requirements and closure gate
+
+### Status
+- documentation update only
+- no application/runtime/API behavior changes
 
 ---
 

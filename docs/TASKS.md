@@ -1,6 +1,6 @@
 # TASKS
 
-Last Updated: 2026-04-14 (TASK 036 closed with live inbound proof; no sender-filter patch)
+Last Updated: 2026-04-17 (TASK 037 added: Laravel fail-to-send checklist + Admin Dashboard recovery controls spec)
 
 ---
 
@@ -1318,6 +1318,97 @@ Acceptance Criteria:
 
 Done / Closure Gate:
 - TASK 036 can be marked DONE only when W1–W7 are PASS and AC-036-01..06 are satisfied with linked artifacts.
+
+---
+
+## TASK 037 — LARAVEL FAIL-TO-SEND CHECKLIST + ADMIN DASHBOARD RECOVERY CONTROLS
+Status: OPEN (planned)
+
+Objective:
+- define a Laravel-only operational checklist and command pack for fail-to-send incidents in `sms-gateway-core`
+- define Admin Dashboard task-list visibility and recovery controls for queue/worker/Redis health
+
+Scope In:
+- Laravel + Redis + MySQL + queue/scheduler/worker surfaces only
+- explicit 13-step fail-to-send checklist for operators
+- dashboard-visible task list for the same 13 checks
+- recovery controls:
+  - one-click combined action (`worker stuck + Redis reconnect + pending jobs dispatch`)
+  - separate buttons per action
+
+Scope Out:
+- ChatApp endpoint debugging
+- Python runtime/modem hardware diagnosis
+- telco/carrier delivery guarantees
+
+Validation Checklist:
+
+037-W1 Checklist definition freeze
+- Scenario: publish the Laravel-only fail-to-send checklist with exactly 13 deterministic checks.
+- Expected behavior: operator has one canonical source for incident triage.
+- Evidence to collect: checklist doc with command examples and pass/fail interpretation.
+- Pass condition: each check has actionable terminal command(s) and expected result.
+- Failure/follow-up condition: keep task open until command-level ambiguity is removed.
+
+037-W2 Dashboard task-list contract
+- Scenario: mirror the same 13 checks as dashboard task rows/cards.
+- Expected behavior: dashboard representation is consistent with runbook order and IDs.
+- Evidence to collect: UI/API task-list contract and field definitions.
+- Pass condition: no mismatch between runbook checklist ID and dashboard task item ID.
+- Failure/follow-up condition: open dashboard-contract defect.
+
+037-W3 One-click recovery control spec
+- Scenario: define combined recovery action for worker/Redis/pending jobs.
+- Expected behavior: one action triggers ordered server-side recovery sequence with full result summary.
+- Evidence to collect: action contract (request/response), ordered step list, rollback/failure behavior.
+- Pass condition: deterministic sequence and error reporting are explicit.
+- Failure/follow-up condition: open combined-recovery design defect.
+
+037-W4 Separate recovery controls spec
+- Scenario: define standalone controls for each recovery action.
+- Expected behavior: operators can run targeted repair without full combined action.
+- Evidence to collect: per-button action contract and completion criteria.
+- Pass condition: each control has isolated, auditable behavior.
+- Failure/follow-up condition: open control-isolation defect.
+
+037-W5 RBAC + audit logging requirements
+- Scenario: restrict write actions while allowing read-only checklist visibility.
+- Expected behavior: only authorized operator roles can execute recovery actions; all actions are audit-logged.
+- Evidence to collect: role matrix + audit event schema.
+- Pass condition: authorization boundaries and audit payload are explicit.
+- Failure/follow-up condition: open security/audit defect.
+
+037-W6 Command pack parity check
+- Scenario: ensure dashboard actions map 1:1 to documented terminal runbook behavior.
+- Expected behavior: dashboard and CLI produce equivalent operational outcomes.
+- Evidence to collect: mapping table (`dashboard_action_id -> terminal command pack`).
+- Pass condition: no undocumented dashboard-only behavior.
+- Failure/follow-up condition: open parity defect.
+
+037-W7 Operator dry-run review
+- Scenario: second operator executes runbook/checklist using only docs.
+- Expected behavior: no tribal knowledge required.
+- Evidence to collect: dry-run notes and corrections.
+- Pass condition: runbook is executable and clear for non-author operators.
+- Failure/follow-up condition: revise docs and repeat dry run.
+
+037-W8 Evidence ledger and closure review
+- Scenario: closure review for TASK 037.
+- Expected behavior: all checklist-to-contract artifacts are linked and auditable.
+- Evidence to collect: single evidence ledger linking W1–W7.
+- Pass condition: ledger complete and acceptance criteria satisfied.
+- Failure/follow-up condition: keep TASK 037 open with explicit remaining items.
+
+Acceptance Criteria:
+- AC-037-01: Laravel-only fail-to-send checklist contains exactly 13 actionable checks.
+- AC-037-02: checklist commands include `cd` context and expected pass/fail outcomes.
+- AC-037-03: Admin Dashboard task list mirrors all 13 checks with stable IDs.
+- AC-037-04: one-click recovery action is specified with ordered, auditable sub-steps.
+- AC-037-05: separate recovery buttons are specified for targeted remediation.
+- AC-037-06: RBAC + audit requirements are explicitly defined for all write actions.
+
+Done / Closure Gate:
+- TASK 037 can be marked DONE only when W1–W8 are PASS and AC-037-01..06 are satisfied with linked artifacts.
 
 ---
 
