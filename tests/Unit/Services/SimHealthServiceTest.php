@@ -88,6 +88,58 @@ class SimHealthServiceTest extends TestCase
     }
 
     /** @test */
+    public function unhealthy_multi_sim_company_never_disables_all_sims_for_new_assignments(): void
+    {
+        Carbon::setTestNow(Carbon::parse('2026-03-30 12:00:00'));
+
+        $company = $this->createCompany();
+        $simA = $this->createSim($company, [
+            'last_success_at' => Carbon::now()->subMinutes(60),
+            'disabled_for_new_assignments' => false,
+        ]);
+        $simB = $this->createSim($company, [
+            'last_success_at' => Carbon::now()->subMinutes(60),
+            'disabled_for_new_assignments' => false,
+        ]);
+
+        $this->service->checkHealth($simA);
+        $this->service->checkHealth($simB);
+
+        $enabledCount = $company->sims()
+            ->where('accept_new_assignments', true)
+            ->where('disabled_for_new_assignments', false)
+            ->count();
+
+        $this->assertGreaterThanOrEqual(1, $enabledCount);
+    }
+
+    /** @test */
+    public function unhealthy_multi_sim_company_auto_recovers_when_all_sims_are_disabled(): void
+    {
+        Carbon::setTestNow(Carbon::parse('2026-03-30 12:00:00'));
+
+        $company = $this->createCompany();
+        $simA = $this->createSim($company, [
+            'last_success_at' => Carbon::now()->subMinutes(60),
+            'disabled_for_new_assignments' => true,
+        ]);
+        $simB = $this->createSim($company, [
+            'last_success_at' => Carbon::now()->subMinutes(60),
+            'disabled_for_new_assignments' => true,
+        ]);
+
+        $this->service->checkHealth($simA);
+        $this->service->checkHealth($simB);
+
+        $enabledCount = $company->sims()
+            ->where('accept_new_assignments', true)
+            ->where('disabled_for_new_assignments', false)
+            ->count();
+
+        $this->assertGreaterThanOrEqual(1, $enabledCount);
+    }
+
+    /** @test */
     public function compute_stuck_age_returns_expected_threshold_flags(): void
     {
         Carbon::setTestNow(Carbon::parse('2026-03-30 12:00:00'));

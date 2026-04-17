@@ -218,6 +218,7 @@ class SimHealthService
      * - unhealthy + company has more than 1 SIM => disable_for_new_assignments = true
      * - healthy + company has more than 1 SIM   => disable_for_new_assignments = false
      * - company has 1 SIM                        => do not auto-toggle
+     * - safety guardrail                         => never leave company with zero assignment-enabled SIMs
      *
      * @param \App\Models\Sim $sim
      * @param bool $isUnhealthy
@@ -231,8 +232,22 @@ class SimHealthService
         }
 
         if ($isUnhealthy && !$sim->disabled_for_new_assignments) {
+            if (!$this->hasOtherAssignmentEnabledSim((int) $sim->company_id, (int) $sim->id)) {
+                return false;
+            }
+
             $sim->update(['disabled_for_new_assignments' => true]);
             return true;
+        }
+
+        if ($isUnhealthy && $sim->disabled_for_new_assignments) {
+            // Safety valve: if everything became disabled, re-enable this SIM to avoid no_sim_available lockout.
+            if (!$this->hasAnyAssignmentEnabledSim((int) $sim->company_id)) {
+                $sim->update(['disabled_for_new_assignments' => false]);
+                return true;
+            }
+
+            return false;
         }
 
         if (!$isUnhealthy && $sim->disabled_for_new_assignments) {
@@ -254,6 +269,42 @@ class SimHealthService
         return Sim::query()
             ->where('company_id', $companyId)
             ->count();
+    }
+
+    /**
+     * Determine whether company has any SIM currently enabled for new assignment selection.
+     *
+     * @param int $companyId
+     * @return bool
+     */
+    protected function hasAnyAssignmentEnabledSim(int $companyId): bool
+    {
+        return Sim::query()
+            ->where('company_id', $companyId)
+            ->where('status', 'active')
+            ->where('operator_status', '!=', 'blocked')
+            ->where('accept_new_assignments', true)
+            ->where('disabled_for_new_assignments', false)
+            ->exists();
+    }
+
+    /**
+     * Determine whether company has another SIM (excluding current) enabled for assignment.
+     *
+     * @param int $companyId
+     * @param int $excludeSimId
+     * @return bool
+     */
+    protected function hasOtherAssignmentEnabledSim(int $companyId, int $excludeSimId): bool
+    {
+        return Sim::query()
+            ->where('company_id', $companyId)
+            ->where('id', '!=', $excludeSimId)
+            ->where('status', 'active')
+            ->where('operator_status', '!=', 'blocked')
+            ->where('accept_new_assignments', true)
+            ->where('disabled_for_new_assignments', false)
+            ->exists();
     }
 
     /**
