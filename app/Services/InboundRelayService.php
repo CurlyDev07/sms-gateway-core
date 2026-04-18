@@ -38,7 +38,7 @@ class InboundRelayService
         $payload = [
             // InfoTxt-compatible contract expected by ChatApp.
             'ID' => 'GW-IN-'.$message->id,
-            'MOBILE' => (string) $message->customer_phone,
+            'MOBILE' => $this->normalizeMobile((string) $message->customer_phone),
             'SMS' => (string) $message->message,
             'RECEIVED' => $message->received_at !== null ? $message->received_at->format('Y-m-d H:i:s') : null,
         ];
@@ -48,7 +48,7 @@ class InboundRelayService
                 ->timeout($timeout)
                 ->post($url, array_filter($payload, static fn ($value) => $value !== null));
 
-            if ($response->successful()) {
+            if ($response->successful() && $this->isAcknowledged($response->json())) {
                 $message->update([
                     'relayed_to_chat_app' => true,
                     'relay_status' => 'success',
@@ -91,5 +91,45 @@ class InboundRelayService
 
             return false;
         }
+    }
+
+    /**
+     * Normalize mobile number for ChatApp InfoTxt inbox expectations.
+     *
+     * @param string $mobile
+     * @return string
+     */
+    protected function normalizeMobile(string $mobile): string
+    {
+        $mobile = preg_replace('/\s+/', '', trim($mobile)) ?? '';
+
+        if (str_starts_with($mobile, '+63') && strlen($mobile) === 13) {
+            return '0'.substr($mobile, 3);
+        }
+
+        if (str_starts_with($mobile, '63') && strlen($mobile) === 12) {
+            return '0'.substr($mobile, 2);
+        }
+
+        return $mobile;
+    }
+
+    /**
+     * Determine whether ChatApp acknowledged relay.
+     *
+     * @param mixed $decodedBody
+     * @return bool
+     */
+    protected function isAcknowledged($decodedBody): bool
+    {
+        if (!is_array($decodedBody)) {
+            return true;
+        }
+
+        if (!array_key_exists('ok', $decodedBody)) {
+            return true;
+        }
+
+        return $decodedBody['ok'] === true;
     }
 }

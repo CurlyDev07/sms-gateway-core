@@ -70,6 +70,7 @@ Pass criteria:
 Common error hints:
 - `Could not resolve host` -> Docker network/DNS issue.
 - `HTTP 429` -> ChatApp endpoint throttling/rate limit.
+- `HTTP 200: {"ok":false,...}` -> ChatApp reached but rejected payload (application-level failure).
 
 ## 5) Optional live probe (15 seconds)
 ```bash
@@ -113,10 +114,14 @@ docker logs --since 10m smschatapp_nuc_app 2>&1 | \
 grep -Ei '/api/infotxt/inbox|inbound|webhook|post' || true
 ```
 
+## 7) Contract behavior notes (important)
+- Gateway now treats inbound relay as success only when ChatApp explicitly replies with `{"ok":true}`.
+- A plain HTTP `200` with `{"ok":false}` is treated as relay failure and retried.
+- Gateway normalizes inbound mobile from `+63xxxxxxxxxx` to `09xxxxxxxxx` before relaying to ChatApp.
+
 ---
 
 Operational note:
 - This check does not restart or reconfigure services.
 - For deep inbound verification (Python listener + DB idempotency proof), also see:
   - `docs/INBOUND_QUICK_VERIFY.md`
-
