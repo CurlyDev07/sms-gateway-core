@@ -14,6 +14,7 @@ use App\Http\Controllers\MigrationDashboardPageController;
 use App\Http\Controllers\MigrationController;
 use App\Http\Controllers\MessageStatusDashboardPageController;
 use App\Http\Controllers\OperatorDashboardPageController;
+use App\Http\Controllers\OpsPanelController;
 use App\Http\Controllers\PythonRuntimeController;
 use App\Http\Controllers\PythonRuntimeDashboardPageController;
 use App\Http\Controllers\SimAdminController;
@@ -35,6 +36,11 @@ use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
     return view('welcome');
+});
+
+Route::prefix('ops')->group(function () {
+    Route::get('/', [OpsPanelController::class, 'index'])->name('ops.index');
+    Route::get('/data', [OpsPanelController::class, 'data'])->name('ops.data');
 });
 
 Route::middleware('guest')->group(function () {
