@@ -1,6 +1,32 @@
 # CHANGELOG
 
-Last Updated: 2026-04-18
+Last Updated: 2026-04-19
+
+---
+
+## [2026-04-19] Permanent SIM Worker Auto-Alignment + Runtime Readiness Sync
+
+### Summary
+Added automated controls so outbound worker alignment survives SIM remap/reinsert events without manual process relaunch.
+
+### What Changed
+- Added:
+  - `app/Console/Commands/SuperviseSimWorkersCommand.php`
+    - long-running supervisor that auto-starts/stops/restarts `gateway:process-sim <sim_id>` workers to match active mapped SIM IDs
+  - `app/Console/Commands/SyncRuntimeReadinessCommand.php`
+    - syncs `disabled_for_new_assignments` using live runtime IMSI readiness
+  - `app/Services/RuntimeSimSyncService.php`
+    - runtime discovery + readiness evaluation + assignment-enable guardrail logic
+  - `sms-sim-supervisor` service in `docker-compose.yml`
+    - runs `php artisan gateway:supervise-sim-workers --poll=5`
+- Updated:
+  - `app/Console/Kernel.php`
+    - schedules `gateway:sync-runtime-readiness` every minute (`withoutOverlapping`)
+  - `docs/SIM_WORKER_ID_ALIGNMENT_RUNBOOK.md`
+    - added permanent/no-manual-relaunch operating mode
+
+### Status
+- application/runtime behavior change (automation added)
 
 ---
 

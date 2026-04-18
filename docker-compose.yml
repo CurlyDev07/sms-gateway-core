@@ -73,6 +73,42 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
 
+  sms-sim-supervisor:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: sms-sim-supervisor
+    working_dir: /var/www/html
+    command: php artisan gateway:supervise-sim-workers --poll=5
+    volumes:
+      - ./:/var/www/html
+    environment:
+      APP_ENV: local
+      APP_DEBUG: "true"
+      APP_URL: http://127.0.0.1:8081
+
+      DB_CONNECTION: mysql
+      DB_HOST: sms-db
+      DB_PORT: "3306"
+      DB_DATABASE: sms_gateway_core
+      DB_USERNAME: smsgateway
+      DB_PASSWORD: "3ZS6aVE2Cx8EmYoKt69V"
+
+      REDIS_CLIENT: phpredis
+      REDIS_HOST: sms-redis
+      REDIS_PORT: "6379"
+      CACHE_DRIVER: redis
+      QUEUE_CONNECTION: redis
+      SESSION_DRIVER: file
+
+      SMS_DRIVER: python
+      SMS_PYTHON_API_URL: http://172.19.0.1:9000
+    depends_on:
+      - sms-db
+      - sms-redis
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
   sms-scheduler:
     build:
       context: .

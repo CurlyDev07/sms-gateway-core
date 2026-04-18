@@ -68,93 +68,99 @@ class SimQueueWorkerService
         Log::info('SIM worker started', ['sim_id' => $simId]);
 
         while (true) {
-            $sim = Sim::query()->find($simId);
+            $sleepSeconds = $this->processOnce($simId);
+            $this->sleepSeconds($sleepSeconds);
+        }
+    }
 
-            if ($sim === null) {
-                Log::warning('SIM worker skipping: SIM not found', ['sim_id' => $simId]);
-                $this->sleepSeconds($this->simStateService->getInactiveSleepSeconds());
-                continue;
+    /**
+     * Process one worker cycle for a SIM and return recommended delay before next cycle.
+     *
+     * @param int $simId
+     * @return int
+     */
+    public function processOnce(int $simId): int
+    {
+        $sim = Sim::query()->find($simId);
+
+        if ($sim === null) {
+            Log::warning('SIM worker skipping: SIM not found', ['sim_id' => $simId]);
+            return $this->simStateService->getInactiveSleepSeconds();
+        }
+
+        if (!$sim->isActive()) {
+            return $this->simStateService->getInactiveSleepSeconds();
+        }
+
+        if ($sim->isOperatorPaused()) {
+            return $this->simStateService->getInactiveSleepSeconds();
+        }
+
+        if (!$this->simStateService->canSend($sim)) {
+            if ($sim->isCoolingDown()) {
+                return $this->simStateService->getCooldownSleepSeconds();
             }
 
-            if (!$sim->isActive()) {
-                $this->sleepSeconds($this->simStateService->getInactiveSleepSeconds());
-                continue;
-            }
+            return $this->simStateService->getDailyLimitSleepSeconds();
+        }
 
-            if ($sim->isOperatorPaused()) {
-                $this->sleepSeconds($this->simStateService->getInactiveSleepSeconds());
-                continue;
-            }
+        if ($this->queueRebuildService->hasLock((int) $sim->id)) {
+            return $this->simStateService->getIdleSleepSeconds();
+        }
 
-            if (!$this->simStateService->canSend($sim)) {
-                if ($sim->isCoolingDown()) {
-                    $this->sleepSeconds($this->simStateService->getCooldownSleepSeconds());
-                } else {
-                    $this->sleepSeconds($this->simStateService->getDailyLimitSleepSeconds());
-                }
-                continue;
-            }
+        $messageId = $this->redisQueueService->popNext((int) $sim->id);
 
-            if ($this->queueRebuildService->hasLock((int) $sim->id)) {
-                $this->sleepSeconds($this->simStateService->getIdleSleepSeconds());
-                continue;
-            }
+        if ($messageId === null) {
+            return $this->simStateService->getIdleSleepSeconds();
+        }
 
-            $messageId = $this->redisQueueService->popNext((int) $sim->id);
+        $message = $this->claimPoppedMessage($sim, (int) $messageId);
 
-            if ($messageId === null) {
-                $this->sleepSeconds($this->simStateService->getIdleSleepSeconds());
-                continue;
-            }
+        if ($message === null) {
+            return $this->simStateService->getIdleSleepSeconds();
+        }
 
-            $message = $this->claimPoppedMessage($sim, (int) $messageId);
+        Log::info('SIM worker claimed message', [
+            'sim_id' => $sim->id,
+            'message_id' => $message->id,
+            'company_id' => $message->company_id,
+            'message_type' => $message->message_type,
+        ]);
 
-            if ($message === null) {
-                continue;
-            }
+        $result = $this->smsSender->send(
+            (int) $sim->id,
+            (string) $message->customer_phone,
+            (string) $message->message,
+            [
+                'message_id' => $message->id,
+                'sim_id' => $sim->id,
+                'company_id' => app()->bound('tenant.company_id')
+                    ? (int) app('tenant.company_id')
+                    : (int) $message->company_id,
+                'message_type' => $message->message_type,
+            ]
+        );
+        $isSuccess = (bool) $result->success;
 
-            Log::info('SIM worker claimed message', [
+        if ($isSuccess) {
+            $this->markMessageSent($sim, $message, $result);
+
+            Log::info('SIM worker send success', [
                 'sim_id' => $sim->id,
                 'message_id' => $message->id,
-                'company_id' => $message->company_id,
-                'message_type' => $message->message_type,
+            ]);
+        } else {
+            Log::warning('SIM worker send failure', [
+                'sim_id' => $sim->id,
+                'message_id' => $message->id,
+                'error' => $result->error,
+                'error_layer' => $result->errorLayer,
             ]);
 
-            $result = $this->smsSender->send(
-                (int) $sim->id,
-                (string) $message->customer_phone,
-                (string) $message->message,
-                [
-                    'message_id' => $message->id,
-                    'sim_id' => $sim->id,
-                    'company_id' => app()->bound('tenant.company_id')
-                        ? (int) app('tenant.company_id')
-                        : (int) $message->company_id,
-                    'message_type' => $message->message_type,
-                ]
-            );
-            $isSuccess = (bool) $result->success;
-
-            if ($isSuccess) {
-                $this->markMessageSent($sim, $message, $result);
-
-                Log::info('SIM worker send success', [
-                    'sim_id' => $sim->id,
-                    'message_id' => $message->id,
-                ]);
-            } else {
-                Log::warning('SIM worker send failure', [
-                    'sim_id' => $sim->id,
-                    'message_id' => $message->id,
-                    'error' => $result->error,
-                    'error_layer' => $result->errorLayer,
-                ]);
-
-                $this->markMessageFailed($message, $result);
-            }
-
-            $this->sleepSeconds($this->simStateService->getSleepSecondsForMessageType($sim, $message->message_type));
+            $this->markMessageFailed($message, $result);
         }
+
+        return $this->simStateService->getSleepSecondsForMessageType($sim, $message->message_type);
     }
 
     /**

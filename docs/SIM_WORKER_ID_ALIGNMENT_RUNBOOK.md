@@ -1,6 +1,6 @@
 # SIM WORKER ID ALIGNMENT RUNBOOK
 
-Last Updated: 2026-04-18
+Last Updated: 2026-04-19
 
 ---
 
@@ -12,6 +12,34 @@ Scope:
 - Laravel `sms-gateway-core` only
 - queue/worker/SIM-ID alignment only
 - excludes ChatApp-side queue bugs and Python modem hardware diagnosis
+
+---
+
+## Permanent Fix (No Manual Re-Launch After Remap)
+
+`sms-gateway-core` now includes a SIM worker supervisor:
+
+- command: `php artisan gateway:supervise-sim-workers`
+- compose service: `sms-sim-supervisor`
+
+What it does:
+- continuously reconciles active mapped SIM IDs (`sims.id` with IMSI mapped)
+- starts missing `gateway:process-sim <sim_id>` workers
+- stops workers for SIM IDs no longer active/mapped
+- auto-recovers if a SIM worker process exits unexpectedly
+
+After pull:
+
+```bash
+cd ~/Documents/WebDev/sms-gateway-core
+docker compose up -d sms-sim-supervisor
+docker compose logs --since=2m sms-sim-supervisor
+docker top sms-sim-supervisor
+```
+
+Expected:
+- no manual per-SIM `docker compose exec -d ... gateway:process-sim <id>` after remap/reinsert
+- supervisor keeps worker set aligned automatically
 
 ---
 
@@ -118,4 +146,3 @@ dump(\App\Models\OutboundMessage::query()->latest("id")->limit(10)->get([
 Pass condition:
 - worker SIM IDs match active mapped SIM IDs in DB
 - new outbound rows do not remain indefinitely in `queued`/`sending`
-

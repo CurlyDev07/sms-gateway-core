@@ -37,6 +37,8 @@ class Phase0SmokeTest extends TestCase
         $this->assertArrayHasKey('gateway:set-sim-operator-status', $commands);
         $this->assertArrayHasKey('gateway:enable-sim-new-assignments', $commands);
         $this->assertArrayHasKey('gateway:disable-sim-new-assignments', $commands);
+        $this->assertArrayHasKey('gateway:sync-runtime-readiness', $commands);
+        $this->assertArrayHasKey('gateway:supervise-sim-workers', $commands);
     }
 
     /** @test */
@@ -83,5 +85,23 @@ class Phase0SmokeTest extends TestCase
         });
 
         $this->assertTrue($matched, 'gateway:retry-scheduler was not scheduled every five minutes.');
+    }
+
+    /** @test */
+    public function scheduler_contains_runtime_readiness_sync_every_minute(): void
+    {
+        $kernel = $this->app->make(AppConsoleKernel::class);
+        $schedule = new Schedule($this->app);
+
+        $method = new ReflectionMethod($kernel, 'schedule');
+        $method->setAccessible(true);
+        $method->invoke($kernel, $schedule);
+
+        $matched = collect($schedule->events())->contains(function ($event) {
+            return str_contains($event->command, 'gateway:sync-runtime-readiness')
+                && $event->expression === '* * * * *';
+        });
+
+        $this->assertTrue($matched, 'gateway:sync-runtime-readiness was not scheduled every minute.');
     }
 }
