@@ -90,6 +90,24 @@ class InboundRelayServiceTest extends TestCase
         $this->assertSame('09278986797', $capturedMobile);
     }
 
+    /** @test */
+    public function it_uses_inbound_uuid_for_relay_id_to_avoid_duplicate_id_reuse(): void
+    {
+        $capturedId = null;
+
+        Http::fake(function (Request $request) use (&$capturedId) {
+            $capturedId = $request['ID'];
+            return Http::response(['ok' => true], 200);
+        });
+
+        $message = $this->createInboundMessage('+639278986797');
+
+        $result = $this->service->relay($message);
+
+        $this->assertTrue($result);
+        $this->assertSame('GW-IN-'.$message->uuid, $capturedId);
+    }
+
     protected function createInboundMessage(string $customerPhone): InboundMessage
     {
         $company = $this->createCompany();
@@ -108,4 +126,3 @@ class InboundRelayServiceTest extends TestCase
         ]);
     }
 }
-

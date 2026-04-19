@@ -37,7 +37,7 @@ class InboundRelayService
 
         $payload = [
             // InfoTxt-compatible contract expected by ChatApp.
-            'ID' => 'GW-IN-'.$message->id,
+            'ID' => 'GW-IN-'.$message->uuid,
             'MOBILE' => $this->normalizeMobile((string) $message->customer_phone),
             'SMS' => (string) $message->message,
             'RECEIVED' => $message->received_at !== null ? $message->received_at->format('Y-m-d H:i:s') : null,
