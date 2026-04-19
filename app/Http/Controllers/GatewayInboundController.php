@@ -25,7 +25,9 @@ class GatewayInboundController extends Controller
         Request $request,
         CustomerSimAssignmentService $assignmentService
     ): JsonResponse {
-        $validator = Validator::make($request->all(), [
+        $payload = $this->normalizePayload($request->all());
+
+        $validator = Validator::make($payload, [
             'sim_id' => ['nullable', 'integer', 'min:1'],
             'runtime_sim_id' => ['nullable', 'string', 'max:64'],
             'imsi' => ['nullable', 'string', 'max:64'],
@@ -162,6 +164,57 @@ class GatewayInboundController extends Controller
         $imsi = trim((string) ($validated['imsi'] ?? ''));
 
         return $imsi !== '' ? $imsi : null;
+    }
+
+    /**
+     * Normalize inbound payload aliases for Python/Laravel compatibility.
+     *
+     * Supported aliases:
+     * - customer_phone <- from|mobile|phone
+     * - runtime_sim_id <- sim_id (when sim_id is a 15-digit IMSI string)
+     *
+     * @param array<string,mixed> $payload
+     * @return array<string,mixed>
+     */
+    protected function normalizePayload(array $payload): array
+    {
+        $customerPhone = trim((string) ($payload['customer_phone'] ?? ''));
+
+        if ($customerPhone === '') {
+            $aliasPhone = trim((string) ($payload['from'] ?? $payload['mobile'] ?? $payload['phone'] ?? ''));
+
+            if ($aliasPhone !== '') {
+                $payload['customer_phone'] = $aliasPhone;
+            }
+        }
+
+        if (!array_key_exists('runtime_sim_id', $payload) && !array_key_exists('imsi', $payload)) {
+            $rawSimId = $payload['sim_id'] ?? null;
+
+            if (is_scalar($rawSimId)) {
+                $simText = trim((string) $rawSimId);
+
+                if (preg_match('/^[0-9]{15}$/', $simText)) {
+                    // Python runtime often sends IMSI in "sim_id"; map to runtime_sim_id.
+                    $payload['runtime_sim_id'] = $simText;
+                    unset($payload['sim_id']);
+                } elseif (ctype_digit($simText) && $simText !== '') {
+                    $payload['sim_id'] = (int) $simText;
+                }
+            }
+        } else {
+            $rawSimId = $payload['sim_id'] ?? null;
+
+            if (is_scalar($rawSimId)) {
+                $simText = trim((string) $rawSimId);
+
+                if (ctype_digit($simText) && $simText !== '') {
+                    $payload['sim_id'] = (int) $simText;
+                }
+            }
+        }
+
+        return $payload;
     }
 
     /**

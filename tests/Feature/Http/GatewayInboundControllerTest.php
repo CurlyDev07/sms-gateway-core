@@ -120,6 +120,37 @@ class GatewayInboundControllerTest extends TestCase
     }
 
     /** @test */
+    public function it_accepts_python_legacy_payload_with_from_and_string_imsi_sim_id(): void
+    {
+        Queue::fake();
+
+        $company = $this->createCompany();
+        $sim = $this->createSim($company, [
+            'imsi' => '515039219149367',
+        ]);
+
+        $response = $this->postJson('/api/gateway/inbound', [
+            'sim_id' => '515039219149367',
+            'from' => '+639550090156',
+            'message' => 'Legacy python payload',
+            'received_at' => now()->toIso8601String(),
+        ]);
+
+        $response->assertStatus(200)
+            ->assertJsonPath('ok', true);
+
+        $this->assertDatabaseHas('inbound_messages', [
+            'company_id' => $company->id,
+            'sim_id' => $sim->id,
+            'runtime_sim_id' => '515039219149367',
+            'customer_phone' => '+639550090156',
+            'message' => 'Legacy python payload',
+        ]);
+
+        Queue::assertPushed(RelayInboundMessageJob::class, 1);
+    }
+
+    /** @test */
     public function it_returns_ack_error_when_no_supported_sim_identifier_is_present(): void
     {
         Queue::fake();
@@ -140,4 +171,3 @@ class GatewayInboundControllerTest extends TestCase
         Queue::assertNothingPushed();
     }
 }
-
