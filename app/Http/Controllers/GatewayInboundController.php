@@ -81,7 +81,7 @@ class GatewayInboundController extends Controller
             ], 200);
         }
 
-        $customerPhone = trim($validated['customer_phone']);
+        $customerPhone = $this->normalizeMobile((string) $validated['customer_phone']);
         $receivedAt = $validated['received_at'];
         $idempotencyKey = $this->resolveIdempotencyKey($validated, $sim, $runtimeSimId);
 
@@ -135,7 +135,7 @@ class GatewayInboundController extends Controller
             'idempotency_key' => $idempotencyKey,
         ]);
 
-        $assignmentService->markReplied((int) $sim->company_id, (string) $customerPhone);
+        $assignmentService->markReplied((int) $sim->company_id, (string) $customerPhone, (int) $sim->id);
 
         RelayInboundMessageJob::dispatch($inboundMessage);
 
@@ -233,7 +233,7 @@ class GatewayInboundController extends Controller
             return $provided;
         }
 
-        $customerPhone = trim((string) ($validated['customer_phone'] ?? ''));
+        $customerPhone = $this->normalizeMobile((string) ($validated['customer_phone'] ?? ''));
         $message = (string) ($validated['message'] ?? '');
         $receivedAt = Carbon::parse((string) ($validated['received_at'] ?? now()->toIso8601String()))->toIso8601String();
         $identity = $runtimeSimId !== null ? $runtimeSimId : (string) $sim->id;
@@ -244,5 +244,26 @@ class GatewayInboundController extends Controller
             $message,
             $receivedAt,
         ]));
+    }
+
+    /**
+     * Normalize phone into local 09 format where possible.
+     *
+     * @param string $mobile
+     * @return string
+     */
+    protected function normalizeMobile(string $mobile): string
+    {
+        $mobile = preg_replace('/\s+/', '', trim($mobile)) ?? '';
+
+        if (str_starts_with($mobile, '+63') && strlen($mobile) === 13) {
+            return '0'.substr($mobile, 3);
+        }
+
+        if (str_starts_with($mobile, '63') && strlen($mobile) === 12) {
+            return '0'.substr($mobile, 2);
+        }
+
+        return $mobile;
     }
 }

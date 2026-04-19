@@ -33,7 +33,7 @@ class CustomerSimAssignmentService
      */
     public function assignSim(int $companyId, string $customerPhone): ?Sim
     {
-        $customerPhone = trim($customerPhone);
+        $customerPhone = $this->normalizeCustomerPhone($customerPhone);
 
         return DB::transaction(function () use ($companyId, $customerPhone) {
             $lockedAssignment = CustomerSimAssignment::query()
@@ -143,7 +143,7 @@ class CustomerSimAssignmentService
      */
     public function reassignSim(int $companyId, string $customerPhone): ?Sim
     {
-        $customerPhone = trim($customerPhone);
+        $customerPhone = $this->normalizeCustomerPhone($customerPhone);
 
         Log::warning('Automatic SIM reassignment blocked (manual migration only)', [
             'company_id' => $companyId,
@@ -160,25 +160,83 @@ class CustomerSimAssignmentService
      * @param string $customerPhone
      * @return \App\Models\CustomerSimAssignment|null
      */
-    public function markReplied(int $companyId, string $customerPhone): ?CustomerSimAssignment
+    public function markReplied(int $companyId, string $customerPhone, ?int $simId = null): ?CustomerSimAssignment
     {
-        $customerPhone = trim($customerPhone);
+        $customerPhone = $this->normalizeCustomerPhone($customerPhone);
 
-        $assignment = CustomerSimAssignment::query()
-            ->where('company_id', $companyId)
-            ->where('customer_phone', $customerPhone)
-            ->first();
+        return DB::transaction(function () use ($companyId, $customerPhone, $simId) {
+            $assignment = CustomerSimAssignment::query()
+                ->where('company_id', $companyId)
+                ->where('customer_phone', $customerPhone)
+                ->lockForUpdate()
+                ->first();
 
-        if ($assignment === null) {
-            return null;
+            if ($assignment === null) {
+                if ($simId === null) {
+                    return null;
+                }
+
+                $assignment = CustomerSimAssignment::query()->create([
+                    'company_id' => $companyId,
+                    'customer_phone' => $customerPhone,
+                    'sim_id' => $simId,
+                    'status' => 'active',
+                    'assigned_at' => now(),
+                    'last_used_at' => now(),
+                    'last_inbound_at' => now(),
+                    'has_replied' => true,
+                ]);
+
+                Log::info('SIM assignment created from inbound message', [
+                    'company_id' => $companyId,
+                    'customer_phone' => $customerPhone,
+                    'sim_id' => $simId,
+                    'assignment_id' => $assignment->id,
+                ]);
+
+                return $assignment;
+            }
+
+            $updates = [
+                'has_replied' => true,
+                'last_inbound_at' => now(),
+                'last_used_at' => now(),
+            ];
+
+            if (
+                $simId !== null
+                && (int) $assignment->sim_id !== $simId
+                && !(bool) $assignment->migration_locked
+            ) {
+                $updates['sim_id'] = $simId;
+                $updates['assigned_at'] = now();
+                $updates['status'] = 'active';
+            }
+
+            $assignment->update($updates);
+
+            return $assignment;
+        });
+    }
+
+    /**
+     * Normalize customer phone into local 09 format where possible.
+     *
+     * @param string $customerPhone
+     * @return string
+     */
+    protected function normalizeCustomerPhone(string $customerPhone): string
+    {
+        $customerPhone = preg_replace('/\s+/', '', trim($customerPhone)) ?? '';
+
+        if (str_starts_with($customerPhone, '+63') && strlen($customerPhone) === 13) {
+            return '0'.substr($customerPhone, 3);
         }
 
-        $assignment->update([
-            'has_replied' => true,
-            'last_inbound_at' => now(),
-            'last_used_at' => now(),
-        ]);
+        if (str_starts_with($customerPhone, '63') && strlen($customerPhone) === 12) {
+            return '0'.substr($customerPhone, 2);
+        }
 
-        return $assignment;
+        return $customerPhone;
     }
 }

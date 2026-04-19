@@ -143,11 +143,41 @@ class GatewayInboundControllerTest extends TestCase
             'company_id' => $company->id,
             'sim_id' => $sim->id,
             'runtime_sim_id' => '515039219149367',
-            'customer_phone' => '+639550090156',
+            'customer_phone' => '09550090156',
             'message' => 'Legacy python payload',
         ]);
 
         Queue::assertPushed(RelayInboundMessageJob::class, 1);
+    }
+
+    /** @test */
+    public function it_creates_sticky_assignment_from_inbound_when_customer_has_no_prior_assignment(): void
+    {
+        Queue::fake();
+
+        $company = $this->createCompany();
+        $sim = $this->createSim($company, [
+            'imsi' => '515020241752005',
+        ]);
+
+        $response = $this->postJson('/api/gateway/inbound', [
+            'runtime_sim_id' => '515020241752005',
+            'customer_phone' => '+639278986797',
+            'message' => 'First inbound',
+            'received_at' => now()->toIso8601String(),
+            'idempotency_key' => 'inbound-create-sticky-001',
+        ]);
+
+        $response->assertStatus(200)
+            ->assertJsonPath('ok', true);
+
+        $this->assertDatabaseHas('customer_sim_assignments', [
+            'company_id' => $company->id,
+            'customer_phone' => '09278986797',
+            'sim_id' => $sim->id,
+            'status' => 'active',
+            'has_replied' => 1,
+        ]);
     }
 
     /** @test */
