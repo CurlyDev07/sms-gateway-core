@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Sim;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 
 class RuntimeSimSyncService
@@ -13,11 +14,18 @@ class RuntimeSimSyncService
     protected $runtimeClient;
 
     /**
-     * @param \App\Services\PythonRuntimeClient $runtimeClient
+     * @var \App\Services\GatewayHealthPolicyService
      */
-    public function __construct(PythonRuntimeClient $runtimeClient)
+    protected $policy;
+
+    /**
+     * @param \App\Services\PythonRuntimeClient $runtimeClient
+     * @param \App\Services\GatewayHealthPolicyService $policy
+     */
+    public function __construct(PythonRuntimeClient $runtimeClient, GatewayHealthPolicyService $policy)
     {
         $this->runtimeClient = $runtimeClient;
+        $this->policy = $policy;
     }
 
     /**
@@ -80,6 +88,8 @@ class RuntimeSimSyncService
         $disabled = 0;
         $guardrailSkipped = 0;
         $ineligibleSkipped = 0;
+        $disableAfterNotReadyChecks = $this->policy->getInt('runtime_sync_disable_after_not_ready_checks');
+        $enableAfterReadyChecks = $this->policy->getInt('runtime_sync_enable_after_ready_checks');
 
         $query->chunkById(200, function ($sims) use (
             &$scanned,
@@ -88,7 +98,9 @@ class RuntimeSimSyncService
             &$guardrailSkipped,
             &$ineligibleSkipped,
             $runtimeByImsi,
-            $runtimeByAlias
+            $runtimeByAlias,
+            $disableAfterNotReadyChecks,
+            $enableAfterReadyChecks
         ) {
             foreach ($sims as $sim) {
                 $scanned++;
@@ -99,14 +111,18 @@ class RuntimeSimSyncService
                 }
 
                 $runtimeReady = $this->resolveRuntimeReadyForSim($sim, $runtimeByImsi, $runtimeByAlias);
+                $streaks = $this->updateRuntimeStreak((int) $sim->id, $runtimeReady);
 
-                if ($runtimeReady && $sim->disabled_for_new_assignments) {
+                if ($runtimeReady && $sim->disabled_for_new_assignments && $streaks['ready_streak'] >= $enableAfterReadyChecks) {
                     $sim->update(['disabled_for_new_assignments' => false]);
                     $enabled++;
                     continue;
                 }
 
-                if (!$runtimeReady && !$sim->disabled_for_new_assignments) {
+                if (!$runtimeReady
+                    && !$sim->disabled_for_new_assignments
+                    && $streaks['not_ready_streak'] >= $disableAfterNotReadyChecks
+                ) {
                     if (!$this->hasOtherAssignmentEnabledSim((int) $sim->company_id, (int) $sim->id)) {
                         $guardrailSkipped++;
                         continue;
@@ -344,5 +360,39 @@ class RuntimeSimSyncService
             ->where('accept_new_assignments', true)
             ->where('disabled_for_new_assignments', false)
             ->exists();
+    }
+
+    /**
+     * Track consecutive runtime ready/not-ready observations per SIM.
+     *
+     * @param int $simId
+     * @param bool $runtimeReady
+     * @return array{ready_streak:int,not_ready_streak:int}
+     */
+    protected function updateRuntimeStreak(int $simId, bool $runtimeReady): array
+    {
+        $readyKey = 'gateway:runtime_sync:sim:'.$simId.':ready_streak';
+        $notReadyKey = 'gateway:runtime_sync:sim:'.$simId.':not_ready_streak';
+        $ttl = now()->addHours(24);
+
+        if ($runtimeReady) {
+            $readyStreak = (int) Cache::get($readyKey, 0) + 1;
+            Cache::put($readyKey, $readyStreak, $ttl);
+            Cache::forget($notReadyKey);
+
+            return [
+                'ready_streak' => $readyStreak,
+                'not_ready_streak' => 0,
+            ];
+        }
+
+        $notReadyStreak = (int) Cache::get($notReadyKey, 0) + 1;
+        Cache::put($notReadyKey, $notReadyStreak, $ttl);
+        Cache::forget($readyKey);
+
+        return [
+            'ready_streak' => 0,
+            'not_ready_streak' => $notReadyStreak,
+        ];
     }
 }

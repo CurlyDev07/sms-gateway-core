@@ -41,6 +41,8 @@ Route::get('/', function () {
 Route::prefix('ops')->group(function () {
     Route::get('/', [OpsPanelController::class, 'index'])->name('ops.index');
     Route::get('/data', [OpsPanelController::class, 'data'])->name('ops.data');
+    Route::post('/settings/health-policy', [OpsPanelController::class, 'updateHealthPolicy'])
+        ->name('ops.settings.health_policy');
 });
 
 Route::middleware('guest')->group(function () {

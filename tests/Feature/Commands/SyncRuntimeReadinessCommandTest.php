@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Commands;
 
+use App\Models\GatewaySetting;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
 use Tests\Support\CreatesGatewayEntities;
@@ -144,5 +145,51 @@ class SyncRuntimeReadinessCommandTest extends TestCase
 
         $this->assertFalse($slotFallbackSim->fresh()->disabled_for_new_assignments);
         $this->assertFalse($readyImsiSim->fresh()->disabled_for_new_assignments);
+    }
+
+    /** @test */
+    public function it_respects_not_ready_streak_threshold_before_disabling_assignment_pool(): void
+    {
+        $company = $this->createCompany(['code' => 'SYNC-STREAK']);
+
+        $target = $this->createSim($company, [
+            'imsi' => '515020241752004',
+            'disabled_for_new_assignments' => false,
+        ]);
+
+        $healthy = $this->createSim($company, [
+            'imsi' => '515020241752005',
+            'disabled_for_new_assignments' => false,
+        ]);
+
+        GatewaySetting::query()->updateOrCreate(
+            ['key' => 'runtime_sync_disable_after_not_ready_checks'],
+            ['value' => '3']
+        );
+
+        Http::fake([
+            'http://python-engine.test/modems/discover' => Http::response([
+                'modems' => [
+                    [
+                        'sim_id' => '515020241752004',
+                        'effective_send_ready' => false,
+                    ],
+                    [
+                        'sim_id' => '515020241752005',
+                        'effective_send_ready' => true,
+                    ],
+                ],
+            ], 200),
+        ]);
+
+        $this->artisan('gateway:sync-runtime-readiness', ['--company-id' => $company->id])->assertExitCode(0);
+        $this->assertFalse($target->fresh()->disabled_for_new_assignments);
+
+        $this->artisan('gateway:sync-runtime-readiness', ['--company-id' => $company->id])->assertExitCode(0);
+        $this->assertFalse($target->fresh()->disabled_for_new_assignments);
+
+        $this->artisan('gateway:sync-runtime-readiness', ['--company-id' => $company->id])->assertExitCode(0);
+        $this->assertTrue($target->fresh()->disabled_for_new_assignments);
+        $this->assertFalse($healthy->fresh()->disabled_for_new_assignments);
     }
 }

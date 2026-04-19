@@ -7,13 +7,22 @@ use App\Models\SimHealthLog;
 
 class SimHealthService
 {
-    private const UNHEALTHY_THRESHOLD_MINUTES = 30;
     private const STUCK_6H_HOURS = 6;
     private const STUCK_24H_HOURS = 24;
     private const STUCK_3D_HOURS = 72;
-    private const RUNTIME_FAILURE_WINDOW_MINUTES = 15;
-    private const RUNTIME_FAILURE_THRESHOLD = 3;
-    private const RUNTIME_SUPPRESSION_MINUTES = 15;
+
+    /**
+     * @var \App\Services\GatewayHealthPolicyService
+     */
+    protected $policy;
+
+    /**
+     * @param \App\Services\GatewayHealthPolicyService $policy
+     */
+    public function __construct(GatewayHealthPolicyService $policy)
+    {
+        $this->policy = $policy;
+    }
 
     /**
      * Evaluate SIM health using last_success_at only.
@@ -23,8 +32,9 @@ class SimHealthService
      */
     public function checkHealth(Sim $sim): array
     {
+        $thresholdMinutes = $this->unhealthyThresholdMinutes();
         $minutesSinceLastSuccess = $this->minutesSinceLastSuccess($sim);
-        $isUnhealthy = $this->isUnhealthy($sim, self::UNHEALTHY_THRESHOLD_MINUTES);
+        $isUnhealthy = $this->isUnhealthy($sim, $thresholdMinutes);
         $companySimCount = $this->companySimCount((int) $sim->company_id);
 
         $status = $isUnhealthy ? 'unhealthy' : 'healthy';
@@ -33,7 +43,7 @@ class SimHealthService
         if ($isUnhealthy) {
             $reason = $minutesSinceLastSuccess === null
                 ? 'no_success_recorded'
-                : 'no_success_within_30_minutes';
+                : 'no_success_within_'.$thresholdMinutes.'_minutes';
         }
 
         $changed = $this->syncAssignmentDisableFlag($sim, $isUnhealthy, $companySimCount);
@@ -71,6 +81,9 @@ class SimHealthService
         string $source = 'worker_send_failure'
     ): array {
         $now = now();
+        $runtimeFailureWindowMinutes = $this->runtimeFailureWindowMinutes();
+        $runtimeFailureThreshold = $this->runtimeFailureThreshold();
+        $runtimeSuppressionMinutes = $this->runtimeSuppressionMinutes();
         $payload = [
             'source' => $source,
             'message_id' => $messageId,
@@ -88,7 +101,7 @@ class SimHealthService
             'logged_at' => $now,
         ]);
 
-        $windowStartedAt = $now->copy()->subMinutes(self::RUNTIME_FAILURE_WINDOW_MINUTES);
+        $windowStartedAt = $now->copy()->subMinutes($runtimeFailureWindowMinutes);
         $recentFailureCount = SimHealthLog::query()
             ->where('sim_id', $sim->id)
             ->where('status', 'error')
@@ -99,8 +112,8 @@ class SimHealthService
         $suppressedUntil = $sim->cooldown_until;
         $cooldownActivated = false;
 
-        if ($recentFailureCount >= self::RUNTIME_FAILURE_THRESHOLD) {
-            $candidateUntil = $now->copy()->addMinutes(self::RUNTIME_SUPPRESSION_MINUTES);
+        if ($recentFailureCount >= $runtimeFailureThreshold) {
+            $candidateUntil = $now->copy()->addMinutes($runtimeSuppressionMinutes);
             $currentCooldown = $sim->cooldown_until;
 
             if ($currentCooldown === null || $currentCooldown->lessThan($candidateUntil)) {
@@ -125,8 +138,8 @@ class SimHealthService
                 'error_message' => json_encode([
                     'source' => $source,
                     'reason' => 'runtime_failure_threshold_reached',
-                    'window_minutes' => self::RUNTIME_FAILURE_WINDOW_MINUTES,
-                    'threshold' => self::RUNTIME_FAILURE_THRESHOLD,
+                    'window_minutes' => $runtimeFailureWindowMinutes,
+                    'threshold' => $runtimeFailureThreshold,
                     'recent_failure_count' => $recentFailureCount,
                     'suppressed_until' => $suppressedUntil !== null ? $suppressedUntil->toIso8601String() : null,
                 ], JSON_UNESCAPED_SLASHES),
@@ -138,8 +151,8 @@ class SimHealthService
             'suppressed' => $suppressed,
             'suppressed_until' => $suppressedUntil !== null ? $suppressedUntil->toIso8601String() : null,
             'recent_failure_count' => $recentFailureCount,
-            'window_minutes' => self::RUNTIME_FAILURE_WINDOW_MINUTES,
-            'threshold' => self::RUNTIME_FAILURE_THRESHOLD,
+            'window_minutes' => $runtimeFailureWindowMinutes,
+            'threshold' => $runtimeFailureThreshold,
             'classification' => $retryDecision['classification'] ?? 'retryable',
             'retryable' => (bool) ($retryDecision['retryable'] ?? true),
             'error' => $error,
@@ -154,8 +167,9 @@ class SimHealthService
      * @param int $thresholdMinutes
      * @return bool
      */
-    public function isUnhealthy(Sim $sim, int $thresholdMinutes = self::UNHEALTHY_THRESHOLD_MINUTES): bool
+    public function isUnhealthy(Sim $sim, ?int $thresholdMinutes = null): bool
     {
+        $thresholdMinutes = $thresholdMinutes ?? $this->unhealthyThresholdMinutes();
         $minutesSinceLastSuccess = $this->minutesSinceLastSuccess($sim);
 
         if ($minutesSinceLastSuccess === null) {
@@ -313,7 +327,9 @@ class SimHealthService
      */
     protected function runtimeControlSnapshot(Sim $sim): array
     {
-        $windowStartedAt = now()->subMinutes(self::RUNTIME_FAILURE_WINDOW_MINUTES);
+        $runtimeFailureWindowMinutes = $this->runtimeFailureWindowMinutes();
+        $runtimeFailureThreshold = $this->runtimeFailureThreshold();
+        $windowStartedAt = now()->subMinutes($runtimeFailureWindowMinutes);
 
         $recentFailureCount = SimHealthLog::query()
             ->where('sim_id', $sim->id)
@@ -335,7 +351,7 @@ class SimHealthService
             }
         }
 
-        $suppressed = $sim->isCoolingDown() && $recentFailureCount >= self::RUNTIME_FAILURE_THRESHOLD;
+        $suppressed = $sim->isCoolingDown() && $recentFailureCount >= $runtimeFailureThreshold;
 
         return [
             'suppressed' => $suppressed,
@@ -343,8 +359,8 @@ class SimHealthService
                 ? $sim->cooldown_until->toIso8601String()
                 : null,
             'recent_failure_count' => $recentFailureCount,
-            'window_minutes' => self::RUNTIME_FAILURE_WINDOW_MINUTES,
-            'threshold' => self::RUNTIME_FAILURE_THRESHOLD,
+            'window_minutes' => $runtimeFailureWindowMinutes,
+            'threshold' => $runtimeFailureThreshold,
             'last_failure_at' => ($latestFailureLog !== null && $latestFailureLog->logged_at !== null)
                 ? $latestFailureLog->logged_at->toIso8601String()
                 : null,
@@ -355,5 +371,37 @@ class SimHealthService
                 ? (bool) $latestPayload['retryable']
                 : null,
         ];
+    }
+
+    /**
+     * @return int
+     */
+    protected function unhealthyThresholdMinutes(): int
+    {
+        return $this->policy->getInt('sim_health_unhealthy_threshold_minutes');
+    }
+
+    /**
+     * @return int
+     */
+    protected function runtimeFailureWindowMinutes(): int
+    {
+        return $this->policy->getInt('sim_health_runtime_failure_window_minutes');
+    }
+
+    /**
+     * @return int
+     */
+    protected function runtimeFailureThreshold(): int
+    {
+        return $this->policy->getInt('sim_health_runtime_failure_threshold');
+    }
+
+    /**
+     * @return int
+     */
+    protected function runtimeSuppressionMinutes(): int
+    {
+        return $this->policy->getInt('sim_health_runtime_suppression_minutes');
     }
 }

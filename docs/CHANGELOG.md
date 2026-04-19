@@ -4,6 +4,44 @@ Last Updated: 2026-04-19
 
 ---
 
+## [2026-04-19] Dashboard-Configurable Health Policy (SIM Health + Runtime Sync Thresholds)
+
+### Summary
+Added no-auth Ops panel settings to tune health/sync auto-toggle thresholds without code edits, including streak-based runtime readiness debounce to reduce assignment flag flapping.
+
+### What Changed
+- Added:
+  - `database/migrations/2026_04_19_120000_create_gateway_settings_table.php`
+    - new `gateway_settings` key/value store
+  - `app/Models/GatewaySetting.php`
+    - Eloquent model for persisted gateway settings
+  - `app/Services/GatewayHealthPolicyService.php`
+    - typed defaults, validation rules, clamp ranges, read/write methods
+- Updated:
+  - `app/Services/SimHealthService.php`
+    - thresholds now read from policy settings (`sim_health_*` keys)
+  - `app/Services/RuntimeSimSyncService.php`
+    - added cached consecutive ready/not-ready streak logic
+    - configurable thresholds: disable-after-N not-ready, enable-after-N ready
+  - `app/Http/Controllers/OpsPanelController.php`
+    - `/ops/data` now includes `settings.health_policy`
+    - new save endpoint for health policy updates
+  - `routes/web.php`
+    - added `POST /ops/settings/health-policy`
+  - `resources/views/ops/index.blade.php`
+    - added Health Policy Settings UI + save flow
+  - Tests:
+    - `tests/Feature/Web/OpsPanelTest.php`
+    - `tests/Unit/Services/SimHealthServiceTest.php`
+    - `tests/Feature/Commands/SyncRuntimeReadinessCommandTest.php`
+- Added docs:
+  - `docs/OPS_HEALTH_POLICY_SETTINGS.md`
+
+### Status
+- application/runtime behavior change (runtime health toggle policy is now operator-tunable)
+
+---
+
 ## [2026-04-19] Permanent SIM Worker Auto-Alignment + Runtime Readiness Sync
 
 ### Summary
