@@ -34,14 +34,20 @@
                     </p>
                 </div>
                 <div class="flex flex-col items-end gap-2">
-                    <button id="refreshBtn" class="rounded-xl bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 transition hover:bg-sky-400">
-                        Refresh Now
-                    </button>
+                    <div class="flex items-center gap-2">
+                        <button id="refreshBtn" class="rounded-xl bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 transition hover:bg-sky-400">
+                            Refresh Now
+                        </button>
+                        <button id="refreshDiscoverBtn" class="rounded-xl bg-amber-400 px-4 py-2 text-sm font-semibold text-slate-950 transition hover:bg-amber-300">
+                            Refresh Discover
+                        </button>
+                    </div>
                     <label class="inline-flex cursor-pointer items-center gap-2 text-xs text-slate-300">
                         <input id="autoRefreshToggle" type="checkbox" class="h-4 w-4 rounded border-slate-500 bg-slate-800" checked>
                         Auto refresh (8s)
                     </label>
                     <p id="lastUpdated" class="mono text-[11px] text-slate-400">Last updated: -</p>
+                    <p id="discoverMeta" class="mono text-[11px] text-slate-400">Discover: -</p>
                 </div>
             </div>
         </header>
@@ -197,8 +203,10 @@
     <script>
         const dataUrl = '/ops/data';
         const refreshBtn = document.getElementById('refreshBtn');
+        const refreshDiscoverBtn = document.getElementById('refreshDiscoverBtn');
         const autoRefreshToggle = document.getElementById('autoRefreshToggle');
         const lastUpdated = document.getElementById('lastUpdated');
+        const discoverMeta = document.getElementById('discoverMeta');
         const pipelineHint = document.getElementById('pipelineHint');
         const snapshotBox = document.getElementById('snapshotBox');
         let timer = null;
@@ -245,10 +253,13 @@
             pipelineHint.innerHTML = `<span class="mono mr-2 text-xs uppercase">${esc(hint?.layer || 'unknown')}</span>${esc(hint?.message || 'No hint')}`;
         };
 
-        const refreshData = async () => {
+        const refreshData = async (options = {}) => {
+            const forceDiscover = Boolean(options.refreshDiscover);
             refreshBtn.disabled = true;
+            refreshDiscoverBtn.disabled = true;
             try {
-                const res = await fetch(dataUrl, { headers: { 'Accept': 'application/json' } });
+                const url = forceDiscover ? `${dataUrl}?refresh_discover=1` : dataUrl;
+                const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
                 const payload = await res.json();
                 if (!res.ok || payload.ok !== true) {
                     throw new Error(payload?.error || `HTTP ${res.status}`);
@@ -263,6 +274,8 @@
                 document.getElementById('kpiQueueDepth').textContent = summary.queues?.per_sim_total_depth ?? '-';
 
                 setPipelineHint(payload.pipeline_hint || null);
+                const runtimeMeta = payload.runtime || {};
+                discoverMeta.textContent = `Discover: ${runtimeMeta.discover_refreshed ? 'fresh' : 'cached'} | cached_at=${fmtDt(runtimeMeta.discover_cached_at)}`;
 
                 const runtimeRows = (payload.runtime?.discovery?.modems || []).slice(0, 120).map((row) => {
                     const ready = row.effective_send_ready ?? row.realtime_probe_ready ?? row.send_ready ?? false;
@@ -343,6 +356,7 @@
                 });
             } finally {
                 refreshBtn.disabled = false;
+                refreshDiscoverBtn.disabled = false;
             }
         };
 
@@ -354,6 +368,7 @@
         };
 
         refreshBtn.addEventListener('click', refreshData);
+        refreshDiscoverBtn.addEventListener('click', () => refreshData({ refreshDiscover: true }));
         autoRefreshToggle.addEventListener('change', startAutoRefresh);
 
         refreshData();
@@ -361,4 +376,3 @@
     </script>
 </body>
 </html>
-

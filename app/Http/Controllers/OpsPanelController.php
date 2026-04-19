@@ -10,7 +10,9 @@ use App\Services\PythonRuntimeClient;
 use App\Services\RedisQueueService;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Redis;
 use Throwable;
 
@@ -34,12 +36,17 @@ class OpsPanelController extends Controller
      * @return \Illuminate\Http\JsonResponse
      */
     public function data(
+        Request $request,
         PythonRuntimeClient $runtimeClient,
         RedisQueueService $redisQueueService
     ): JsonResponse {
         $runtimeHealth = $runtimeClient->health();
-        $runtimeDiscovery = $runtimeClient->discover();
-        $normalizedModems = $this->normalizeModemRows($runtimeDiscovery['modems'] ?? []);
+        $runtimeDiscoverySnapshot = $this->resolveRuntimeDiscoverySnapshot(
+            $runtimeClient,
+            $request->boolean('refresh_discover')
+        );
+        $runtimeDiscovery = $runtimeDiscoverySnapshot['discovery'];
+        $normalizedModems = $runtimeDiscoverySnapshot['normalized_modems'];
 
         $runtimeByImsi = [];
         foreach ($normalizedModems as $modem) {
@@ -332,6 +339,8 @@ class OpsPanelController extends Controller
                     'error' => $runtimeDiscovery['error'] ?? null,
                     'modems' => $normalizedModems,
                 ],
+                'discover_refreshed' => $runtimeDiscoverySnapshot['refreshed'],
+                'discover_cached_at' => $runtimeDiscoverySnapshot['cached_at'],
             ],
             'tables' => [
                 'sims' => $simRows,
@@ -341,6 +350,61 @@ class OpsPanelController extends Controller
                 'api_clients' => $activeApiClients,
             ],
         ]);
+    }
+
+    /**
+     * Resolve runtime discovery payload with cache fallback to reduce probe pressure.
+     *
+     * @param \App\Services\PythonRuntimeClient $runtimeClient
+     * @param bool $forceRefresh
+     * @return array{discovery:array<string,mixed>,normalized_modems:array<int,array<string,mixed>>,refreshed:bool,cached_at:?string}
+     */
+    protected function resolveRuntimeDiscoverySnapshot(PythonRuntimeClient $runtimeClient, bool $forceRefresh = false): array
+    {
+        $cacheKey = 'ops:runtime_discovery_snapshot';
+        $ttlSeconds = 120;
+        $cached = Cache::get($cacheKey);
+        $hasValidCache = is_array($cached)
+            && isset($cached['discovery'])
+            && is_array($cached['discovery'])
+            && isset($cached['normalized_modems'])
+            && is_array($cached['normalized_modems']);
+
+        if (!$forceRefresh && $hasValidCache) {
+            return [
+                'discovery' => $cached['discovery'],
+                'normalized_modems' => $cached['normalized_modems'],
+                'refreshed' => false,
+                'cached_at' => isset($cached['cached_at']) ? (string) $cached['cached_at'] : null,
+            ];
+        }
+
+        $freshDiscovery = $runtimeClient->discover();
+        $freshModems = $this->normalizeModemRows($freshDiscovery['modems'] ?? []);
+        $cachedAt = now()->toIso8601String();
+
+        if (($freshDiscovery['ok'] ?? false) === true || !$hasValidCache) {
+            Cache::put($cacheKey, [
+                'discovery' => $freshDiscovery,
+                'normalized_modems' => $freshModems,
+                'cached_at' => $cachedAt,
+            ], now()->addSeconds($ttlSeconds));
+
+            return [
+                'discovery' => $freshDiscovery,
+                'normalized_modems' => $freshModems,
+                'refreshed' => true,
+                'cached_at' => $cachedAt,
+            ];
+        }
+
+        // Fallback to last known-good snapshot when forced refresh fails.
+        return [
+            'discovery' => $cached['discovery'],
+            'normalized_modems' => $cached['normalized_modems'],
+            'refreshed' => false,
+            'cached_at' => isset($cached['cached_at']) ? (string) $cached['cached_at'] : null,
+        ];
     }
 
     /**
@@ -476,4 +540,3 @@ class OpsPanelController extends Controller
         return null;
     }
 }
-
