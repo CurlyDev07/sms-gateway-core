@@ -2,7 +2,6 @@
 
 namespace Tests\Unit\Services;
 
-use App\Models\GatewaySetting;
 use App\Models\SimHealthLog;
 use App\Services\SimHealthService;
 use Carbon\Carbon;
@@ -210,24 +209,6 @@ class SimHealthServiceTest extends TestCase
         ]);
 
         $this->assertTrue($this->service->isUnhealthy($sim));
-    }
-
-    /** @test */
-    public function is_unhealthy_threshold_can_be_overridden_from_gateway_settings(): void
-    {
-        Carbon::setTestNow(Carbon::parse('2026-04-06 10:30:00'));
-
-        GatewaySetting::query()->updateOrCreate(
-            ['key' => 'sim_health_unhealthy_threshold_minutes'],
-            ['value' => '90']
-        );
-
-        $company = $this->createCompany();
-        $sim = $this->createSim($company, [
-            'last_success_at' => Carbon::now()->subMinutes(30),
-        ]);
-
-        $this->assertFalse($this->service->isUnhealthy($sim));
     }
 
     /** @test */

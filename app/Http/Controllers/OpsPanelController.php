@@ -6,15 +6,12 @@ use App\Models\ApiClient;
 use App\Models\InboundMessage;
 use App\Models\OutboundMessage;
 use App\Models\Sim;
-use App\Services\GatewayHealthPolicyService;
 use App\Services\PythonRuntimeClient;
 use App\Services\RedisQueueService;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Redis;
-use Illuminate\Support\Facades\Validator;
 use Throwable;
 
 class OpsPanelController extends Controller
@@ -38,8 +35,7 @@ class OpsPanelController extends Controller
      */
     public function data(
         PythonRuntimeClient $runtimeClient,
-        RedisQueueService $redisQueueService,
-        GatewayHealthPolicyService $healthPolicyService
+        RedisQueueService $redisQueueService
     ): JsonResponse {
         $runtimeHealth = $runtimeClient->health();
         $runtimeDiscovery = $runtimeClient->discover();
@@ -328,9 +324,6 @@ class OpsPanelController extends Controller
                     'active_api_clients_total' => count($activeApiClients),
                 ],
             ],
-            'settings' => [
-                'health_policy' => $healthPolicyService->all(),
-            ],
             'runtime' => [
                 'health' => $runtimeHealth,
                 'discovery' => [
@@ -347,34 +340,6 @@ class OpsPanelController extends Controller
                 'webhook_recent' => $inboundRecent,
                 'api_clients' => $activeApiClients,
             ],
-        ]);
-    }
-
-    /**
-     * Update no-auth health policy settings for ops tuning.
-     *
-     * @param \Illuminate\Http\Request $request
-     * @param \App\Services\GatewayHealthPolicyService $healthPolicyService
-     * @return \Illuminate\Http\JsonResponse
-     */
-    public function updateHealthPolicy(
-        Request $request,
-        GatewayHealthPolicyService $healthPolicyService
-    ): JsonResponse {
-        $validator = Validator::make($request->all(), $healthPolicyService->validationRules());
-
-        if ($validator->fails()) {
-            return response()->json([
-                'ok' => false,
-                'error' => 'validation_failed',
-                'details' => $validator->errors()->toArray(),
-            ], 422);
-        }
-
-        return response()->json([
-            'ok' => true,
-            'message' => 'Health policy settings saved.',
-            'health_policy' => $healthPolicyService->update($validator->validated()),
         ]);
     }
 
@@ -511,3 +476,4 @@ class OpsPanelController extends Controller
         return null;
     }
 }
+

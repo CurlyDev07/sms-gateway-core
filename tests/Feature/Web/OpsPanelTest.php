@@ -107,9 +107,6 @@ class OpsPanelTest extends TestCase
                     'runtime',
                     'entities',
                 ],
-                'settings' => [
-                    'health_policy',
-                ],
                 'runtime' => [
                     'health',
                     'discovery' => ['ok', 'status', 'error', 'modems'],
@@ -129,35 +126,5 @@ class OpsPanelTest extends TestCase
         $this->assertNotEmpty($payload['tables']['outbound_recent']);
         $this->assertNotEmpty($payload['tables']['api_clients']);
     }
-
-    /** @test */
-    public function ops_health_policy_settings_can_be_updated_from_panel_endpoint(): void
-    {
-        $payload = [
-            'sim_health_unhealthy_threshold_minutes' => 180,
-            'sim_health_runtime_failure_window_minutes' => 20,
-            'sim_health_runtime_failure_threshold' => 4,
-            'sim_health_runtime_suppression_minutes' => 30,
-            'runtime_sync_disable_after_not_ready_checks' => 3,
-            'runtime_sync_enable_after_ready_checks' => 2,
-        ];
-
-        $response = $this->postJson('/ops/settings/health-policy', $payload);
-
-        $response->assertStatus(200)
-            ->assertJsonPath('ok', true)
-            ->assertJsonPath('health_policy.sim_health_unhealthy_threshold_minutes', 180)
-            ->assertJsonPath('health_policy.runtime_sync_disable_after_not_ready_checks', 3)
-            ->assertJsonPath('health_policy.runtime_sync_enable_after_ready_checks', 2);
-
-        $this->assertDatabaseHas('gateway_settings', [
-            'key' => 'sim_health_unhealthy_threshold_minutes',
-            'value' => '180',
-        ]);
-
-        $this->assertDatabaseHas('gateway_settings', [
-            'key' => 'runtime_sync_disable_after_not_ready_checks',
-            'value' => '3',
-        ]);
-    }
 }
+

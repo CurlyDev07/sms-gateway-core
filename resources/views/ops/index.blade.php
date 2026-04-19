@@ -3,7 +3,6 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>Gateway Ops Panel</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -76,49 +75,6 @@
 
         <section id="pipelineHint" class="mt-4 rounded-xl border px-4 py-3 text-sm">
             Loading pipeline hint...
-        </section>
-
-        <section class="mt-4">
-            <article class="glass rounded-xl p-4">
-                <div class="flex flex-wrap items-center justify-between gap-3">
-                    <div>
-                        <h2 class="text-lg font-semibold">Health Policy Settings</h2>
-                        <p class="mt-1 text-xs text-slate-400">Tune SIM auto-disable/auto-enable thresholds without code changes.</p>
-                    </div>
-                    <button id="healthPolicySaveBtn" class="rounded-xl bg-emerald-400 px-4 py-2 text-sm font-semibold text-slate-950 transition hover:bg-emerald-300">
-                        Save Policy
-                    </button>
-                </div>
-
-                <p id="healthPolicyStatus" class="mt-2 text-xs text-slate-400">Policy loaded from defaults or database.</p>
-
-                <div class="mt-3 grid gap-3 md:grid-cols-2 lg:grid-cols-3">
-                    <label class="rounded-lg border border-slate-700 bg-slate-900/60 p-3 text-xs">
-                        <span class="block text-slate-300">Unhealthy Threshold Minutes</span>
-                        <input id="hp_sim_health_unhealthy_threshold_minutes" type="number" min="5" max="1440" class="mono mt-2 w-full rounded-md border border-slate-600 bg-slate-950 px-2 py-1 text-sm text-slate-100">
-                    </label>
-                    <label class="rounded-lg border border-slate-700 bg-slate-900/60 p-3 text-xs">
-                        <span class="block text-slate-300">Runtime Failure Window (min)</span>
-                        <input id="hp_sim_health_runtime_failure_window_minutes" type="number" min="1" max="240" class="mono mt-2 w-full rounded-md border border-slate-600 bg-slate-950 px-2 py-1 text-sm text-slate-100">
-                    </label>
-                    <label class="rounded-lg border border-slate-700 bg-slate-900/60 p-3 text-xs">
-                        <span class="block text-slate-300">Runtime Failure Threshold</span>
-                        <input id="hp_sim_health_runtime_failure_threshold" type="number" min="1" max="20" class="mono mt-2 w-full rounded-md border border-slate-600 bg-slate-950 px-2 py-1 text-sm text-slate-100">
-                    </label>
-                    <label class="rounded-lg border border-slate-700 bg-slate-900/60 p-3 text-xs">
-                        <span class="block text-slate-300">Runtime Suppression Minutes</span>
-                        <input id="hp_sim_health_runtime_suppression_minutes" type="number" min="1" max="240" class="mono mt-2 w-full rounded-md border border-slate-600 bg-slate-950 px-2 py-1 text-sm text-slate-100">
-                    </label>
-                    <label class="rounded-lg border border-slate-700 bg-slate-900/60 p-3 text-xs">
-                        <span class="block text-slate-300">Disable After Not-Ready Checks</span>
-                        <input id="hp_runtime_sync_disable_after_not_ready_checks" type="number" min="1" max="10" class="mono mt-2 w-full rounded-md border border-slate-600 bg-slate-950 px-2 py-1 text-sm text-slate-100">
-                    </label>
-                    <label class="rounded-lg border border-slate-700 bg-slate-900/60 p-3 text-xs">
-                        <span class="block text-slate-300">Enable After Ready Checks</span>
-                        <input id="hp_runtime_sync_enable_after_ready_checks" type="number" min="1" max="10" class="mono mt-2 w-full rounded-md border border-slate-600 bg-slate-950 px-2 py-1 text-sm text-slate-100">
-                    </label>
-                </div>
-            </article>
         </section>
 
         <section class="mt-4 grid gap-4 lg:grid-cols-2">
@@ -240,25 +196,12 @@
 
     <script>
         const dataUrl = '/ops/data';
-        const healthPolicyUrl = '/ops/settings/health-policy';
         const refreshBtn = document.getElementById('refreshBtn');
         const autoRefreshToggle = document.getElementById('autoRefreshToggle');
         const lastUpdated = document.getElementById('lastUpdated');
         const pipelineHint = document.getElementById('pipelineHint');
         const snapshotBox = document.getElementById('snapshotBox');
-        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
-        const healthPolicySaveBtn = document.getElementById('healthPolicySaveBtn');
-        const healthPolicyStatus = document.getElementById('healthPolicyStatus');
         let timer = null;
-
-        const healthPolicyInputIds = {
-            sim_health_unhealthy_threshold_minutes: 'hp_sim_health_unhealthy_threshold_minutes',
-            sim_health_runtime_failure_window_minutes: 'hp_sim_health_runtime_failure_window_minutes',
-            sim_health_runtime_failure_threshold: 'hp_sim_health_runtime_failure_threshold',
-            sim_health_runtime_suppression_minutes: 'hp_sim_health_runtime_suppression_minutes',
-            runtime_sync_disable_after_not_ready_checks: 'hp_runtime_sync_disable_after_not_ready_checks',
-            runtime_sync_enable_after_ready_checks: 'hp_runtime_sync_enable_after_ready_checks',
-        };
 
         const esc = (value) => {
             const str = value === null || value === undefined ? '' : String(value);
@@ -302,67 +245,6 @@
             pipelineHint.innerHTML = `<span class="mono mr-2 text-xs uppercase">${esc(hint?.layer || 'unknown')}</span>${esc(hint?.message || 'No hint')}`;
         };
 
-        const applyHealthPolicy = (policy) => {
-            if (!policy || typeof policy !== 'object') return;
-
-            Object.entries(healthPolicyInputIds).forEach(([key, elementId]) => {
-                const el = document.getElementById(elementId);
-                if (!el) return;
-
-                if (policy[key] !== undefined && policy[key] !== null) {
-                    el.value = String(policy[key]);
-                }
-            });
-        };
-
-        const collectHealthPolicy = () => {
-            const payload = {};
-
-            Object.entries(healthPolicyInputIds).forEach(([key, elementId]) => {
-                const el = document.getElementById(elementId);
-                const raw = el ? String(el.value || '').trim() : '';
-                const parsed = Number.parseInt(raw, 10);
-                payload[key] = Number.isFinite(parsed) ? parsed : null;
-            });
-
-            return payload;
-        };
-
-        const saveHealthPolicy = async () => {
-            healthPolicySaveBtn.disabled = true;
-            healthPolicyStatus.textContent = 'Saving...';
-            healthPolicyStatus.className = 'mt-2 text-xs text-amber-300';
-
-            try {
-                const payload = collectHealthPolicy();
-                const res = await fetch(healthPolicyUrl, {
-                    method: 'POST',
-                    headers: {
-                        'Accept': 'application/json',
-                        'Content-Type': 'application/json',
-                        'X-CSRF-TOKEN': csrfToken,
-                    },
-                    body: JSON.stringify(payload),
-                });
-
-                const data = await res.json();
-
-                if (!res.ok || data?.ok !== true) {
-                    throw new Error(data?.error || `HTTP ${res.status}`);
-                }
-
-                applyHealthPolicy(data.health_policy || {});
-                healthPolicyStatus.textContent = 'Saved. New thresholds apply on next scheduler/command run.';
-                healthPolicyStatus.className = 'mt-2 text-xs text-emerald-300';
-                await refreshData();
-            } catch (error) {
-                healthPolicyStatus.textContent = `Save failed: ${error.message}`;
-                healthPolicyStatus.className = 'mt-2 text-xs text-rose-300';
-            } finally {
-                healthPolicySaveBtn.disabled = false;
-            }
-        };
-
         const refreshData = async () => {
             refreshBtn.disabled = true;
             try {
@@ -381,7 +263,6 @@
                 document.getElementById('kpiQueueDepth').textContent = summary.queues?.per_sim_total_depth ?? '-';
 
                 setPipelineHint(payload.pipeline_hint || null);
-                applyHealthPolicy(payload.settings?.health_policy || {});
 
                 const runtimeRows = (payload.runtime?.discovery?.modems || []).slice(0, 120).map((row) => {
                     const ready = row.effective_send_ready ?? row.realtime_probe_ready ?? row.send_ready ?? false;
@@ -474,10 +355,10 @@
 
         refreshBtn.addEventListener('click', refreshData);
         autoRefreshToggle.addEventListener('change', startAutoRefresh);
-        healthPolicySaveBtn.addEventListener('click', saveHealthPolicy);
 
         refreshData();
         startAutoRefresh();
     </script>
 </body>
 </html>
+
