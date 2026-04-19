@@ -41,6 +41,8 @@ Route::get('/', function () {
 Route::prefix('ops')->group(function () {
     Route::get('/', [OpsPanelController::class, 'index'])->name('ops.index');
     Route::get('/data', [OpsPanelController::class, 'data'])->name('ops.data');
+    Route::post('/retry-all-inbound', [OpsPanelController::class, 'retryAllInbound'])->name('ops.retry.inbound');
+    Route::post('/retry-all-outbound', [OpsPanelController::class, 'retryAllOutbound'])->name('ops.retry.outbound');
 });
 
 Route::middleware('guest')->group(function () {

@@ -29,7 +29,7 @@ class OutboundRetryServiceTest extends TestCase
     }
 
     /** @test */
-    public function handle_send_failure_schedules_fixed_five_minute_retry_forever_policy(): void
+    public function handle_send_failure_schedules_fixed_retry_in_seconds(): void
     {
         Carbon::setTestNow(Carbon::parse('2026-03-30 12:00:00'));
 
@@ -55,8 +55,34 @@ class OutboundRetryServiceTest extends TestCase
         $this->assertSame('pending', $fresh->status);
         $this->assertSame(3, (int) $fresh->retry_count);
         $this->assertSame('Provider timeout', $fresh->failure_reason);
-        $this->assertSame('2026-03-30 12:05:00', $fresh->scheduled_at->format('Y-m-d H:i:s'));
+        $this->assertSame('2026-03-30 12:00:10', $fresh->scheduled_at->format('Y-m-d H:i:s'));
         $this->assertNull($fresh->locked_at);
+    }
+
+    /** @test */
+    public function handle_send_failure_uses_configured_retry_delay_seconds(): void
+    {
+        config()->set('services.gateway.outbound_retry_base_delay_seconds', 25);
+        Carbon::setTestNow(Carbon::parse('2026-03-30 12:00:00'));
+
+        $company = $this->createCompany();
+        $sim = $this->createSim($company);
+
+        $message = OutboundMessage::query()->create([
+            'company_id' => $company->id,
+            'sim_id' => $sim->id,
+            'customer_phone' => '09170000004',
+            'message' => 'Hello',
+            'message_type' => 'CHAT',
+            'priority' => 100,
+            'status' => 'failed',
+            'retry_count' => 0,
+            'locked_at' => now(),
+        ]);
+
+        $this->service->handleSendFailure($message, 'Provider timeout');
+
+        $this->assertSame('2026-03-30 12:00:25', $message->fresh()->scheduled_at->format('Y-m-d H:i:s'));
     }
 
     /** @test */

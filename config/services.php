@@ -37,7 +37,7 @@ return [
 
     'gateway' => [
         'outbound_retry_max_attempts' => env('GATEWAY_OUTBOUND_RETRY_MAX_ATTEMPTS', 3),
-        'outbound_retry_base_delay_seconds' => env('GATEWAY_OUTBOUND_RETRY_BASE_DELAY_SECONDS', 30),
+        'outbound_retry_base_delay_seconds' => env('GATEWAY_OUTBOUND_RETRY_BASE_DELAY_SECONDS', 10),
         'outbound_retry_max_delay_seconds' => env('GATEWAY_OUTBOUND_RETRY_MAX_DELAY_SECONDS', 300),
         'outbound_stale_lock_seconds' => env('GATEWAY_OUTBOUND_STALE_LOCK_SECONDS', 300),
 

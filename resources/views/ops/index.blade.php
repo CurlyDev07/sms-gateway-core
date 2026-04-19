@@ -3,6 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>Gateway Ops Panel</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -42,10 +43,19 @@
                             Refresh Discover
                         </button>
                     </div>
+                    <div class="flex items-center gap-2">
+                        <button id="retryInboundBtn" class="rounded-xl bg-emerald-400 px-4 py-2 text-sm font-semibold text-slate-950 transition hover:bg-emerald-300">
+                            Retry All Inbound
+                        </button>
+                        <button id="retryOutboundBtn" class="rounded-xl bg-orange-400 px-4 py-2 text-sm font-semibold text-slate-950 transition hover:bg-orange-300">
+                            Retry All Outbound
+                        </button>
+                    </div>
                     <label class="inline-flex cursor-pointer items-center gap-2 text-xs text-slate-300">
                         <input id="autoRefreshToggle" type="checkbox" class="h-4 w-4 rounded border-slate-500 bg-slate-800" checked>
                         Auto refresh (8s)
                     </label>
+                    <p id="actionStatus" class="mono text-[11px] text-slate-400">Actions: idle</p>
                     <p id="lastUpdated" class="mono text-[11px] text-slate-400">Last updated: -</p>
                     <p id="discoverMeta" class="mono text-[11px] text-slate-400">Discover: -</p>
                 </div>
@@ -202,9 +212,15 @@
 
     <script>
         const dataUrl = '/ops/data';
+        const retryInboundUrl = '/ops/retry-all-inbound';
+        const retryOutboundUrl = '/ops/retry-all-outbound';
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
         const refreshBtn = document.getElementById('refreshBtn');
         const refreshDiscoverBtn = document.getElementById('refreshDiscoverBtn');
+        const retryInboundBtn = document.getElementById('retryInboundBtn');
+        const retryOutboundBtn = document.getElementById('retryOutboundBtn');
         const autoRefreshToggle = document.getElementById('autoRefreshToggle');
+        const actionStatus = document.getElementById('actionStatus');
         const lastUpdated = document.getElementById('lastUpdated');
         const discoverMeta = document.getElementById('discoverMeta');
         const pipelineHint = document.getElementById('pipelineHint');
@@ -251,6 +267,49 @@
             if (severity === 'critical') cls = 'border-rose-500/40 bg-rose-500/10 text-rose-200';
             pipelineHint.className = `mt-4 rounded-xl border px-4 py-3 text-sm ${cls}`;
             pipelineHint.innerHTML = `<span class="mono mr-2 text-xs uppercase">${esc(hint?.layer || 'unknown')}</span>${esc(hint?.message || 'No hint')}`;
+        };
+
+        const setActionStatus = (message, tone = 'muted') => {
+            let cls = 'mono text-[11px] text-slate-400';
+            if (tone === 'ok') cls = 'mono text-[11px] text-emerald-300';
+            if (tone === 'error') cls = 'mono text-[11px] text-rose-300';
+            actionStatus.className = cls;
+            actionStatus.textContent = `Actions: ${message}`;
+        };
+
+        const runRetryAction = async (url, button, payload, label) => {
+            button.disabled = true;
+            setActionStatus(`${label} requested...`);
+
+            try {
+                const res = await fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': csrfToken,
+                    },
+                    body: JSON.stringify(payload || {}),
+                });
+                const body = await res.json();
+
+                if (!res.ok || body?.ok !== true) {
+                    const error = body?.error || body?.message || `HTTP ${res.status}`;
+                    throw new Error(error);
+                }
+
+                const summaryParts = [];
+                if (typeof body.reset_count === 'number') summaryParts.push(`reset=${body.reset_count}`);
+                if (typeof body.dispatched === 'number') summaryParts.push(`dispatched=${body.dispatched}`);
+                if (typeof body.enqueued === 'number') summaryParts.push(`enqueued=${body.enqueued}`);
+                const suffix = summaryParts.length > 0 ? ` (${summaryParts.join(', ')})` : '';
+                setActionStatus(`${label} done${suffix}`, 'ok');
+                await refreshData();
+            } catch (error) {
+                setActionStatus(`${label} failed: ${error.message}`, 'error');
+            } finally {
+                button.disabled = false;
+            }
         };
 
         const refreshData = async (options = {}) => {
@@ -369,6 +428,8 @@
 
         refreshBtn.addEventListener('click', refreshData);
         refreshDiscoverBtn.addEventListener('click', () => refreshData({ refreshDiscover: true }));
+        retryInboundBtn.addEventListener('click', () => runRetryAction(retryInboundUrl, retryInboundBtn, { limit: 2000 }, 'Retry inbound'));
+        retryOutboundBtn.addEventListener('click', () => runRetryAction(retryOutboundUrl, retryOutboundBtn, { limit: 5000 }, 'Retry outbound'));
         autoRefreshToggle.addEventListener('change', startAutoRefresh);
 
         refreshData();

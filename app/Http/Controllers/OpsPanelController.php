@@ -6,12 +6,14 @@ use App\Models\ApiClient;
 use App\Models\InboundMessage;
 use App\Models\OutboundMessage;
 use App\Models\Sim;
+use App\Services\InboundRelayRetryService;
 use App\Services\PythonRuntimeClient;
 use App\Services\RedisQueueService;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Redis;
 use Throwable;
@@ -353,6 +355,106 @@ class OpsPanelController extends Controller
     }
 
     /**
+     * Force all inbound relay rows back to pending and dispatch retries now.
+     *
+     * @param \Illuminate\Http\Request $request
+     * @param \App\Services\InboundRelayRetryService $inboundRelayRetryService
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function retryAllInbound(Request $request, InboundRelayRetryService $inboundRelayRetryService): JsonResponse
+    {
+        $limit = min(5000, max(1, (int) $request->input('limit', 500)));
+        $retryAt = now();
+
+        $resetCount = InboundMessage::query()
+            ->whereIn('relay_status', ['pending', 'failed'])
+            ->update([
+                'relay_status' => 'pending',
+                'relay_retry_count' => 0,
+                'relay_next_attempt_at' => $retryAt,
+                'relay_failed_at' => null,
+                'relay_locked_at' => null,
+            ]);
+
+        $dispatched = $inboundRelayRetryService->dispatchDueRetries($limit);
+
+        return response()->json([
+            'ok' => true,
+            'message' => 'Inbound relay retry-all queued.',
+            'reset_count' => (int) $resetCount,
+            'dispatched' => (int) $dispatched,
+            'limit' => $limit,
+            'retry_at' => $retryAt->toIso8601String(),
+        ]);
+    }
+
+    /**
+     * Force outbound retry rows to pending and enqueue due retries now.
+     *
+     * @param \Illuminate\Http\Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function retryAllOutbound(Request $request): JsonResponse
+    {
+        $limit = min(10000, max(1, (int) $request->input('limit', 1000)));
+        $retryAt = now();
+
+        $resetCount = OutboundMessage::query()
+            ->whereIn('status', ['failed', 'pending', 'queued', 'sending'])
+            ->update([
+                'status' => 'pending',
+                'scheduled_at' => $retryAt,
+                'queued_at' => null,
+                'locked_at' => null,
+                'failed_at' => null,
+            ]);
+
+        $dueCandidateIds = OutboundMessage::query()
+            ->where('status', 'pending')
+            ->whereNotNull('scheduled_at')
+            ->where('scheduled_at', '<=', $retryAt)
+            ->whereHas('sim', function ($query) {
+                $query->where('operator_status', '!=', 'paused');
+            })
+            ->orderBy('scheduled_at')
+            ->orderBy('id')
+            ->limit($limit)
+            ->pluck('id')
+            ->all();
+
+        $exitCode = Artisan::call('gateway:retry-scheduler', [
+            '--limit' => $limit,
+        ]);
+        $schedulerOutput = trim(Artisan::output());
+        $enqueuedCount = OutboundMessage::query()
+            ->whereIn('id', $dueCandidateIds)
+            ->where('status', 'queued')
+            ->count();
+
+        if ($exitCode !== 0) {
+            return response()->json([
+                'ok' => false,
+                'error' => 'retry_scheduler_failed',
+                'message' => 'Outbound rows were reset, but retry scheduler reported enqueue failures.',
+                'reset_count' => (int) $resetCount,
+                'limit' => $limit,
+                'enqueued' => (int) $enqueuedCount,
+                'scheduler_output' => $schedulerOutput,
+            ], 500);
+        }
+
+        return response()->json([
+            'ok' => true,
+            'message' => 'Outbound retry-all enqueued.',
+            'reset_count' => (int) $resetCount,
+            'limit' => $limit,
+            'retry_at' => $retryAt->toIso8601String(),
+            'enqueued' => (int) $enqueuedCount,
+            'scheduler_output' => $schedulerOutput,
+        ]);
+    }
+
+    /**
      * Resolve runtime discovery payload with cache fallback to reduce probe pressure.
      *
      * @param \App\Services\PythonRuntimeClient $runtimeClient
@@ -539,4 +641,5 @@ class OpsPanelController extends Controller
 
         return null;
     }
+
 }

@@ -7,7 +7,6 @@ use Illuminate\Support\Facades\Log;
 
 class OutboundRetryService
 {
-    private const RETRY_DELAY_MINUTES = 5;
     private const RETRYABLE_ERRORS = [
         'RUNTIME_UNREACHABLE',
         'RUNTIME_TIMEOUT',
@@ -43,7 +42,8 @@ class OutboundRetryService
     {
         $nextRetryCount = (int) $message->retry_count + 1;
         $reason = $error ?: 'Outbound send failed';
-        $nextAttemptAt = now()->addMinutes(self::RETRY_DELAY_MINUTES);
+        $retryDelaySeconds = $this->retryDelaySeconds();
+        $nextAttemptAt = now()->addSeconds($retryDelaySeconds);
 
         $message->update([
             'status' => 'pending',
@@ -59,6 +59,7 @@ class OutboundRetryService
             'company_id' => $message->company_id,
             'sim_id' => $message->sim_id,
             'retry_count' => $nextRetryCount,
+            'retry_delay_seconds' => $retryDelaySeconds,
             'next_attempt_at' => $nextAttemptAt->toDateTimeString(),
             'source' => $source,
             'failure_reason' => $reason,
@@ -191,5 +192,15 @@ class OutboundRetryService
     public function canRetry(OutboundMessage $message): bool
     {
         return true;
+    }
+
+    /**
+     * Resolve fixed outbound retry delay in seconds.
+     *
+     * @return int
+     */
+    protected function retryDelaySeconds(): int
+    {
+        return max(1, (int) config('services.gateway.outbound_retry_base_delay_seconds', 10));
     }
 }

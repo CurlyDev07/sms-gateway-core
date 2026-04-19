@@ -5,8 +5,12 @@ namespace Tests\Feature\Web;
 use App\Models\ApiClient;
 use App\Models\InboundMessage;
 use App\Models\OutboundMessage;
+use App\Jobs\RetryInboundRelayJob;
+use App\Services\RedisQueueService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Queue;
+use Mockery;
 use Tests\Support\CreatesGatewayEntities;
 use Tests\TestCase;
 
@@ -126,5 +130,125 @@ class OpsPanelTest extends TestCase
         $this->assertNotEmpty($payload['tables']['outbound_recent']);
         $this->assertNotEmpty($payload['tables']['api_clients']);
     }
-}
 
+    /** @test */
+    public function retry_all_inbound_resets_failed_rows_and_dispatches_retries(): void
+    {
+        Queue::fake();
+
+        $company = $this->createCompany(['code' => 'OPS2']);
+        $sim = $this->createSim($company, [
+            'imsi' => '515020241752004',
+        ]);
+
+        $failed = InboundMessage::query()->create([
+            'company_id' => $company->id,
+            'sim_id' => $sim->id,
+            'runtime_sim_id' => '515020241752004',
+            'customer_phone' => '09278986797',
+            'message' => 'Failed inbound',
+            'received_at' => now(),
+            'relay_status' => 'failed',
+            'relay_retry_count' => 3,
+            'relay_failed_at' => now(),
+            'relay_error' => 'HTTP 500',
+            'relay_next_attempt_at' => now()->subMinute(),
+        ]);
+
+        $pending = InboundMessage::query()->create([
+            'company_id' => $company->id,
+            'sim_id' => $sim->id,
+            'runtime_sim_id' => '515020241752004',
+            'customer_phone' => '09278986797',
+            'message' => 'Pending inbound',
+            'received_at' => now(),
+            'relay_status' => 'pending',
+            'relay_retry_count' => 1,
+            'relay_next_attempt_at' => now()->addMinutes(10),
+        ]);
+
+        $success = InboundMessage::query()->create([
+            'company_id' => $company->id,
+            'sim_id' => $sim->id,
+            'runtime_sim_id' => '515020241752004',
+            'customer_phone' => '09278986797',
+            'message' => 'Success inbound',
+            'received_at' => now(),
+            'relay_status' => 'success',
+            'relayed_to_chat_app' => true,
+            'relayed_at' => now(),
+        ]);
+
+        $response = $this->postJson('/ops/retry-all-inbound', [
+            'limit' => 500,
+        ]);
+
+        $response->assertStatus(200)
+            ->assertJsonPath('ok', true)
+            ->assertJsonPath('reset_count', 2)
+            ->assertJsonPath('dispatched', 2);
+
+        $this->assertSame('pending', $failed->fresh()->relay_status);
+        $this->assertSame(0, (int) $failed->fresh()->relay_retry_count);
+        $this->assertNull($failed->fresh()->relay_failed_at);
+        $this->assertSame('pending', $pending->fresh()->relay_status);
+        $this->assertSame(0, (int) $pending->fresh()->relay_retry_count);
+        $this->assertSame('success', $success->fresh()->relay_status);
+
+        Queue::assertPushed(RetryInboundRelayJob::class, 2);
+    }
+
+    /** @test */
+    public function retry_all_outbound_resets_rows_and_enqueues_now(): void
+    {
+        $company = $this->createCompany(['code' => 'OPS3']);
+        $sim = $this->createSim($company, ['operator_status' => 'active']);
+
+        $failed = OutboundMessage::query()->create([
+            'company_id' => $company->id,
+            'sim_id' => $sim->id,
+            'customer_phone' => '09278986797',
+            'message' => 'Failed outbound',
+            'message_type' => 'CHAT',
+            'priority' => 100,
+            'status' => 'failed',
+            'retry_count' => 1,
+            'failure_reason' => 'SEND_FAILED',
+        ]);
+
+        $queued = OutboundMessage::query()->create([
+            'company_id' => $company->id,
+            'sim_id' => $sim->id,
+            'customer_phone' => '09550090156',
+            'message' => 'Queued outbound',
+            'message_type' => 'FOLLOW_UP',
+            'priority' => 50,
+            'status' => 'queued',
+            'queued_at' => now(),
+        ]);
+
+        $mock = Mockery::mock(RedisQueueService::class);
+        $mock->shouldReceive('enqueue')->twice();
+        $this->app->instance(RedisQueueService::class, $mock);
+
+        $response = $this->postJson('/ops/retry-all-outbound', [
+            'limit' => 500,
+        ]);
+
+        $response->assertStatus(200)
+            ->assertJsonPath('ok', true)
+            ->assertJsonPath('reset_count', 2)
+            ->assertJsonPath('enqueued', 2);
+
+        $failedFresh = $failed->fresh();
+        $queuedFresh = $queued->fresh();
+
+        $this->assertSame('queued', $failedFresh->status);
+        $this->assertNull($failedFresh->scheduled_at);
+        $this->assertNotNull($failedFresh->queued_at);
+
+        $this->assertSame('queued', $queuedFresh->status);
+        $this->assertNull($queuedFresh->scheduled_at);
+        $this->assertNotNull($queuedFresh->queued_at);
+    }
+}
