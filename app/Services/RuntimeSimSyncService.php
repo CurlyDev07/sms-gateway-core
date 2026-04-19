@@ -21,11 +21,11 @@ class RuntimeSimSyncService
     }
 
     /**
-     * Sync SIM assignment-disable flags against live runtime readiness by SIM identity.
+     * Sync SIM assignment-disable flags against watchdog health send-ready state by SIM identity.
      *
      * Rule:
-     * - mapped SIM identity present + send-ready in runtime => disable_for_new_assignments = false
-     * - mapped SIM identity missing or not send-ready       => disable_for_new_assignments = true
+     * - mapped SIM identity present + send_ready=true  => disable_for_new_assignments = false
+     * - mapped SIM identity missing or send_ready=false => disable_for_new_assignments = true
      * - guardrail: never disable the last assignment-enabled SIM in a company
      *
      * Identity resolution order per tenant SIM row:
@@ -38,19 +38,19 @@ class RuntimeSimSyncService
      */
     public function sync(?int $companyId = null): array
     {
-        $discover = $this->runtimeClient->discover();
+        $health = $this->runtimeClient->health();
 
-        if (($discover['ok'] ?? false) !== true) {
-            Log::warning('Runtime SIM sync skipped: discovery failed', [
+        if (($health['ok'] ?? false) !== true) {
+            Log::warning('Runtime SIM sync skipped: health failed', [
                 'company_id_filter' => $companyId,
-                'error' => $discover['error'] ?? null,
-                'status' => $discover['status'] ?? null,
+                'error' => $health['error'] ?? null,
+                'status' => $health['status'] ?? null,
             ]);
 
             return [
                 'ok' => false,
-                'error' => $discover['error'] ?? 'runtime_discovery_failed',
-                'status' => $discover['status'] ?? null,
+                'error' => $health['error'] ?? 'runtime_health_failed',
+                'status' => $health['status'] ?? null,
                 'company_id_filter' => $companyId,
                 'runtime_modems_total' => 0,
                 'runtime_imsi_total' => 0,
@@ -63,7 +63,7 @@ class RuntimeSimSyncService
             ];
         }
 
-        $runtimeIndex = $this->indexRuntimeIdentities($discover['modems'] ?? []);
+        $runtimeIndex = $this->indexRuntimeIdentities($health['modems'] ?? []);
         $runtimeByImsi = $runtimeIndex['by_imsi'];
         $runtimeByAlias = $runtimeIndex['by_alias'];
 
@@ -128,9 +128,9 @@ class RuntimeSimSyncService
         $summary = [
             'ok' => true,
             'error' => null,
-            'status' => $discover['status'] ?? null,
+            'status' => $health['status'] ?? null,
             'company_id_filter' => $companyId,
-            'runtime_modems_total' => count($discover['modems'] ?? []),
+            'runtime_modems_total' => count($health['modems'] ?? []),
             'runtime_imsi_total' => count($runtimeByImsi),
             'runtime_ready_imsi_total' => $runtimeReadyImsiTotal,
             'sims_scanned' => $scanned,
@@ -295,6 +295,10 @@ class RuntimeSimSyncService
      */
     protected function runtimeSendReady(array $modem): bool
     {
+        if (is_bool($modem['send_ready'] ?? null)) {
+            return (bool) $modem['send_ready'];
+        }
+
         if (is_bool($modem['effective_send_ready'] ?? null)) {
             return (bool) $modem['effective_send_ready'];
         }

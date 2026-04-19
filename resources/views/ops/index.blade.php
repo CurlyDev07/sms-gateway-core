@@ -96,7 +96,7 @@
         <section class="mt-4 grid gap-4 lg:grid-cols-2">
             <article class="glass rounded-xl p-4">
                 <h2 class="text-lg font-semibold">Runtime Modems</h2>
-                <p class="mt-1 text-xs text-slate-400">Live modem readiness from Python discovery.</p>
+                <p class="mt-1 text-xs text-slate-400">Live modem readiness from Python watchdog health.</p>
                 <div class="table-wrap mt-3 rounded-lg border border-slate-700">
                     <table class="w-full text-left text-xs">
                         <thead class="bg-slate-900 text-slate-300">
@@ -104,7 +104,7 @@
                                 <th class="px-3 py-2">SIM ID</th>
                                 <th class="px-3 py-2">Port</th>
                                 <th class="px-3 py-2">Ready</th>
-                                <th class="px-3 py-2">AT/SIM/CREG</th>
+                                <th class="px-3 py-2">Alive/Ping/Fails</th>
                                 <th class="px-3 py-2">Reason</th>
                                 <th class="px-3 py-2">Seen</th>
                             </tr>
@@ -336,15 +336,22 @@
                 const runtimeMeta = payload.runtime || {};
                 discoverMeta.textContent = `Discover: ${runtimeMeta.discover_refreshed ? 'fresh' : 'cached'} | cached_at=${fmtDt(runtimeMeta.discover_cached_at)}`;
 
-                const runtimeRows = (payload.runtime?.discovery?.modems || []).slice(0, 120).map((row) => {
-                    const ready = row.effective_send_ready ?? row.realtime_probe_ready ?? row.send_ready ?? false;
+                const runtimeRows = (payload.runtime?.health?.modems || []).slice(0, 120).map((row) => {
+                    const ready = row.send_ready ?? row.effective_send_ready ?? row.realtime_probe_ready ?? false;
+                    const watchdogCell = (row.alive !== null && row.alive !== undefined)
+                        ? [row.alive, row.last_ping_ok, row.consecutive_failures].map(v => {
+                            if (v === null || v === undefined) return '-';
+                            if (typeof v === 'boolean') return v ? '1' : '0';
+                            return String(v);
+                        }).join('/')
+                        : [row.at_ok, row.sim_ready, row.creg_registered].map(v => v === null || v === undefined ? '-' : (v ? '1' : '0')).join('/');
                     return `<tr>
                         <td class="mono px-3 py-2">${esc(row.sim_id || '-')}</td>
                         <td class="mono px-3 py-2">${esc(row.port || '-')}</td>
                         <td class="px-3 py-2">${badge(String(Boolean(ready)))}</td>
-                        <td class="px-3 py-2">${esc([row.at_ok, row.sim_ready, row.creg_registered].map(v => v === null || v === undefined ? '-' : (v ? '1' : '0')).join('/'))}</td>
+                        <td class="px-3 py-2">${esc(watchdogCell)}</td>
                         <td class="px-3 py-2">${esc(row.readiness_reason_code || row.probe_error || '-')}</td>
-                        <td class="mono px-3 py-2">${esc(fmtDt(row.last_seen_at))}</td>
+                        <td class="mono px-3 py-2">${esc(fmtDt(row.last_seen_at || row.last_ping_at))}</td>
                     </tr>`;
                 });
                 renderRows('runtimeRows', runtimeRows, 6);
@@ -356,7 +363,7 @@
                     <td class="px-3 py-2">${badge(row.operator_status)}</td>
                     <td class="px-3 py-2">${badge(String(Boolean(row.accept_new_assignments && !row.disabled_for_new_assignments)))}</td>
                     <td class="mono px-3 py-2">${esc(`${row.queue_depth?.total ?? 0} (${row.queue_depth?.chat ?? 0}/${row.queue_depth?.followup ?? 0}/${row.queue_depth?.blasting ?? 0})`)}</td>
-                    <td class="px-3 py-2">${badge(String(Boolean(row.runtime?.effective_send_ready ?? row.runtime?.realtime_probe_ready ?? false)))}</td>
+                    <td class="px-3 py-2">${badge(String(Boolean(row.runtime?.send_ready ?? row.runtime?.effective_send_ready ?? row.runtime?.realtime_probe_ready ?? false)))}</td>
                 </tr>`);
                 renderRows('simRows', simRows, 7);
 

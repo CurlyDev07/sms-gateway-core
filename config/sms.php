@@ -10,8 +10,8 @@ return [
     // Revert by removing the env line or unsetting it.
     'python_api_send_path' => env('SMS_PYTHON_API_SEND_PATH', '/send'),
 
-    // Runtime integration endpoints used for Phase 6 hardware/runtime visibility.
-    'python_api_health_path' => env('SMS_PYTHON_API_HEALTH_PATH', '/health'),
+    // Runtime integration endpoints used for watchdog health and runtime visibility.
+    'python_api_health_path' => env('SMS_PYTHON_API_HEALTH_PATH', '/modems/health'),
     'python_api_discover_path' => env('SMS_PYTHON_API_DISCOVER_PATH', '/modems/discover'),
 
     // Shared timeout for runtime calls (health/discovery/send).

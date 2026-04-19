@@ -43,15 +43,16 @@ class OpsPanelController extends Controller
         RedisQueueService $redisQueueService
     ): JsonResponse {
         $runtimeHealth = $runtimeClient->health();
+        $normalizedHealthModems = $this->normalizeModemRows($runtimeHealth['modems'] ?? []);
         $runtimeDiscoverySnapshot = $this->resolveRuntimeDiscoverySnapshot(
             $runtimeClient,
             $request->boolean('refresh_discover')
         );
         $runtimeDiscovery = $runtimeDiscoverySnapshot['discovery'];
-        $normalizedModems = $runtimeDiscoverySnapshot['normalized_modems'];
+        $normalizedDiscoveryModems = $runtimeDiscoverySnapshot['normalized_modems'];
 
         $runtimeByImsi = [];
-        foreach ($normalizedModems as $modem) {
+        foreach ($normalizedHealthModems as $modem) {
             $runtimeSimId = trim((string) ($modem['sim_id'] ?? ''));
 
             if ($runtimeSimId === '' || !preg_match('/^[0-9]{15}$/', $runtimeSimId)) {
@@ -251,14 +252,14 @@ class OpsPanelController extends Controller
             ->pluck('c', 'status');
 
         $runtimeSendReadyCount = 0;
-        $runtimeProbeErrorCount = 0;
-        foreach ($normalizedModems as $modem) {
+        $runtimeUnhealthyCount = 0;
+        foreach ($normalizedHealthModems as $modem) {
             if ($this->runtimeSendReady($modem)) {
                 $runtimeSendReadyCount++;
             }
 
-            if (!empty($modem['probe_error'])) {
-                $runtimeProbeErrorCount++;
+            if (($modem['alive'] ?? true) !== true || (int) ($modem['consecutive_failures'] ?? 0) > 0) {
+                $runtimeUnhealthyCount++;
             }
         }
 
@@ -281,7 +282,6 @@ class OpsPanelController extends Controller
 
         $pipelineHint = $this->buildPipelineHint(
             (bool) ($runtimeHealth['ok'] ?? false),
-            (bool) ($runtimeDiscovery['ok'] ?? false),
             $relayPendingTotal,
             $relayFailedTotal,
             $sendingStaleCount,
@@ -323,10 +323,13 @@ class OpsPanelController extends Controller
                     'health_error' => $runtimeHealth['error'] ?? null,
                     'discover_ok' => (bool) ($runtimeDiscovery['ok'] ?? false),
                     'discover_status' => $runtimeDiscovery['status'] ?? null,
-                    'discover_error' => $runtimeDiscovery['error'] ?? null,
-                    'modems_total' => count($normalizedModems),
+                    'discover_error' => ($runtimeDiscovery['error'] ?? null) === 'not_requested'
+                        ? null
+                        : ($runtimeDiscovery['error'] ?? null),
+                    'modems_total' => count($normalizedHealthModems),
                     'send_ready_total' => $runtimeSendReadyCount,
-                    'probe_error_total' => $runtimeProbeErrorCount,
+                    'not_ready_total' => max(0, count($normalizedHealthModems) - $runtimeSendReadyCount),
+                    'unhealthy_total' => $runtimeUnhealthyCount,
                 ],
                 'entities' => [
                     'sims_total' => count($simRows),
@@ -334,12 +337,18 @@ class OpsPanelController extends Controller
                 ],
             ],
             'runtime' => [
-                'health' => $runtimeHealth,
+                'health' => [
+                    'ok' => (bool) ($runtimeHealth['ok'] ?? false),
+                    'status' => $runtimeHealth['status'] ?? null,
+                    'error' => $runtimeHealth['error'] ?? null,
+                    'data' => $runtimeHealth['data'] ?? [],
+                    'modems' => $normalizedHealthModems,
+                ],
                 'discovery' => [
                     'ok' => (bool) ($runtimeDiscovery['ok'] ?? false),
                     'status' => $runtimeDiscovery['status'] ?? null,
                     'error' => $runtimeDiscovery['error'] ?? null,
-                    'modems' => $normalizedModems,
+                    'modems' => $normalizedDiscoveryModems,
                 ],
                 'discover_refreshed' => $runtimeDiscoverySnapshot['refreshed'],
                 'discover_cached_at' => $runtimeDiscoverySnapshot['cached_at'],
@@ -472,12 +481,26 @@ class OpsPanelController extends Controller
             && isset($cached['normalized_modems'])
             && is_array($cached['normalized_modems']);
 
-        if (!$forceRefresh && $hasValidCache) {
+        if (!$forceRefresh) {
+            if ($hasValidCache) {
+                return [
+                    'discovery' => $cached['discovery'],
+                    'normalized_modems' => $cached['normalized_modems'],
+                    'refreshed' => false,
+                    'cached_at' => isset($cached['cached_at']) ? (string) $cached['cached_at'] : null,
+                ];
+            }
+
             return [
-                'discovery' => $cached['discovery'],
-                'normalized_modems' => $cached['normalized_modems'],
+                'discovery' => [
+                    'ok' => false,
+                    'status' => null,
+                    'error' => 'not_requested',
+                    'modems' => [],
+                ],
+                'normalized_modems' => [],
                 'refreshed' => false,
-                'cached_at' => isset($cached['cached_at']) ? (string) $cached['cached_at'] : null,
+                'cached_at' => null,
             ];
         }
 
@@ -485,7 +508,7 @@ class OpsPanelController extends Controller
         $freshModems = $this->normalizeModemRows($freshDiscovery['modems'] ?? []);
         $cachedAt = now()->toIso8601String();
 
-        if (($freshDiscovery['ok'] ?? false) === true || !$hasValidCache) {
+        if (($freshDiscovery['ok'] ?? false) === true) {
             Cache::put($cacheKey, [
                 'discovery' => $freshDiscovery,
                 'normalized_modems' => $freshModems,
@@ -500,12 +523,21 @@ class OpsPanelController extends Controller
             ];
         }
 
-        // Fallback to last known-good snapshot when forced refresh fails.
+        // Forced refresh failed: fallback to last known-good snapshot when available.
+        if ($hasValidCache) {
+            return [
+                'discovery' => $cached['discovery'],
+                'normalized_modems' => $cached['normalized_modems'],
+                'refreshed' => false,
+                'cached_at' => isset($cached['cached_at']) ? (string) $cached['cached_at'] : null,
+            ];
+        }
+
         return [
-            'discovery' => $cached['discovery'],
-            'normalized_modems' => $cached['normalized_modems'],
+            'discovery' => $freshDiscovery,
+            'normalized_modems' => $freshModems,
             'refreshed' => false,
-            'cached_at' => isset($cached['cached_at']) ? (string) $cached['cached_at'] : null,
+            'cached_at' => null,
         ];
     }
 
@@ -521,21 +553,41 @@ class OpsPanelController extends Controller
                 continue;
             }
 
+            $sendReady = is_bool($modem['send_ready'] ?? null) ? (bool) $modem['send_ready'] : null;
+            $alive = is_bool($modem['alive'] ?? null) ? (bool) $modem['alive'] : null;
+            $lastPingOk = is_bool($modem['last_ping_ok'] ?? null) ? (bool) $modem['last_ping_ok'] : null;
+            $consecutiveFailures = isset($modem['consecutive_failures']) && is_numeric($modem['consecutive_failures'])
+                ? (int) $modem['consecutive_failures']
+                : null;
+            $readinessReason = $this->firstString($modem, ['readiness_reason_code']);
+
+            if ($readinessReason === null && $alive === false) {
+                $readinessReason = 'MODEM_NOT_ALIVE';
+            }
+
+            if ($readinessReason === null && $consecutiveFailures !== null && $consecutiveFailures > 0) {
+                $readinessReason = 'PING_FAIL_'.$consecutiveFailures;
+            }
+
             $rows[] = [
                 'device_id' => $this->firstString($modem, ['device_id', 'modem_id', 'id']),
                 'sim_id' => $this->firstString($modem, ['sim_id', 'imsi']),
                 'port' => $this->firstString($modem, ['port', 'device_port', 'tty']),
                 'identifier_source' => $this->firstString($modem, ['identifier_source']),
-                'effective_send_ready' => is_bool($modem['effective_send_ready'] ?? null) ? $modem['effective_send_ready'] : null,
-                'realtime_probe_ready' => is_bool($modem['realtime_probe_ready'] ?? null) ? $modem['realtime_probe_ready'] : null,
-                'send_ready' => is_bool($modem['send_ready'] ?? null) ? $modem['send_ready'] : null,
+                'alive' => $alive,
+                'last_ping_at' => $this->firstString($modem, ['last_ping_at']),
+                'last_ping_ok' => $lastPingOk,
+                'consecutive_failures' => $consecutiveFailures,
+                'effective_send_ready' => is_bool($modem['effective_send_ready'] ?? null) ? $modem['effective_send_ready'] : $sendReady,
+                'realtime_probe_ready' => is_bool($modem['realtime_probe_ready'] ?? null) ? $modem['realtime_probe_ready'] : $sendReady,
+                'send_ready' => $sendReady,
                 'at_ok' => isset($modem['at_ok']) ? (bool) $modem['at_ok'] : null,
                 'sim_ready' => isset($modem['sim_ready']) ? (bool) $modem['sim_ready'] : null,
                 'creg_registered' => isset($modem['creg_registered']) ? (bool) $modem['creg_registered'] : null,
                 'signal' => $modem['signal'] ?? null,
-                'readiness_reason_code' => $this->firstString($modem, ['readiness_reason_code']),
+                'readiness_reason_code' => $readinessReason,
                 'probe_error' => $this->firstString($modem, ['probe_error']),
-                'last_seen_at' => $this->firstString($modem, ['last_seen_at', 'last_seen']),
+                'last_seen_at' => $this->firstString($modem, ['last_seen_at', 'last_seen', 'last_ping_at']),
             ];
         }
 
@@ -548,6 +600,10 @@ class OpsPanelController extends Controller
      */
     protected function runtimeSendReady(array $modem): bool
     {
+        if (is_bool($modem['send_ready'] ?? null)) {
+            return (bool) $modem['send_ready'];
+        }
+
         if (is_bool($modem['effective_send_ready'] ?? null)) {
             return (bool) $modem['effective_send_ready'];
         }
@@ -576,7 +632,6 @@ class OpsPanelController extends Controller
 
     /**
      * @param bool $healthOk
-     * @param bool $discoverOk
      * @param int $relayPendingTotal
      * @param int $relayFailedTotal
      * @param int $sendingStaleCount
@@ -585,17 +640,16 @@ class OpsPanelController extends Controller
      */
     protected function buildPipelineHint(
         bool $healthOk,
-        bool $discoverOk,
         int $relayPendingTotal,
         int $relayFailedTotal,
         int $sendingStaleCount,
         int $queuedOldCount
     ): array {
-        if (!$healthOk || !$discoverOk) {
+        if (!$healthOk) {
             return [
                 'layer' => 'python_runtime',
                 'severity' => 'critical',
-                'message' => 'Python runtime health/discovery is failing. Inbound/outbound may be blocked before Gateway processing.',
+                'message' => 'Python runtime health is failing. Inbound/outbound may be blocked before Gateway processing.',
             ];
         }
 

@@ -17,7 +17,7 @@ class SyncRuntimeReadinessCommandTest extends TestCase
         parent::setUp();
 
         config()->set('sms.python_api_url', 'http://python-engine.test');
-        config()->set('sms.python_api_discover_path', '/modems/discover');
+        config()->set('sms.python_api_health_path', '/modems/health');
     }
 
     /** @test */
@@ -40,19 +40,19 @@ class SyncRuntimeReadinessCommandTest extends TestCase
         ]);
 
         Http::fake([
-            'http://python-engine.test/modems/discover' => Http::response([
+            'http://python-engine.test/modems/health' => Http::response([
                 'modems' => [
                     [
                         'sim_id' => '515020241752004',
-                        'effective_send_ready' => true,
+                        'send_ready' => true,
                     ],
                     [
                         'sim_id' => '515020241752005',
-                        'effective_send_ready' => false,
+                        'send_ready' => false,
                     ],
                     [
                         'sim_id' => '515039219149367',
-                        'effective_send_ready' => false,
+                        'send_ready' => false,
                     ],
                 ],
             ], 200),
@@ -81,11 +81,11 @@ class SyncRuntimeReadinessCommandTest extends TestCase
         ]);
 
         Http::fake([
-            'http://python-engine.test/modems/discover' => Http::response([
+            'http://python-engine.test/modems/health' => Http::response([
                 'modems' => [
                     [
                         'sim_id' => '515020241752004',
-                        'effective_send_ready' => false,
+                        'send_ready' => false,
                     ],
                 ],
             ], 200),
@@ -102,7 +102,7 @@ class SyncRuntimeReadinessCommandTest extends TestCase
     }
 
     /** @test */
-    public function it_uses_slot_name_fallback_when_runtime_discovery_returns_non_imsi_identity(): void
+    public function it_uses_slot_name_fallback_when_runtime_health_returns_non_imsi_identity(): void
     {
         $company = $this->createCompany(['code' => 'SYNC-SLOT']);
 
@@ -119,15 +119,15 @@ class SyncRuntimeReadinessCommandTest extends TestCase
         ]);
 
         Http::fake([
-            'http://python-engine.test/modems/discover' => Http::response([
+            'http://python-engine.test/modems/health' => Http::response([
                 'modems' => [
                     [
                         'sim_id' => '3-7.4.2',
-                        'effective_send_ready' => true,
+                        'send_ready' => true,
                     ],
                     [
                         'sim_id' => '515020241752005',
-                        'effective_send_ready' => true,
+                        'send_ready' => true,
                     ],
                 ],
             ], 200),

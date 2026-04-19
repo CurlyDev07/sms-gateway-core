@@ -13,17 +13,19 @@ class PythonRuntimeClient
     /**
      * Check Python runtime health endpoint.
      *
-     * @return array{ok:bool,status:int|null,error:string|null,data:array<string,mixed>,raw:mixed}
+     * @return array{ok:bool,status:int|null,error:string|null,modems:array<int,array<string,mixed>>,data:array<string,mixed>,raw:mixed}
      */
     public function health(): array
     {
         $result = $this->get((string) config('sms.python_api_health_path', '/health'));
+        $data = is_array($result['data']) ? $result['data'] : [];
 
         return [
             'ok' => $result['ok'],
             'status' => $result['status'],
             'error' => $result['error'],
-            'data' => is_array($result['data']) ? $result['data'] : [],
+            'modems' => $this->extractModems($data),
+            'data' => $data,
             'raw' => $result['raw'],
         ];
     }
