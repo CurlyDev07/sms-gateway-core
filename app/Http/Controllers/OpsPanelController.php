@@ -83,10 +83,16 @@ class OpsPanelController extends Controller
             ]);
 
         $simRows = [];
+        $redisQueueRows = [];
+        $redisNonEmptySimQueues = 0;
         $perSimQueueTotal = 0;
         foreach ($sims as $sim) {
             $simId = (int) $sim->id;
             $runtime = $runtimeByImsi[(string) $sim->imsi] ?? null;
+
+            $chatKey = $redisQueueService->queueKey($simId, 'chat');
+            $followupKey = $redisQueueService->queueKey($simId, 'followup');
+            $blastingKey = $redisQueueService->queueKey($simId, 'blasting');
 
             $queueChat = $this->safeRedisInt(function () use ($redisQueueService, $simId) {
                 return $redisQueueService->depth($simId, 'chat');
@@ -99,6 +105,9 @@ class OpsPanelController extends Controller
             });
             $queueTotal = $queueChat + $queueFollowup + $queueBlasting;
             $perSimQueueTotal += $queueTotal;
+            if ($queueTotal > 0) {
+                $redisNonEmptySimQueues++;
+            }
 
             $simRows[] = [
                 'sim_id' => $simId,
@@ -121,6 +130,35 @@ class OpsPanelController extends Controller
                     'blasting' => $queueBlasting,
                 ],
                 'runtime' => $runtime,
+            ];
+
+            $redisQueueRows[] = [
+                'sim_id' => $simId,
+                'company_id' => (int) $sim->company_id,
+                'company_code' => (string) optional($sim->company)->code,
+                'imsi' => $sim->imsi !== null ? (string) $sim->imsi : null,
+                'keys' => [
+                    'chat' => $chatKey,
+                    'followup' => $followupKey,
+                    'blasting' => $blastingKey,
+                ],
+                'depth' => [
+                    'chat' => $queueChat,
+                    'followup' => $queueFollowup,
+                    'blasting' => $queueBlasting,
+                    'total' => $queueTotal,
+                ],
+                'head' => [
+                    'chat' => $this->safeRedisString(function () use ($chatKey) {
+                        return Redis::lindex($chatKey, 0);
+                    }),
+                    'followup' => $this->safeRedisString(function () use ($followupKey) {
+                        return Redis::lindex($followupKey, 0);
+                    }),
+                    'blasting' => $this->safeRedisString(function () use ($blastingKey) {
+                        return Redis::lindex($blastingKey, 0);
+                    }),
+                ],
             ];
         }
 
@@ -266,6 +304,7 @@ class OpsPanelController extends Controller
         $defaultQueueDepth = $this->safeRedisInt(function () {
             return Redis::llen('default');
         });
+        $redisPing = $this->probeRedisPing();
 
         $sendingStaleCount = OutboundMessage::query()
             ->where('status', 'sending')
@@ -314,6 +353,7 @@ class OpsPanelController extends Controller
                 'queues' => [
                     'default_depth' => $defaultQueueDepth,
                     'per_sim_total_depth' => $perSimQueueTotal,
+                    'non_empty_sim_queues' => $redisNonEmptySimQueues,
                     'sending_stale_count' => $sendingStaleCount,
                     'queued_old_count' => $queuedOldCount,
                 ],
@@ -336,6 +376,15 @@ class OpsPanelController extends Controller
                     'active_api_clients_total' => count($activeApiClients),
                 ],
             ],
+            'redis' => [
+                'ping_ok' => (bool) $redisPing['ok'],
+                'ping_reply' => $redisPing['reply'],
+                'error' => $redisPing['error'],
+                'default_queue_depth' => $defaultQueueDepth,
+                'per_sim_total_depth' => $perSimQueueTotal,
+                'non_empty_sim_queues' => $redisNonEmptySimQueues,
+                'sim_queue_rows' => $redisQueueRows,
+            ],
             'runtime' => [
                 'health' => [
                     'ok' => (bool) ($runtimeHealth['ok'] ?? false),
@@ -355,6 +404,7 @@ class OpsPanelController extends Controller
             ],
             'tables' => [
                 'sims' => $simRows,
+                'redis_sim_queues' => $redisQueueRows,
                 'inbound_recent' => $inboundRecent,
                 'outbound_recent' => $outboundRecent,
                 'webhook_recent' => $inboundRecent,
@@ -627,6 +677,46 @@ class OpsPanelController extends Controller
             return max(0, (int) $reader());
         } catch (Throwable $e) {
             return 0;
+        }
+    }
+
+    /**
+     * @param callable():mixed $reader
+     * @return string|null
+     */
+    protected function safeRedisString(callable $reader): ?string
+    {
+        try {
+            $value = $reader();
+            if ($value === null) {
+                return null;
+            }
+
+            return (string) $value;
+        } catch (Throwable $e) {
+            return null;
+        }
+    }
+
+    /**
+     * @return array{ok:bool,reply:?string,error:?string}
+     */
+    protected function probeRedisPing(): array
+    {
+        try {
+            $reply = Redis::ping();
+
+            return [
+                'ok' => true,
+                'reply' => is_scalar($reply) ? (string) $reply : null,
+                'error' => null,
+            ];
+        } catch (Throwable $e) {
+            return [
+                'ok' => false,
+                'reply' => null,
+                'error' => $e->getMessage(),
+            ];
         }
     }
 

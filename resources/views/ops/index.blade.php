@@ -208,6 +208,33 @@
                 <div id="snapshotBox" class="mono mt-3 space-y-1 rounded-lg border border-slate-700 bg-slate-900/70 p-3 text-[11px] text-slate-300"></div>
             </article>
         </section>
+
+        <section class="mt-4">
+            <article class="glass rounded-xl p-4">
+                <div class="flex flex-wrap items-center justify-between gap-2">
+                    <div>
+                        <h2 class="text-lg font-semibold">Redis Queue Diagnostics</h2>
+                        <p class="mt-1 text-xs text-slate-400">Per-SIM Redis queue keys, depths, and head message IDs for stuck-queue triage.</p>
+                    </div>
+                    <p id="redisMeta" class="mono text-[11px] text-slate-300">Redis: -</p>
+                </div>
+                <div class="table-wrap mt-3 rounded-lg border border-slate-700">
+                    <table class="w-full text-left text-xs">
+                        <thead class="bg-slate-900 text-slate-300">
+                            <tr>
+                                <th class="px-3 py-2">SIM</th>
+                                <th class="px-3 py-2">Company</th>
+                                <th class="px-3 py-2">IMSI</th>
+                                <th class="px-3 py-2">Depth (C/F/B/T)</th>
+                                <th class="px-3 py-2">Head IDs (C/F/B)</th>
+                                <th class="px-3 py-2">Keys (C/F/B)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="redisQueueRows" class="divide-y divide-slate-800"></tbody>
+                    </table>
+                </div>
+            </article>
+        </section>
     </main>
 
     <script>
@@ -223,6 +250,7 @@
         const actionStatus = document.getElementById('actionStatus');
         const lastUpdated = document.getElementById('lastUpdated');
         const discoverMeta = document.getElementById('discoverMeta');
+        const redisMeta = document.getElementById('redisMeta');
         const pipelineHint = document.getElementById('pipelineHint');
         const snapshotBox = document.getElementById('snapshotBox');
         let timer = null;
@@ -335,6 +363,8 @@
                 setPipelineHint(payload.pipeline_hint || null);
                 const runtimeMeta = payload.runtime || {};
                 discoverMeta.textContent = `Discover: ${runtimeMeta.discover_refreshed ? 'fresh' : 'cached'} | cached_at=${fmtDt(runtimeMeta.discover_cached_at)}`;
+                const redisSummary = payload.redis || {};
+                redisMeta.textContent = `Redis: ping_ok=${redisSummary.ping_ok === true ? 'true' : 'false'} | default=${redisSummary.default_queue_depth ?? 0} | sim_total=${redisSummary.per_sim_total_depth ?? 0} | non_empty_sims=${redisSummary.non_empty_sim_queues ?? 0}`;
 
                 const runtimeRows = (payload.runtime?.health?.modems || []).slice(0, 120).map((row) => {
                     const ready = row.send_ready ?? row.effective_send_ready ?? row.realtime_probe_ready ?? false;
@@ -366,6 +396,27 @@
                     <td class="px-3 py-2">${badge(String(Boolean(row.runtime?.send_ready ?? row.runtime?.effective_send_ready ?? row.runtime?.realtime_probe_ready ?? false)))}</td>
                 </tr>`);
                 renderRows('simRows', simRows, 7);
+
+                const redisRows = (payload.redis?.sim_queue_rows || payload.tables?.redis_sim_queues || []).slice(0, 200).map((row) => {
+                    const chatDepth = row.depth?.chat ?? 0;
+                    const followDepth = row.depth?.followup ?? 0;
+                    const blastDepth = row.depth?.blasting ?? 0;
+                    const totalDepth = row.depth?.total ?? 0;
+                    const keyChat = row.keys?.chat || '-';
+                    const keyFollow = row.keys?.followup || '-';
+                    const keyBlast = row.keys?.blasting || '-';
+                    const shortKey = (v) => String(v).replace(/^sms:queue:sim:/, '...:');
+
+                    return `<tr>
+                        <td class="mono px-3 py-2">#${esc(row.sim_id)}</td>
+                        <td class="px-3 py-2">${esc(row.company_code || row.company_id || '-')}</td>
+                        <td class="mono px-3 py-2">${esc(row.imsi || '-')}</td>
+                        <td class="mono px-3 py-2">${esc(`${chatDepth}/${followDepth}/${blastDepth}/${totalDepth}`)}</td>
+                        <td class="mono px-3 py-2">${esc(`${row.head?.chat || '-'} / ${row.head?.followup || '-'} / ${row.head?.blasting || '-'}`)}</td>
+                        <td class="mono px-3 py-2" title="${esc(`${keyChat}\n${keyFollow}\n${keyBlast}`)}">${esc(`${shortKey(keyChat)} | ${shortKey(keyFollow)} | ${shortKey(keyBlast)}`)}</td>
+                    </tr>`;
+                });
+                renderRows('redisQueueRows', redisRows, 6);
 
                 const inboundRows = (payload.tables?.inbound_recent || []).slice(0, 120).map((row) => `<tr>
                     <td class="mono px-3 py-2">#${esc(row.id)}</td>
@@ -409,8 +460,12 @@
                     `outbound_1h_sent/queued/sending/pending/failed=${esc(summary.outbound_1h?.sent ?? 0)}/${esc(summary.outbound_1h?.queued ?? 0)}/${esc(summary.outbound_1h?.sending ?? 0)}/${esc(summary.outbound_1h?.pending ?? 0)}/${esc(summary.outbound_1h?.failed ?? 0)}`,
                     `queue_default=${esc(summary.queues?.default_depth ?? 0)}`,
                     `queue_per_sim_total=${esc(summary.queues?.per_sim_total_depth ?? 0)}`,
+                    `queue_non_empty_sims=${esc(summary.queues?.non_empty_sim_queues ?? 0)}`,
                     `sending_stale=${esc(summary.queues?.sending_stale_count ?? 0)}`,
-                    `queued_old=${esc(summary.queues?.queued_old_count ?? 0)}`
+                    `queued_old=${esc(summary.queues?.queued_old_count ?? 0)}`,
+                    `redis_ping_ok=${esc(payload.redis?.ping_ok ?? false)}`,
+                    `redis_ping_reply=${esc(payload.redis?.ping_reply || '-')}`,
+                    `redis_error=${esc(payload.redis?.error || '-')}`
                 ].map((line) => `<div>${line}</div>`).join('');
 
                 lastUpdated.textContent = `Last updated: ${new Date().toLocaleString()}`;
