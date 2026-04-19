@@ -4,6 +4,26 @@ Last Updated: 2026-04-19
 
 ---
 
+## [2026-04-19] Queue-First Fallback Admission (Avoid no_sim_available Under Runtime Flaps)
+
+### Summary
+Adjusted SIM fallback selection to keep accepting outbound intake even when SIMs are temporarily cooldown/auto-disabled by runtime health automation.
+
+### What Changed
+- Updated:
+  - `app/Services/SimSelectionService.php`
+    - fallback selection now ignores `cooldown_until` and `disabled_for_new_assignments`
+    - fallback still enforces `status=active`, `operator_status!=blocked`, and `accept_new_assignments=true`
+    - intent: avoid transient `no_sim_available` during modem/runtime turbulence and let queue+retry own delivery
+- Updated:
+  - `tests/Unit/Services/SimSelectionServiceTest.php`
+    - added regression test proving new-assignment fallback can admit auto-disabled/cooldown SIM when strict selector returns null
+
+### Status
+- application/runtime behavior change (queue-first admission hardening)
+
+---
+
 ## [2026-04-19] Non-Sticky SIM Routing Hysteresis (Soft Deprioritization)
 
 ### Summary

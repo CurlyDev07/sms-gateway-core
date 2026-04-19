@@ -97,6 +97,26 @@ class SimSelectionServiceTest extends TestCase
     }
 
     /** @test */
+    public function select_fallback_sim_for_new_assignment_can_admit_auto_disabled_or_cooldown_sim(): void
+    {
+        $company = $this->createCompany();
+
+        $autoDisabledCooldown = $this->createSim($company, [
+            'accept_new_assignments' => true,
+            'disabled_for_new_assignments' => true,
+            'cooldown_until' => now()->addMinutes(10),
+            'operator_status' => 'active',
+        ]);
+
+        $available = $this->service->selectAvailableSim($company->id);
+        $this->assertNull($available);
+
+        $fallback = $this->service->selectFallbackSim($company->id);
+        $this->assertNotNull($fallback);
+        $this->assertSame($autoDisabledCooldown->id, $fallback->id);
+    }
+
+    /** @test */
     public function select_available_sim_skips_candidate_under_hysteresis_hold_for_new_assignment(): void
     {
         $company = $this->createCompany();

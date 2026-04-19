@@ -66,6 +66,12 @@ class SimSelectionService
     /**
      * Select a fallback SIM when strict selection has no result.
      *
+     * Fallback is intentionally queue-first:
+     * - skips hard runtime pressure gates (cooldown/auto-disabled) for admission
+     * - still enforces core operator controls (active + not blocked)
+     * This prevents transient runtime flaps from returning no_sim_available and
+     * lets retry/worker flow own eventual delivery outcomes.
+     *
      * @param int $companyId
      * @param int|null $excludeSimId
      * @return \App\Models\Sim|null
@@ -81,17 +87,14 @@ class SimSelectionService
             ])
             ->where('company_id', $companyId)
             ->where('status', 'active')
-            ->where('operator_status', '!=', 'blocked')
-            ->where(function ($q) {
-                $q->whereNull('cooldown_until')
-                    ->orWhere('cooldown_until', '<=', now());
-            });
+            ->where('operator_status', '!=', 'blocked');
 
         // excludeSimId === null means new customer assignment (not reassignment/failover).
         // Reassignment paths pass the current SIM's ID and are exempt from new-assignment filters.
         if ($excludeSimId === null) {
-            $query->where('accept_new_assignments', true)
-                ->where('disabled_for_new_assignments', false);
+            // Keep explicit operator/manual admission control only.
+            // Auto-disable and cooldown are intentionally ignored at fallback level.
+            $query->where('accept_new_assignments', true);
         }
 
         if ($excludeSimId !== null) {
