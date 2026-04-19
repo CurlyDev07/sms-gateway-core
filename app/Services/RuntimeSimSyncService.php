@@ -21,12 +21,17 @@ class RuntimeSimSyncService
     }
 
     /**
-     * Sync SIM assignment-disable flags against live runtime readiness by IMSI.
+     * Sync SIM assignment-disable flags against live runtime readiness by SIM identity.
      *
      * Rule:
-     * - mapped IMSI present + send-ready in runtime => disable_for_new_assignments = false
-     * - mapped IMSI missing or not send-ready       => disable_for_new_assignments = true
+     * - mapped SIM identity present + send-ready in runtime => disable_for_new_assignments = false
+     * - mapped SIM identity missing or not send-ready       => disable_for_new_assignments = true
      * - guardrail: never disable the last assignment-enabled SIM in a company
+     *
+     * Identity resolution order per tenant SIM row:
+     * - IMSI (preferred)
+     * - slot_name
+     * - modem_id
      *
      * @param int|null $companyId
      * @return array<string,mixed>
@@ -58,7 +63,9 @@ class RuntimeSimSyncService
             ];
         }
 
-        $runtimeByImsi = $this->indexRuntimeByImsi($discover['modems'] ?? []);
+        $runtimeIndex = $this->indexRuntimeIdentities($discover['modems'] ?? []);
+        $runtimeByImsi = $runtimeIndex['by_imsi'];
+        $runtimeByAlias = $runtimeIndex['by_alias'];
 
         $query = Sim::query()
             ->whereNotNull('imsi')
@@ -80,7 +87,8 @@ class RuntimeSimSyncService
             &$disabled,
             &$guardrailSkipped,
             &$ineligibleSkipped,
-            $runtimeByImsi
+            $runtimeByImsi,
+            $runtimeByAlias
         ) {
             foreach ($sims as $sim) {
                 $scanned++;
@@ -90,8 +98,7 @@ class RuntimeSimSyncService
                     continue;
                 }
 
-                $imsi = trim((string) $sim->imsi);
-                $runtimeReady = isset($runtimeByImsi[$imsi]) && $runtimeByImsi[$imsi]['ready'] === true;
+                $runtimeReady = $this->resolveRuntimeReadyForSim($sim, $runtimeByImsi, $runtimeByAlias);
 
                 if ($runtimeReady && $sim->disabled_for_new_assignments) {
                     $sim->update(['disabled_for_new_assignments' => false]);
@@ -139,38 +146,45 @@ class RuntimeSimSyncService
     }
 
     /**
+     * Build runtime readiness indexes from discovery rows.
+     *
      * @param array<int,mixed> $modems
-     * @return array<string,array{ready:bool}>
+     * @return array{by_imsi:array<string,array{ready:bool}>,by_alias:array<string,array{ready:bool}>}
      */
-    protected function indexRuntimeByImsi(array $modems): array
+    protected function indexRuntimeIdentities(array $modems): array
     {
-        $index = [];
+        $byImsi = [];
+        $byAlias = [];
 
         foreach ($modems as $modem) {
             if (!is_array($modem)) {
                 continue;
             }
 
+            $ready = $this->runtimeSendReady($modem);
             $imsi = $this->extractImsi($modem);
 
-            if ($imsi === null) {
-                continue;
+            if ($imsi !== null) {
+                if (!isset($byImsi[$imsi])) {
+                    $byImsi[$imsi] = ['ready' => $ready];
+                } elseif ($ready) {
+                    $byImsi[$imsi]['ready'] = true;
+                }
             }
 
-            $ready = $this->runtimeSendReady($modem);
-
-            if (!isset($index[$imsi])) {
-                $index[$imsi] = ['ready' => $ready];
-                continue;
-            }
-
-            // Prefer "ready=true" when multiple modem rows resolve to same IMSI.
-            if ($ready) {
-                $index[$imsi]['ready'] = true;
+            foreach ($this->extractRuntimeAliases($modem) as $alias) {
+                if (!isset($byAlias[$alias])) {
+                    $byAlias[$alias] = ['ready' => $ready];
+                } elseif ($ready) {
+                    $byAlias[$alias]['ready'] = true;
+                }
             }
         }
 
-        return $index;
+        return [
+            'by_imsi' => $byImsi,
+            'by_alias' => $byAlias,
+        ];
     }
 
     /**
@@ -196,6 +210,83 @@ class RuntimeSimSyncService
         }
 
         return $candidate;
+    }
+
+    /**
+     * Extract non-IMSI runtime aliases that may map to SIM slot_name/modem_id.
+     *
+     * @param array<string,mixed> $modem
+     * @return array<int,string>
+     */
+    protected function extractRuntimeAliases(array $modem): array
+    {
+        $aliases = [];
+        $keys = ['sim_id', 'device_id', 'modem_id', 'id', 'port'];
+
+        foreach ($keys as $key) {
+            if (!isset($modem[$key]) || !is_scalar($modem[$key])) {
+                continue;
+            }
+
+            $normalized = $this->normalizeAlias((string) $modem[$key]);
+
+            if ($normalized === null) {
+                continue;
+            }
+
+            if (preg_match('/^[0-9]{15}$/', $normalized)) {
+                // IMSI keys are handled by dedicated IMSI index.
+                continue;
+            }
+
+            $aliases[$normalized] = $normalized;
+        }
+
+        return array_values($aliases);
+    }
+
+    /**
+     * Resolve runtime send-ready state for a tenant SIM row.
+     *
+     * @param \App\Models\Sim $sim
+     * @param array<string,array{ready:bool}> $runtimeByImsi
+     * @param array<string,array{ready:bool}> $runtimeByAlias
+     * @return bool
+     */
+    protected function resolveRuntimeReadyForSim(Sim $sim, array $runtimeByImsi, array $runtimeByAlias): bool
+    {
+        $imsi = trim((string) $sim->imsi);
+
+        if ($imsi !== '' && isset($runtimeByImsi[$imsi])) {
+            return $runtimeByImsi[$imsi]['ready'] === true;
+        }
+
+        $slotAlias = $this->normalizeAlias((string) $sim->slot_name);
+        if ($slotAlias !== null && isset($runtimeByAlias[$slotAlias])) {
+            return $runtimeByAlias[$slotAlias]['ready'] === true;
+        }
+
+        $modemAlias = $this->normalizeAlias((string) $sim->modem_id);
+        if ($modemAlias !== null && isset($runtimeByAlias[$modemAlias])) {
+            return $runtimeByAlias[$modemAlias]['ready'] === true;
+        }
+
+        return false;
+    }
+
+    /**
+     * @param string $value
+     * @return string|null
+     */
+    protected function normalizeAlias(string $value): ?string
+    {
+        $value = trim($value);
+
+        if ($value === '') {
+            return null;
+        }
+
+        return strtolower($value);
     }
 
     /**
@@ -255,4 +346,3 @@ class RuntimeSimSyncService
             ->exists();
     }
 }
-

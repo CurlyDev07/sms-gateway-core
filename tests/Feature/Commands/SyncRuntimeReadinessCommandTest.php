@@ -100,5 +100,49 @@ class SyncRuntimeReadinessCommandTest extends TestCase
 
         $this->assertFalse($sim->fresh()->disabled_for_new_assignments);
     }
-}
 
+    /** @test */
+    public function it_uses_slot_name_fallback_when_runtime_discovery_returns_non_imsi_identity(): void
+    {
+        $company = $this->createCompany(['code' => 'SYNC-SLOT']);
+
+        $slotFallbackSim = $this->createSim($company, [
+            'imsi' => '515020241752004',
+            'slot_name' => '3-7.4.2',
+            'disabled_for_new_assignments' => false,
+        ]);
+
+        $readyImsiSim = $this->createSim($company, [
+            'imsi' => '515020241752005',
+            'slot_name' => '3-7.4.4',
+            'disabled_for_new_assignments' => false,
+        ]);
+
+        Http::fake([
+            'http://python-engine.test/modems/discover' => Http::response([
+                'modems' => [
+                    [
+                        'sim_id' => '3-7.4.2',
+                        'effective_send_ready' => true,
+                    ],
+                    [
+                        'sim_id' => '515020241752005',
+                        'effective_send_ready' => true,
+                    ],
+                ],
+            ], 200),
+        ]);
+
+        $this->artisan('gateway:sync-runtime-readiness', [
+            '--company-id' => $company->id,
+        ])
+            ->expectsOutput('Runtime readiness sync completed.')
+            ->expectsOutput('Company filter: '.$company->id)
+            ->expectsOutput('SIMs scanned: 2')
+            ->expectsOutput('SIMs disabled: 0')
+            ->assertExitCode(0);
+
+        $this->assertFalse($slotFallbackSim->fresh()->disabled_for_new_assignments);
+        $this->assertFalse($readyImsiSim->fresh()->disabled_for_new_assignments);
+    }
+}
