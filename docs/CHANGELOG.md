@@ -56,6 +56,125 @@ Added hard protections so PHPUnit/`php artisan test` cannot run against runtime 
 
 ---
 
+## [2026-04-19] Inbound Relay De-Dup Hardening (UUID Webhook ID)
+
+### Summary
+Updated ChatApp inbound relay payload IDs to use immutable inbound UUIDs so DB id reuse cannot cause false duplicate suppression in ChatApp.
+
+### What Changed
+- Updated:
+  - `app/Services/InboundRelayService.php`
+    - relay payload now sends `ID=GW-IN-<inbound_message_uuid>` instead of numeric row id
+- Updated:
+  - `tests/Unit/Services/InboundRelayServiceTest.php`
+    - added regression coverage asserting relay `ID` is UUID-based
+
+### Status
+- application/runtime behavior change (inbound relay contract hardening)
+
+---
+
+## [2026-04-19] Inbound Webhook Compatibility (Legacy Python Payload Aliases)
+
+### Summary
+Made inbound ingest accept legacy Python field aliases so webhook posts remain compatible during mixed-runtime rollouts.
+
+### What Changed
+- Updated:
+  - `app/Http/Controllers/GatewayInboundController.php`
+    - normalizes `from|mobile|phone` into `customer_phone`
+    - accepts 15-digit IMSI sent in `sim_id` and maps it to `runtime_sim_id`
+    - continues to accept numeric DB `sim_id` where provided
+- Updated:
+  - `tests/Feature/Http/GatewayInboundControllerTest.php`
+    - added alias/compatibility behavior assertions
+
+### Status
+- application/runtime behavior change (broader inbound payload compatibility)
+
+---
+
+## [2026-04-19] Inbound Relay Retry Scheduler Cadence Increase
+
+### Summary
+Reduced inbound relay lag by running retry dispatch every minute.
+
+### What Changed
+- Updated:
+  - `app/Console/Kernel.php`
+    - schedules `gateway:retry-inbound-relays --limit=500` every minute with overlap protection
+- Updated:
+  - `tests/Feature/Smoke/Phase0SmokeTest.php`
+    - schedule assertions updated for new retry cadence
+
+### Status
+- application/runtime behavior change (faster inbound relay recovery path)
+
+---
+
+## [2026-04-18] Ops Monitoring Dashboard (No-Auth Tailwind View)
+
+### Summary
+Added an operator-facing dashboard page to visualize outbound/inbound pipeline state without requiring API credentials in the browser.
+
+### What Changed
+- Added:
+  - `app/Http/Controllers/OpsPanelController.php`
+    - aggregates API client mapping, SIM runtime readiness, outbound progression, inbound relay status, queue depth, and recent failures
+  - `resources/views/ops/index.blade.php`
+    - Tailwind-styled monitoring table/cards for live troubleshooting
+  - `tests/Feature/Web/OpsPanelTest.php`
+    - feature coverage for page rendering/data sections
+- Updated:
+  - `routes/web.php`
+    - registers ops panel route
+
+### Status
+- application/runtime behavior change (new monitoring surface)
+
+---
+
+## [2026-04-18] Inbound Relay Contract Hardening for ChatApp
+
+### Summary
+Hardened Laravel-to-ChatApp inbound relay rules so success is only recorded on explicit `{"ok":true}` acknowledgment, with consistent mobile normalization.
+
+### What Changed
+- Updated:
+  - `app/Services/InboundRelayService.php`
+    - treats HTTP 200 with `ok=false` as failure (not success)
+    - normalizes `+63` mobile format to `09` before posting to ChatApp InfoTxt inbox
+- Added:
+  - `tests/Unit/Services/InboundRelayServiceTest.php`
+    - success/failure and mobile-normalization coverage
+- Updated:
+  - `docs/GATEWAY_CHATAPP_DAILY_HEALTH_CHECK.md`
+    - operator checks aligned with strict relay-ack behavior
+
+### Status
+- application/runtime behavior change (strict relay acknowledgment semantics)
+
+---
+
+## [2026-04-18] SIM Health Guardrail Against All-SIM Assignment Lockout
+
+### Summary
+Added a safety valve in SIM health auto-disable logic to prevent a company from ending up with zero assignment-eligible SIMs (`no_sim_available` lockout).
+
+### What Changed
+- Updated:
+  - `app/Services/SimHealthService.php`
+    - guardrail re-enables one SIM when all would otherwise be disabled for new assignments
+    - preserves disable behavior when alternative assignment-eligible SIMs exist
+- Updated:
+  - `tests/Unit/Services/SimHealthServiceTest.php`
+    - coverage for lockout-prevention and healthy/unhealthy toggle behavior
+
+### Status
+- application/runtime behavior change (assignment safety hardening)
+
+---
+
 ## [2026-04-18] SIM Worker ID Alignment Runbook Added (Post-Remap Outbound Queue Incident)
 
 ### Summary
@@ -77,6 +196,31 @@ Added a dedicated runbook documenting the outbound queue issue caused by `gatewa
 ### Status
 - documentation update only
 - no application/runtime/API behavior changes
+
+---
+
+## [2026-04-17] ChatApp Fast-Path Outbound Adapter (InfoTxt-Compatible)
+
+### Summary
+Added an InfoTxt-style outbound adapter endpoint so ChatApp can send through `sms-gateway-core` using existing `INFOTXT_*` contract fields.
+
+### What Changed
+- Added:
+  - `app/Http/Controllers/InfotxtOutboundController.php`
+    - accepts `UserID`, `ApiKey`, `Mobile`, `SMS` (+ optional `Type`/`MessageType`)
+    - authenticates tenant, assigns SIM, creates outbound row, enqueues per-SIM queue, returns provider-style response
+  - `app/Http/Middleware/AuthenticateInfotxtClient.php`
+    - validates body credentials against `api_clients` (`api_key` + hashed `api_secret`)
+  - `tests/Feature/Http/InfotxtOutboundControllerTest.php`
+    - compatibility + auth + error-path coverage
+- Updated:
+  - `routes/api.php`
+    - added `POST /api/v2/send.php` under `infotxt.client` + `tenant.resolve`
+  - `app/Http/Kernel.php`
+    - registered `infotxt.client` middleware alias
+
+### Status
+- application/runtime/API behavior change (new outbound integration surface)
 
 ---
 
