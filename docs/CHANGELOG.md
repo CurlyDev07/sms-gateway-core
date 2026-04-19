@@ -30,6 +30,32 @@ Added automated controls so outbound worker alignment survives SIM remap/reinser
 
 ---
 
+## [2026-04-19] Test DB Safety Guardrails (Prevent Runtime DB Wipe During Tests)
+
+### Summary
+Added hard protections so PHPUnit/`php artisan test` cannot run against runtime DB (`sms_gateway_core`).
+
+### What Changed
+- Updated:
+  - `phpunit.xml`
+    - force testing DB to sqlite in-memory by default
+- Updated:
+  - `tests/TestCase.php`
+    - pre-test safety guard:
+      - requires `APP_ENV=testing`
+      - blocks `DB_DATABASE=sms_gateway_core`
+      - requires non-sqlite test DB names to include `test`
+- Added:
+  - `.env.testing.example`
+    - safe baseline testing env values
+  - `docs/TESTING_DB_SAFETY.md`
+    - operator/developer runbook for safe test execution
+
+### Status
+- safety hardening update
+
+---
+
 ## [2026-04-18] SIM Worker ID Alignment Runbook Added (Post-Remap Outbound Queue Incident)
 
 ### Summary
