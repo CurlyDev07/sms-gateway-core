@@ -53,6 +53,7 @@ class GatewayInboundController extends Controller
         $validated = $validator->validated();
         $simId = isset($validated['sim_id']) ? (int) $validated['sim_id'] : null;
         $runtimeSimId = $this->resolveRuntimeSimIdentifier($validated);
+        $providedIdempotencyKey = trim((string) ($validated['idempotency_key'] ?? ''));
 
         if ($simId === null && $runtimeSimId === null) {
             Log::warning('Inbound message ignored: missing SIM identifier', [
@@ -84,9 +85,11 @@ class GatewayInboundController extends Controller
         $customerPhone = $this->normalizeMobile((string) $validated['customer_phone']);
         $receivedAt = $validated['received_at'];
         $idempotencyKey = $this->resolveIdempotencyKey($validated, $sim, $runtimeSimId);
+        $responseIdempotencyKey = $providedIdempotencyKey !== '' ? $providedIdempotencyKey : $idempotencyKey;
 
         $duplicateMessage = InboundMessage::query()
             ->where('company_id', $sim->company_id)
+            ->where('sim_id', $sim->id)
             ->where('idempotency_key', $idempotencyKey)
             ->first();
 
@@ -103,7 +106,7 @@ class GatewayInboundController extends Controller
                 'ok' => true,
                 'duplicate' => true,
                 'inbound_message_uuid' => $duplicateMessage->uuid,
-                'idempotency_key' => $idempotencyKey,
+                'idempotency_key' => $responseIdempotencyKey,
             ], 200);
         }
 
@@ -142,7 +145,7 @@ class GatewayInboundController extends Controller
         return response()->json([
             'ok' => true,
             'inbound_message_uuid' => $inboundMessage->uuid,
-            'idempotency_key' => $idempotencyKey,
+            'idempotency_key' => $responseIdempotencyKey,
             'queued_for_relay' => true,
         ], 200);
     }
@@ -227,16 +230,17 @@ class GatewayInboundController extends Controller
      */
     protected function resolveIdempotencyKey(array $validated, Sim $sim, ?string $runtimeSimId): string
     {
+        $identity = $runtimeSimId !== null ? $runtimeSimId : (string) $sim->id;
         $provided = trim((string) ($validated['idempotency_key'] ?? ''));
 
         if ($provided !== '') {
-            return $provided;
+            // Keep company-unique storage safe while allowing identical provider keys across SIMs.
+            return hash('sha256', $identity.'|'.$provided);
         }
 
         $customerPhone = $this->normalizeMobile((string) ($validated['customer_phone'] ?? ''));
         $message = (string) ($validated['message'] ?? '');
         $receivedAt = Carbon::parse((string) ($validated['received_at'] ?? now()->toIso8601String()))->toIso8601String();
-        $identity = $runtimeSimId !== null ? $runtimeSimId : (string) $sim->id;
 
         return hash('sha256', implode('|', [
             $identity,

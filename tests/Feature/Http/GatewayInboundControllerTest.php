@@ -41,12 +41,14 @@ class GatewayInboundControllerTest extends TestCase
                 'idempotency_key' => 'inbound-key-001',
             ]);
 
+        $storedIdempotencyKey = hash('sha256', '515039219149367|inbound-key-001');
+
         $this->assertDatabaseHas('inbound_messages', [
             'company_id' => $company->id,
             'sim_id' => $sim->id,
             'runtime_sim_id' => '515039219149367',
             'customer_phone' => '09171112222',
-            'idempotency_key' => 'inbound-key-001',
+            'idempotency_key' => $storedIdempotencyKey,
             'relay_status' => 'pending',
             'relayed_to_chat_app' => 0,
         ]);
@@ -89,6 +91,57 @@ class GatewayInboundControllerTest extends TestCase
 
         $this->assertSame(1, InboundMessage::query()->count());
         Queue::assertPushed(RelayInboundMessageJob::class, 1);
+    }
+
+    /** @test */
+    public function it_does_not_false_dedupe_same_idempotency_key_across_different_sims(): void
+    {
+        Queue::fake();
+
+        $company = $this->createCompany();
+        $simA = $this->createSim($company, ['imsi' => '515020241752004']);
+        $simB = $this->createSim($company, ['imsi' => '515020241752005']);
+
+        $payloadA = [
+            'runtime_sim_id' => '515020241752004',
+            'customer_phone' => '09278986797',
+            'message' => 'SIM A inbound',
+            'received_at' => now()->toIso8601String(),
+            'idempotency_key' => 'cross-sim-idem-001',
+        ];
+
+        $payloadB = [
+            'runtime_sim_id' => '515020241752005',
+            'customer_phone' => '09278986797',
+            'message' => 'SIM B inbound',
+            'received_at' => now()->toIso8601String(),
+            'idempotency_key' => 'cross-sim-idem-001',
+        ];
+
+        $first = $this->postJson('/api/gateway/inbound', $payloadA);
+        $second = $this->postJson('/api/gateway/inbound', $payloadB);
+
+        $first->assertStatus(200)->assertJsonPath('ok', true);
+        $second->assertStatus(200)
+            ->assertJsonPath('ok', true)
+            ->assertJsonMissing(['duplicate' => true]);
+
+        $this->assertDatabaseHas('inbound_messages', [
+            'company_id' => $company->id,
+            'sim_id' => $simA->id,
+            'runtime_sim_id' => '515020241752004',
+            'idempotency_key' => hash('sha256', '515020241752004|cross-sim-idem-001'),
+        ]);
+
+        $this->assertDatabaseHas('inbound_messages', [
+            'company_id' => $company->id,
+            'sim_id' => $simB->id,
+            'runtime_sim_id' => '515020241752005',
+            'idempotency_key' => hash('sha256', '515020241752005|cross-sim-idem-001'),
+        ]);
+
+        $this->assertSame(2, InboundMessage::query()->count());
+        Queue::assertPushed(RelayInboundMessageJob::class, 2);
     }
 
     /** @test */
