@@ -66,9 +66,7 @@ class GatewayInboundController extends Controller
             ], 200);
         }
 
-        $sim = $simId !== null
-            ? Sim::query()->find($simId)
-            : Sim::query()->where('imsi', $runtimeSimId)->first();
+        $sim = $this->resolveSim($simId, $runtimeSimId);
 
         if ($sim === null) {
             Log::warning('Inbound message ignored: SIM not found', [
@@ -167,6 +165,56 @@ class GatewayInboundController extends Controller
         $imsi = trim((string) ($validated['imsi'] ?? ''));
 
         return $imsi !== '' ? $imsi : null;
+    }
+
+    /**
+     * Resolve tenant SIM row from provided numeric sim_id or runtime identity.
+     *
+     * Runtime identity lookup order:
+     * 1) exact IMSI match
+     * 2) exact slot_name/modem_id match when unique (safe fallback)
+     *
+     * @param int|null $simId
+     * @param string|null $runtimeSimId
+     * @return \App\Models\Sim|null
+     */
+    protected function resolveSim(?int $simId, ?string $runtimeSimId): ?Sim
+    {
+        if ($simId !== null) {
+            return Sim::query()->find($simId);
+        }
+
+        if ($runtimeSimId === null || $runtimeSimId === '') {
+            return null;
+        }
+
+        $byImsi = Sim::query()
+            ->where('imsi', $runtimeSimId)
+            ->first();
+
+        if ($byImsi !== null) {
+            return $byImsi;
+        }
+
+        $fallbackCandidates = Sim::query()
+            ->where(function ($query) use ($runtimeSimId) {
+                $query->where('slot_name', $runtimeSimId)
+                    ->orWhere('modem_id', $runtimeSimId);
+            })
+            ->get(['id']);
+
+        if ($fallbackCandidates->count() === 1) {
+            return Sim::query()->find((int) $fallbackCandidates->first()->id);
+        }
+
+        if ($fallbackCandidates->count() > 1) {
+            Log::warning('Inbound runtime identity fallback is ambiguous', [
+                'runtime_sim_id' => $runtimeSimId,
+                'candidate_count' => $fallbackCandidates->count(),
+            ]);
+        }
+
+        return null;
     }
 
     /**

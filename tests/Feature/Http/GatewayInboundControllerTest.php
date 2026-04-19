@@ -204,6 +204,36 @@ class GatewayInboundControllerTest extends TestCase
     }
 
     /** @test */
+    public function it_resolves_runtime_sim_id_via_slot_name_fallback_when_imsi_is_not_available(): void
+    {
+        Queue::fake();
+
+        $company = $this->createCompany();
+        $sim = $this->createSim($company, [
+            'imsi' => null,
+            'slot_name' => '3-7.4.3',
+        ]);
+
+        $response = $this->postJson('/api/gateway/inbound', [
+            'runtime_sim_id' => '3-7.4.3',
+            'customer_phone' => '09278986797',
+            'message' => 'slot-fallback',
+            'received_at' => now()->toIso8601String(),
+        ]);
+
+        $response->assertStatus(200)
+            ->assertJsonPath('ok', true);
+
+        $this->assertDatabaseHas('inbound_messages', [
+            'company_id' => $company->id,
+            'sim_id' => $sim->id,
+            'runtime_sim_id' => '3-7.4.3',
+            'customer_phone' => '09278986797',
+            'message' => 'slot-fallback',
+        ]);
+    }
+
+    /** @test */
     public function it_creates_sticky_assignment_from_inbound_when_customer_has_no_prior_assignment(): void
     {
         Queue::fake();
