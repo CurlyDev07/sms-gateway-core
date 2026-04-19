@@ -104,4 +104,22 @@ class Phase0SmokeTest extends TestCase
 
         $this->assertTrue($matched, 'gateway:sync-runtime-readiness was not scheduled every minute.');
     }
+
+    /** @test */
+    public function scheduler_contains_inbound_relay_retry_dispatch_every_minute(): void
+    {
+        $kernel = $this->app->make(AppConsoleKernel::class);
+        $schedule = new Schedule($this->app);
+
+        $method = new ReflectionMethod($kernel, 'schedule');
+        $method->setAccessible(true);
+        $method->invoke($kernel, $schedule);
+
+        $matched = collect($schedule->events())->contains(function ($event) {
+            return str_contains($event->command, 'gateway:retry-inbound-relays')
+                && $event->expression === '* * * * *';
+        });
+
+        $this->assertTrue($matched, 'gateway:retry-inbound-relays was not scheduled every minute.');
+    }
 }

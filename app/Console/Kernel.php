@@ -19,6 +19,10 @@ class Kernel extends ConsoleKernel
             ->everyMinute()
             ->withoutOverlapping();
 
+        $schedule->command('gateway:retry-inbound-relays --limit=500')
+            ->everyMinute()
+            ->withoutOverlapping();
+
         $schedule->command('gateway:check-sim-health')->everyFiveMinutes();
         $schedule->command('gateway:retry-scheduler')->everyFiveMinutes();
     }
