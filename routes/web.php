@@ -9,6 +9,7 @@ use App\Http\Controllers\Auth\ForcePasswordChangeController;
 use App\Http\Controllers\DashboardAuditLogController;
 use App\Http\Controllers\DashboardHomePageController;
 use App\Http\Controllers\DashboardOperatorController;
+use App\Http\Controllers\InfotxtStatusController;
 use App\Http\Controllers\MessageStatusController;
 use App\Http\Controllers\MigrationDashboardPageController;
 use App\Http\Controllers\MigrationController;
@@ -37,6 +38,9 @@ use Illuminate\Support\Facades\Route;
 Route::get('/', function () {
     return view('welcome');
 });
+
+// Backward-compatible InfoText-style status endpoint (without /api prefix).
+Route::get('/v2/status.php', [InfotxtStatusController::class, 'show']);
 
 Route::prefix('ops')->group(function () {
     Route::get('/', [OpsPanelController::class, 'index'])->name('ops.index');

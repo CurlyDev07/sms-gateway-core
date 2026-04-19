@@ -4,6 +4,7 @@ use App\Http\Controllers\AssignmentController;
 use App\Http\Controllers\GatewayInboundController;
 use App\Http\Controllers\GatewayOutboundController;
 use App\Http\Controllers\InfotxtOutboundController;
+use App\Http\Controllers\InfotxtStatusController;
 use App\Http\Controllers\MessageStatusController;
 use App\Http\Controllers\MigrationController;
 use App\Http\Controllers\SimAdminController;
@@ -32,6 +33,9 @@ Route::post('/gateway/inbound', [GatewayInboundController::class, 'store']);
 // InfoText-compatible outbound adapter path for ChatApp fast-path integration.
 Route::middleware(['infotxt.client', 'tenant.resolve'])
     ->post('/v2/send.php', [InfotxtOutboundController::class, 'store']);
+
+// InfoText-compatible status poll path for ChatApp scheduler.
+Route::get('/v2/status.php', [InfotxtStatusController::class, 'show']);
 
 // Tenant-authenticated API surface: company context is resolved from api_clients credentials.
 Route::middleware(['api.client', 'tenant.resolve'])->group(function () {

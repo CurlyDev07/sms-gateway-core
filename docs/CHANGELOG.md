@@ -1,6 +1,34 @@
 # CHANGELOG
 
-Last Updated: 2026-04-19
+Last Updated: 2026-04-20
+
+---
+
+## [2026-04-20] InfoTxt Status Poll Compatibility Endpoint (`/v2/status.php`)
+
+### Summary
+Added the missing InfoTxt-compatible status poll endpoint so ChatApp can transition outbound rows from `queued` to `sent/failed`.
+
+### What Changed
+- Added:
+  - `app/Http/Controllers/InfotxtStatusController.php`
+    - accepts `smsid` (or `SMSID`) query param
+    - returns InfoTxt-compatible payload with `status` mapped as:
+      - `0` => queued/in-progress (`pending|queued|sending`)
+      - `1` => sent (`sent`)
+      - `2` => failed (`failed|cancelled|not_found`)
+    - response includes `smsid`
+- Updated:
+  - `routes/api.php`
+    - new route `GET /api/v2/status.php`
+  - `routes/web.php`
+    - compatibility alias route `GET /v2/status.php` (for callers without `/api` base path)
+- Added:
+  - `tests/Feature/Http/InfotxtStatusControllerTest.php`
+    - contract coverage for `0|1|2` mapping and both route paths
+
+### Status
+- application/runtime behavior change (ChatApp delivery status polling fixed)
 
 ---
 
