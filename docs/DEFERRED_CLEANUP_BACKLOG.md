@@ -1,7 +1,7 @@
 # Deferred Cleanup Backlog
 
 Date: 2026-04-19
-Status: Deferred (do not execute in current hotfix/stabilization window)
+Status: Phase 1 completed on 2026-04-19; remaining items deferred
 Owner: Gateway Core
 
 ## Purpose
@@ -10,6 +10,7 @@ Capture non-critical cleanup items that are currently safe or desirable but inte
 ## Scope To Execute Later
 
 ### A) Safe technical debt cleanup (low-risk, code/data noise)
+Status: DONE (implemented 2026-04-19)
 1. Remove dead stub service:
 - `app/Services/ModemCommandService.php`
 
@@ -30,13 +31,15 @@ Capture non-critical cleanup items that are currently safe or desirable but inte
 - Model fillable: `App\\Models\\SimHealthLog::$fillable`
 
 ### B) Config cleanup (currently misleading)
+Status: PARTIAL (implemented 2026-04-19)
 1. Reconcile outbound retry config vs implementation:
 - Config keys currently defined but not fully enforced by logic:
-  - `services.gateway.outbound_retry_max_attempts`
-  - `services.gateway.outbound_retry_max_delay_seconds`
+  - `services.gateway.outbound_retry_max_attempts` (removed)
+  - `services.gateway.outbound_retry_max_delay_seconds` (removed)
 - Align implementation (`OutboundRetryService`) or remove unused keys.
 
 ### C) Policy refactor (higher impact, requires controlled rollout)
+Status: DEFERRED
 1. Review/remove automatic SIM assignment toggling based on health/discovery:
 - Scheduler entries:
   - `gateway:sync-runtime-readiness` (every minute)
@@ -52,6 +55,7 @@ Capture non-critical cleanup items that are currently safe or desirable but inte
 3. Preserve queue+retry-first strategy without aggressive auto-disable flapping.
 
 ### D) Optional legacy surface cleanup (only if confirmed unused)
+Status: DEFERRED
 1. Evaluate retaining/removing legacy dashboard runtime pages and related endpoints if Ops panel is the single operational UI.
 2. Evaluate retaining/removing `queue` SMS driver path if deployment is permanently Python-only.
 

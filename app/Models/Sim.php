@@ -42,9 +42,7 @@ class Sim extends Model
         'cooldown_until',
         'last_success_at',
         'last_sent_at',
-        'last_received_at',
         'last_error_at',
-        'notes',
     ];
 
     /**
@@ -59,7 +57,6 @@ class Sim extends Model
         'last_success_at' => 'datetime',
         'cooldown_until' => 'datetime',
         'last_sent_at' => 'datetime',
-        'last_received_at' => 'datetime',
         'last_error_at' => 'datetime',
     ];
 

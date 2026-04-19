@@ -19,8 +19,6 @@ class SimHealthLog extends Model
         'uuid',
         'sim_id',
         'status',
-        'signal_strength',
-        'network_name',
         'error_message',
         'logged_at',
     ];

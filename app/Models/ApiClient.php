@@ -23,7 +23,6 @@ class ApiClient extends Model
         'api_key',
         'api_secret',
         'status',
-        'allowed_ips',
     ];
 
     /**

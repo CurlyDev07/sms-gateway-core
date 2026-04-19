@@ -32,8 +32,6 @@ class OutboundMessage extends Model
         'failure_reason',
         'retry_count',
         'client_message_id',
-        'campaign_id',
-        'conversation_ref',
         'metadata',
     ];
 
