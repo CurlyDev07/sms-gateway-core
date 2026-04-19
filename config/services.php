@@ -45,6 +45,13 @@ return [
         'inbound_relay_retry_base_delay_seconds' => env('GATEWAY_INBOUND_RELAY_RETRY_BASE_DELAY_SECONDS', 30),
         'inbound_relay_retry_max_delay_seconds' => env('GATEWAY_INBOUND_RELAY_RETRY_MAX_DELAY_SECONDS', 300),
         'inbound_relay_lock_seconds' => env('GATEWAY_INBOUND_RELAY_LOCK_SECONDS', 120),
+
+        // Soft non-sticky assignment pressure controls (no hard disable):
+        // SIMs breaching queue/failure thresholds are temporarily held for new assignments.
+        'sim_selection_hysteresis_hold_seconds' => env('GATEWAY_SIM_SELECTION_HYSTERESIS_HOLD_SECONDS', 300),
+        'sim_selection_failure_window_minutes' => env('GATEWAY_SIM_SELECTION_FAILURE_WINDOW_MINUTES', 15),
+        'sim_selection_failure_hold_threshold' => env('GATEWAY_SIM_SELECTION_FAILURE_HOLD_THRESHOLD', 3),
+        'sim_selection_queue_hold_threshold' => env('GATEWAY_SIM_SELECTION_QUEUE_HOLD_THRESHOLD', 100),
     ],
 
 ];

@@ -4,6 +4,33 @@ Last Updated: 2026-04-19
 
 ---
 
+## [2026-04-19] Non-Sticky SIM Routing Hysteresis (Soft Deprioritization)
+
+### Summary
+Added non-sticky assignment hysteresis so traffic does not flap between SIMs every minute when one modem is unstable.
+
+### What Changed
+- Updated:
+  - `app/Services/SimSelectionService.php`
+    - new-assignment selection now applies soft hold windows for SIMs with high recent failure counts or queue pressure
+    - held SIMs are skipped for new assignments until hold TTL expires
+    - safety valve retained: if all candidates are held, selection still returns the best-ranked SIM instead of hard-failing
+- Updated:
+  - `config/services.php`
+    - new tuning keys:
+      - `GATEWAY_SIM_SELECTION_HYSTERESIS_HOLD_SECONDS` (default `300`)
+      - `GATEWAY_SIM_SELECTION_FAILURE_WINDOW_MINUTES` (default `15`)
+      - `GATEWAY_SIM_SELECTION_FAILURE_HOLD_THRESHOLD` (default `3`)
+      - `GATEWAY_SIM_SELECTION_QUEUE_HOLD_THRESHOLD` (default `100`)
+- Updated:
+  - `tests/Unit/Services/SimSelectionServiceTest.php`
+    - added coverage for hold-skip behavior, all-held safety fallback, and failure-threshold-triggered hold
+
+### Status
+- application/runtime behavior change (stable non-sticky assignment under modem instability)
+
+---
+
 ## [2026-04-19] Permanent SIM Worker Auto-Alignment + Runtime Readiness Sync
 
 ### Summary
