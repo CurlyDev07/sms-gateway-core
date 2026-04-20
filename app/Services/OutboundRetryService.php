@@ -7,6 +7,11 @@ use Illuminate\Support\Facades\Log;
 
 class OutboundRetryService
 {
+    /**
+     * @var \App\Services\GatewaySettingService
+     */
+    protected $gatewaySettingService;
+
     private const RETRYABLE_ERRORS = [
         'RUNTIME_UNREACHABLE',
         'RUNTIME_TIMEOUT',
@@ -29,6 +34,14 @@ class OutboundRetryService
         'NETWORK_NOT_REGISTERED',
         'NO_SIGNAL',
     ];
+
+    /**
+     * @param \App\Services\GatewaySettingService $gatewaySettingService
+     */
+    public function __construct(GatewaySettingService $gatewaySettingService)
+    {
+        $this->gatewaySettingService = $gatewaySettingService;
+    }
 
     /**
      * Handle outbound send failure by scheduling fixed-interval retry.
@@ -211,7 +224,7 @@ class OutboundRetryService
      */
     protected function retryDelaySeconds(): int
     {
-        return max(1, (int) config('services.gateway.outbound_retry_base_delay_seconds', 10));
+        return max(1, $this->gatewaySettingService->int('outbound_retry_base_delay_seconds', 10));
     }
 
     /**
@@ -219,6 +232,6 @@ class OutboundRetryService
      */
     protected function retryAllFailuresEnabled(): bool
     {
-        return (bool) config('services.gateway.outbound_retry_all_failures', true);
+        return $this->gatewaySettingService->bool('outbound_retry_all_failures', true);
     }
 }

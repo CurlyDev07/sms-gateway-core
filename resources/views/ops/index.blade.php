@@ -240,8 +240,15 @@
 
         <section class="mt-4">
             <article class="glass rounded-xl p-4">
-                <h2 class="text-lg font-semibold">Gateway Settings</h2>
-                <p class="mt-1 text-xs text-slate-400">Effective runtime parameters used by retry, cooldown suppression, and SIM selection policies.</p>
+                <div class="flex flex-wrap items-center justify-between gap-2">
+                    <div>
+                        <h2 class="text-lg font-semibold">Gateway Settings</h2>
+                        <p class="mt-1 text-xs text-slate-400">Editable runtime parameters used by retry, cooldown suppression, and SIM selection policies.</p>
+                    </div>
+                    <button id="saveAllSettingsBtn" class="rounded-xl bg-indigo-400 px-4 py-2 text-sm font-semibold text-slate-950 transition hover:bg-indigo-300">
+                        Save All Settings
+                    </button>
+                </div>
                 <div class="table-wrap mt-3 rounded-lg border border-slate-700">
                     <table class="w-full text-left text-xs">
                         <thead class="bg-slate-900 text-slate-300">
@@ -249,6 +256,7 @@
                                 <th class="px-3 py-2">Setting</th>
                                 <th class="px-3 py-2">Value</th>
                                 <th class="px-3 py-2">Description</th>
+                                <th class="px-3 py-2">Action</th>
                             </tr>
                         </thead>
                         <tbody id="settingsRows" class="divide-y divide-slate-800"></tbody>
@@ -262,11 +270,13 @@
         const dataUrl = '/ops/data';
         const retryInboundUrl = '/ops/retry-all-inbound';
         const retryOutboundUrl = '/ops/retry-all-outbound';
+        const settingsUpdateUrl = '/ops/settings';
         const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
         const refreshBtn = document.getElementById('refreshBtn');
         const refreshDiscoverBtn = document.getElementById('refreshDiscoverBtn');
         const retryInboundBtn = document.getElementById('retryInboundBtn');
         const retryOutboundBtn = document.getElementById('retryOutboundBtn');
+        const saveAllSettingsBtn = document.getElementById('saveAllSettingsBtn');
         const autoRefreshToggle = document.getElementById('autoRefreshToggle');
         const actionStatus = document.getElementById('actionStatus');
         const lastUpdated = document.getElementById('lastUpdated');
@@ -361,6 +371,78 @@
             }
         };
 
+        const parseSettingInput = (input) => {
+            const type = input?.dataset?.settingType || 'int';
+            const key = input?.dataset?.settingKey || '';
+            const raw = input?.value ?? '';
+
+            if (!key) {
+                throw new Error('missing_setting_key');
+            }
+
+            if (type === 'bool') {
+                if (raw === 'true') return true;
+                if (raw === 'false') return false;
+                throw new Error(`Invalid boolean for ${key}`);
+            }
+
+            const parsed = Number(raw);
+            if (!Number.isFinite(parsed) || !Number.isInteger(parsed)) {
+                throw new Error(`Invalid integer for ${key}`);
+            }
+
+            const minAttr = input.dataset.settingMin;
+            const maxAttr = input.dataset.settingMax;
+            const min = minAttr !== undefined && minAttr !== '' ? Number(minAttr) : null;
+            const max = maxAttr !== undefined && maxAttr !== '' ? Number(maxAttr) : null;
+
+            if (min !== null && parsed < min) {
+                throw new Error(`${key} must be >= ${min}`);
+            }
+
+            if (max !== null && parsed > max) {
+                throw new Error(`${key} must be <= ${max}`);
+            }
+
+            return parsed;
+        };
+
+        const runSettingsSave = async (updates, sourceLabel, button = null) => {
+            if (!updates || Object.keys(updates).length === 0) {
+                setActionStatus(`No settings changes to save for ${sourceLabel}.`, 'error');
+                return;
+            }
+
+            if (button) button.disabled = true;
+            setActionStatus(`${sourceLabel} saving...`);
+
+            try {
+                const res = await fetch(settingsUpdateUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': csrfToken,
+                    },
+                    body: JSON.stringify({ settings: updates }),
+                });
+
+                const body = await res.json();
+                if (!res.ok || body?.ok !== true) {
+                    const details = body?.errors ? ` (${Object.keys(body.errors).join(', ')})` : '';
+                    throw new Error((body?.message || body?.error || `HTTP ${res.status}`) + details);
+                }
+
+                const updatedCount = Object.keys(body.updated || {}).length;
+                setActionStatus(`${sourceLabel} saved (${updatedCount} updated).`, 'ok');
+                await refreshData();
+            } catch (error) {
+                setActionStatus(`${sourceLabel} failed: ${error.message}`, 'error');
+            } finally {
+                if (button) button.disabled = false;
+            }
+        };
+
         const refreshData = async (options = {}) => {
             const forceDiscover = Boolean(options.refreshDiscover);
             refreshBtn.disabled = true;
@@ -426,23 +508,40 @@
                 </tr>`);
                 renderRows('simRows', simRows, 9);
 
-                const settingMeta = {
-                    outbound_retry_base_delay_seconds: 'Base seconds before retry scheduler runs failed send again.',
-                    outbound_retry_all_failures: 'When true, all send failures (including network/carrier) are retryable.',
-                    runtime_failure_window_minutes: 'Lookback window for SIM runtime error accumulation.',
-                    runtime_failure_threshold: 'Error count threshold before runtime suppression cooldown is applied.',
-                    runtime_suppression_minutes: 'Cooldown minutes applied when runtime error threshold is breached.',
-                    sim_selection_hysteresis_hold_seconds: 'Temporary hold duration for unstable SIMs in non-sticky assignment.',
-                    sim_selection_failure_window_minutes: 'Lookback window for SIM selection failure pressure.',
-                    sim_selection_failure_hold_threshold: 'Failure count threshold for non-sticky hold/deprioritization.',
-                    sim_selection_queue_hold_threshold: 'Queue depth threshold for non-sticky hold/deprioritization.'
-                };
-                const settingsRows = Object.entries(payload.settings || {}).map(([key, value]) => `<tr>
-                    <td class="mono px-3 py-2">${esc(key)}</td>
-                    <td class="mono px-3 py-2">${esc(value)}</td>
-                    <td class="px-3 py-2">${esc(settingMeta[key] || '-')}</td>
-                </tr>`);
-                renderRows('settingsRows', settingsRows, 3);
+                const definitions = payload.setting_definitions || {};
+                const values = payload.settings || {};
+                const settingsRows = Object.entries(definitions).map(([key, meta]) => {
+                    const type = meta?.type || 'int';
+                    const value = Object.prototype.hasOwnProperty.call(values, key) ? values[key] : meta?.default;
+                    const min = meta?.min ?? '';
+                    const max = meta?.max ?? '';
+                    const inputHtml = type === 'bool'
+                        ? `<select class="settingInput mono w-full rounded-md border border-slate-600 bg-slate-900 px-2 py-1 text-slate-100" data-setting-key="${esc(key)}" data-setting-type="bool">
+                            <option value="true" ${value === true ? 'selected' : ''}>true</option>
+                            <option value="false" ${value === false ? 'selected' : ''}>false</option>
+                        </select>`
+                        : `<input type="number" class="settingInput mono w-full rounded-md border border-slate-600 bg-slate-900 px-2 py-1 text-slate-100" value="${esc(value)}" data-setting-key="${esc(key)}" data-setting-type="int" data-setting-min="${esc(min)}" data-setting-max="${esc(max)}" min="${esc(min)}" max="${esc(max)}">`;
+
+                    return `<tr>
+                        <td class="px-3 py-2">
+                            <div class="flex items-center gap-2">
+                                <span class="mono">${esc(meta?.label || key)}</span>
+                                <span class="group relative inline-flex cursor-help items-center justify-center rounded-full border border-slate-600 px-1.5 py-0.5 text-[10px] font-bold text-slate-300">i
+                                    <span class="pointer-events-none absolute left-1/2 top-full z-20 mt-2 w-72 -translate-x-1/2 rounded-md border border-slate-700 bg-slate-950 px-2 py-2 text-[11px] text-slate-200 opacity-0 shadow-xl transition group-hover:opacity-100">${esc(meta?.hint || meta?.description || '-')}</span>
+                                </span>
+                            </div>
+                            <div class="mono mt-1 text-[10px] text-slate-500">${esc(key)}</div>
+                        </td>
+                        <td class="px-3 py-2">${inputHtml}</td>
+                        <td class="px-3 py-2 text-slate-300">${esc(meta?.description || '-')}</td>
+                        <td class="px-3 py-2">
+                            <button class="saveSettingBtn rounded-lg bg-indigo-400 px-2 py-1 text-[11px] font-semibold text-slate-950 hover:bg-indigo-300" data-setting-key="${esc(key)}">
+                                Save
+                            </button>
+                        </td>
+                    </tr>`;
+                });
+                renderRows('settingsRows', settingsRows, 4);
 
                 const redisRows = (payload.redis?.sim_queue_rows || payload.tables?.redis_sim_queues || []).slice(0, 200).map((row) => {
                     const chatDepth = row.depth?.chat ?? 0;
@@ -540,6 +639,22 @@
         refreshDiscoverBtn.addEventListener('click', () => refreshData({ refreshDiscover: true }));
         retryInboundBtn.addEventListener('click', () => runRetryAction(retryInboundUrl, retryInboundBtn, { limit: 2000 }, 'Retry inbound'));
         retryOutboundBtn.addEventListener('click', () => runRetryAction(retryOutboundUrl, retryOutboundBtn, { limit: 5000 }, 'Retry outbound'));
+        saveAllSettingsBtn.addEventListener('click', async () => {
+            const inputs = Array.from(document.querySelectorAll('.settingInput'));
+            const updates = {};
+
+            try {
+                for (const input of inputs) {
+                    const key = input.dataset.settingKey;
+                    updates[key] = parseSettingInput(input);
+                }
+            } catch (error) {
+                setActionStatus(`Save settings failed: ${error.message}`, 'error');
+                return;
+            }
+
+            await runSettingsSave(updates, 'Save all settings', saveAllSettingsBtn);
+        });
         autoRefreshToggle.addEventListener('change', startAutoRefresh);
         document.getElementById('simRows').addEventListener('click', (event) => {
             const button = event.target.closest('.clearCooldownBtn');
@@ -547,6 +662,22 @@
             const simId = button.getAttribute('data-sim-id');
             if (!simId) return;
             runRetryAction(`/ops/sims/${simId}/clear-cooldown`, button, {}, `Clear cooldown SIM ${simId}`);
+        });
+        document.getElementById('settingsRows').addEventListener('click', async (event) => {
+            const button = event.target.closest('.saveSettingBtn');
+            if (!button) return;
+
+            const row = button.closest('tr');
+            const input = row ? row.querySelector('.settingInput') : null;
+            if (!input) return;
+
+            try {
+                const key = input.dataset.settingKey;
+                const value = parseSettingInput(input);
+                await runSettingsSave({ [key]: value }, `Save ${key}`, button);
+            } catch (error) {
+                setActionStatus(`Save setting failed: ${error.message}`, 'error');
+            }
         });
 
         refreshData();

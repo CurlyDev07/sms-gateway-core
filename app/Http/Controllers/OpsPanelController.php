@@ -6,6 +6,7 @@ use App\Models\ApiClient;
 use App\Models\InboundMessage;
 use App\Models\OutboundMessage;
 use App\Models\Sim;
+use App\Services\GatewaySettingService;
 use App\Services\InboundRelayRetryService;
 use App\Services\PythonRuntimeClient;
 use App\Services\RedisQueueService;
@@ -40,7 +41,8 @@ class OpsPanelController extends Controller
     public function data(
         Request $request,
         PythonRuntimeClient $runtimeClient,
-        RedisQueueService $redisQueueService
+        RedisQueueService $redisQueueService,
+        GatewaySettingService $gatewaySettingService
     ): JsonResponse {
         $runtimeHealth = $runtimeClient->health();
         $normalizedHealthModems = $this->normalizeModemRows($runtimeHealth['modems'] ?? []);
@@ -338,7 +340,7 @@ class OpsPanelController extends Controller
             $sendingStaleCount,
             $queuedOldCount
         );
-        $gatewaySettings = $this->buildGatewaySettings();
+        $gatewaySettings = $this->buildGatewaySettings($gatewaySettingService);
 
         return response()->json([
             'ok' => true,
@@ -390,7 +392,8 @@ class OpsPanelController extends Controller
                     'active_api_clients_total' => count($activeApiClients),
                 ],
             ],
-            'settings' => $gatewaySettings,
+            'settings' => $gatewaySettings['values'],
+            'setting_definitions' => $gatewaySettings['definitions'],
             'redis' => [
                 'ping_ok' => (bool) $redisPing['ok'],
                 'ping_reply' => $redisPing['reply'],
@@ -569,6 +572,39 @@ class OpsPanelController extends Controller
                 'burst_count' => 0,
             ],
         ]);
+    }
+
+    /**
+     * Update one or more gateway runtime settings from Ops panel.
+     *
+     * @param \Illuminate\Http\Request $request
+     * @param \App\Services\GatewaySettingService $gatewaySettingService
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function updateSettings(Request $request, GatewaySettingService $gatewaySettingService): JsonResponse
+    {
+        $settings = $request->input('settings');
+
+        if (!is_array($settings) || $settings === []) {
+            return response()->json([
+                'ok' => false,
+                'error' => 'invalid_settings_payload',
+                'message' => 'Expected non-empty "settings" object.',
+            ], 422);
+        }
+
+        $result = $gatewaySettingService->updateMany($settings);
+        $hasErrors = $result['errors'] !== [];
+
+        return response()->json([
+            'ok' => !$hasErrors,
+            'message' => $hasErrors
+                ? 'Some settings were not saved. Check errors.'
+                : 'Settings updated.',
+            'updated' => $result['updated'],
+            'errors' => $result['errors'],
+            'settings' => $gatewaySettingService->values(),
+        ], $hasErrors ? 422 : 200);
     }
 
     /**
@@ -781,18 +817,11 @@ class OpsPanelController extends Controller
     /**
      * @return array<string,mixed>
      */
-    protected function buildGatewaySettings(): array
+    protected function buildGatewaySettings(GatewaySettingService $gatewaySettingService): array
     {
         return [
-            'outbound_retry_base_delay_seconds' => max(1, (int) config('services.gateway.outbound_retry_base_delay_seconds', 10)),
-            'outbound_retry_all_failures' => (bool) config('services.gateway.outbound_retry_all_failures', true),
-            'runtime_failure_window_minutes' => max(1, (int) config('services.gateway.runtime_failure_window_minutes', 15)),
-            'runtime_failure_threshold' => max(1, (int) config('services.gateway.runtime_failure_threshold', 3)),
-            'runtime_suppression_minutes' => max(1, (int) config('services.gateway.runtime_suppression_minutes', 15)),
-            'sim_selection_hysteresis_hold_seconds' => max(1, (int) config('services.gateway.sim_selection_hysteresis_hold_seconds', 300)),
-            'sim_selection_failure_window_minutes' => max(1, (int) config('services.gateway.sim_selection_failure_window_minutes', 15)),
-            'sim_selection_failure_hold_threshold' => max(1, (int) config('services.gateway.sim_selection_failure_hold_threshold', 3)),
-            'sim_selection_queue_hold_threshold' => max(1, (int) config('services.gateway.sim_selection_queue_hold_threshold', 100)),
+            'values' => $gatewaySettingService->values(),
+            'definitions' => $gatewaySettingService->valuesForOps(),
         ];
     }
 

@@ -45,6 +45,7 @@ Route::get('/v2/status.php', [InfotxtStatusController::class, 'show']);
 Route::prefix('ops')->group(function () {
     Route::get('/', [OpsPanelController::class, 'index'])->name('ops.index');
     Route::get('/data', [OpsPanelController::class, 'data'])->name('ops.data');
+    Route::post('/settings', [OpsPanelController::class, 'updateSettings'])->name('ops.settings.update');
     Route::post('/retry-all-inbound', [OpsPanelController::class, 'retryAllInbound'])->name('ops.retry.inbound');
     Route::post('/retry-all-outbound', [OpsPanelController::class, 'retryAllOutbound'])->name('ops.retry.outbound');
     Route::post('/sims/{id}/clear-cooldown', [OpsPanelController::class, 'clearSimCooldown'])->name('ops.sims.clear_cooldown');

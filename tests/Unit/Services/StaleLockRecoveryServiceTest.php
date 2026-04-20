@@ -33,6 +33,7 @@ class StaleLockRecoveryServiceTest extends TestCase
     {
         Carbon::setTestNow(Carbon::parse('2026-04-03 10:00:00'));
         config()->set('services.gateway.outbound_stale_lock_seconds', 300);
+        config()->set('services.gateway.outbound_retry_base_delay_seconds', 300);
 
         $company = $this->createCompany();
         $simA = $this->createSim($company);
@@ -101,6 +102,7 @@ class StaleLockRecoveryServiceTest extends TestCase
     {
         Carbon::setTestNow(Carbon::parse('2026-04-03 11:00:00'));
         config()->set('services.gateway.outbound_stale_lock_seconds', 300);
+        config()->set('services.gateway.outbound_retry_base_delay_seconds', 300);
 
         $company = $this->createCompany();
         $sim = $this->createSim($company);

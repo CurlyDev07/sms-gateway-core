@@ -6,6 +6,7 @@ use App\Models\ApiClient;
 use App\Models\InboundMessage;
 use App\Models\OutboundMessage;
 use App\Jobs\RetryInboundRelayJob;
+use App\Models\GatewaySetting;
 use App\Services\RedisQueueService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
@@ -112,6 +113,7 @@ class OpsPanelTest extends TestCase
                     'entities',
                 ],
                 'settings',
+                'setting_definitions',
                 'runtime' => [
                     'health',
                     'discovery' => ['ok', 'status', 'error', 'modems'],
@@ -132,6 +134,7 @@ class OpsPanelTest extends TestCase
         $this->assertNotEmpty($payload['tables']['outbound_recent']);
         $this->assertNotEmpty($payload['tables']['api_clients']);
         $this->assertArrayHasKey('outbound_retry_all_failures', $payload['settings']);
+        $this->assertArrayHasKey('runtime_suppression_minutes', $payload['setting_definitions']);
     }
 
     /** @test */
@@ -276,5 +279,41 @@ class OpsPanelTest extends TestCase
         $this->assertSame('NORMAL', $fresh->mode);
         $this->assertNull($fresh->cooldown_until);
         $this->assertSame(0, (int) $fresh->burst_count);
+    }
+
+    /** @test */
+    public function update_settings_endpoint_persists_and_reflects_in_ops_data(): void
+    {
+        $response = $this->postJson('/ops/settings', [
+            'settings' => [
+                'runtime_failure_window_minutes' => 12,
+                'runtime_failure_threshold' => 5,
+                'runtime_suppression_minutes' => 20,
+                'outbound_retry_all_failures' => false,
+            ],
+        ]);
+
+        $response->assertStatus(200)
+            ->assertJsonPath('ok', true)
+            ->assertJsonPath('settings.runtime_failure_window_minutes', 12)
+            ->assertJsonPath('settings.runtime_failure_threshold', 5)
+            ->assertJsonPath('settings.runtime_suppression_minutes', 20)
+            ->assertJsonPath('settings.outbound_retry_all_failures', false);
+
+        $this->assertSame(
+            '20',
+            GatewaySetting::query()->where('setting_key', 'runtime_suppression_minutes')->value('setting_value')
+        );
+        $this->assertSame(
+            '0',
+            GatewaySetting::query()->where('setting_key', 'outbound_retry_all_failures')->value('setting_value')
+        );
+
+        $data = $this->getJson('/ops/data');
+        $data->assertStatus(200)
+            ->assertJsonPath('settings.runtime_failure_window_minutes', 12)
+            ->assertJsonPath('settings.runtime_failure_threshold', 5)
+            ->assertJsonPath('settings.runtime_suppression_minutes', 20)
+            ->assertJsonPath('settings.outbound_retry_all_failures', false);
     }
 }

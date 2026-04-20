@@ -15,11 +15,21 @@ class InboundRelayRetryService
     protected $inboundRelayService;
 
     /**
-     * @param \App\Services\InboundRelayService $inboundRelayService
+     * @var \App\Services\GatewaySettingService
      */
-    public function __construct(InboundRelayService $inboundRelayService)
+    protected $gatewaySettingService;
+
+    /**
+     * @param \App\Services\InboundRelayService $inboundRelayService
+     * @param \App\Services\GatewaySettingService $gatewaySettingService
+     */
+    public function __construct(
+        InboundRelayService $inboundRelayService,
+        GatewaySettingService $gatewaySettingService
+    )
     {
         $this->inboundRelayService = $inboundRelayService;
+        $this->gatewaySettingService = $gatewaySettingService;
     }
 
     /**
@@ -54,7 +64,7 @@ class InboundRelayRetryService
      */
     public function dispatchDueRetries(int $limit = 100): int
     {
-        $lockSeconds = (int) config('services.gateway.inbound_relay_lock_seconds', 120);
+        $lockSeconds = $this->gatewaySettingService->int('inbound_relay_lock_seconds', 120);
         $activeLockCutoff = now()->subSeconds($lockSeconds);
 
         $candidateIds = InboundMessage::query()
@@ -100,7 +110,7 @@ class InboundRelayRetryService
                 return null;
             }
 
-            $lockSeconds = (int) config('services.gateway.inbound_relay_lock_seconds', 120);
+            $lockSeconds = $this->gatewaySettingService->int('inbound_relay_lock_seconds', 120);
             $activeLockCutoff = now()->subSeconds($lockSeconds);
 
             if ($message->relay_locked_at !== null && $message->relay_locked_at->greaterThan($activeLockCutoff)) {
@@ -126,7 +136,7 @@ class InboundRelayRetryService
      */
     protected function handleRelayFailure(int $messageId): bool
     {
-        $maxAttempts = (int) config('services.gateway.inbound_relay_retry_max_attempts', 3);
+        $maxAttempts = $this->gatewaySettingService->int('inbound_relay_retry_max_attempts', 3);
 
         return DB::transaction(function () use ($messageId, $maxAttempts) {
             $message = InboundMessage::query()->lockForUpdate()->find($messageId);
@@ -197,8 +207,8 @@ class InboundRelayRetryService
      */
     protected function retryDelaySeconds(int $attempt): int
     {
-        $baseDelay = (int) config('services.gateway.inbound_relay_retry_base_delay_seconds', 30);
-        $maxDelay = (int) config('services.gateway.inbound_relay_retry_max_delay_seconds', 300);
+        $baseDelay = $this->gatewaySettingService->int('inbound_relay_retry_base_delay_seconds', 30);
+        $maxDelay = $this->gatewaySettingService->int('inbound_relay_retry_max_delay_seconds', 300);
 
         $safeAttempt = max(1, $attempt);
         $delay = $baseDelay * (2 ** ($safeAttempt - 1));

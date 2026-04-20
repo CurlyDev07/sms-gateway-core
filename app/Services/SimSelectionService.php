@@ -12,6 +12,19 @@ use Illuminate\Support\Facades\Log;
 class SimSelectionService
 {
     /**
+     * @var \App\Services\GatewaySettingService
+     */
+    protected $gatewaySettingService;
+
+    /**
+     * @param \App\Services\GatewaySettingService $gatewaySettingService
+     */
+    public function __construct(GatewaySettingService $gatewaySettingService)
+    {
+        $this->gatewaySettingService = $gatewaySettingService;
+    }
+
+    /**
      * Select the best SIM for a company using strict availability rules.
      *
      * @param int $companyId
@@ -181,7 +194,7 @@ class SimSelectionService
             return [];
         }
 
-        $windowMinutes = max(1, (int) config('services.gateway.sim_selection_failure_window_minutes', 15));
+        $windowMinutes = max(1, $this->gatewaySettingService->int('sim_selection_failure_window_minutes', 15));
         $windowStart = now()->subMinutes($windowMinutes);
 
         return OutboundMessage::query()
@@ -203,8 +216,8 @@ class SimSelectionService
      */
     protected function shouldDeprioritize(Sim $sim, int $recentFailures): bool
     {
-        $queueThreshold = max(1, (int) config('services.gateway.sim_selection_queue_hold_threshold', 100));
-        $failureThreshold = max(1, (int) config('services.gateway.sim_selection_failure_hold_threshold', 3));
+        $queueThreshold = max(1, $this->gatewaySettingService->int('sim_selection_queue_hold_threshold', 100));
+        $failureThreshold = max(1, $this->gatewaySettingService->int('sim_selection_failure_hold_threshold', 3));
         $currentLoad = (int) ($sim->current_load ?? 0);
 
         return $currentLoad >= $queueThreshold || $recentFailures >= $failureThreshold;
@@ -219,7 +232,7 @@ class SimSelectionService
     {
         $simId = (int) $sim->id;
         $currentLoad = (int) ($sim->current_load ?? 0);
-        $holdSeconds = max(30, (int) config('services.gateway.sim_selection_hysteresis_hold_seconds', 300));
+        $holdSeconds = max(30, $this->gatewaySettingService->int('sim_selection_hysteresis_hold_seconds', 300));
         $key = $this->holdCacheKey($simId);
 
         if (!Cache::has($key)) {

@@ -14,11 +14,21 @@ class StaleLockRecoveryService
     protected $outboundRetryService;
 
     /**
-     * @param \App\Services\OutboundRetryService $outboundRetryService
+     * @var \App\Services\GatewaySettingService
      */
-    public function __construct(OutboundRetryService $outboundRetryService)
+    protected $gatewaySettingService;
+
+    /**
+     * @param \App\Services\OutboundRetryService $outboundRetryService
+     * @param \App\Services\GatewaySettingService $gatewaySettingService
+     */
+    public function __construct(
+        OutboundRetryService $outboundRetryService,
+        GatewaySettingService $gatewaySettingService
+    )
     {
         $this->outboundRetryService = $outboundRetryService;
+        $this->gatewaySettingService = $gatewaySettingService;
     }
 
     /**
@@ -29,7 +39,7 @@ class StaleLockRecoveryService
      */
     public function recoverStaleLockedMessages(int $limit = 100): int
     {
-        $staleCutoff = now()->subSeconds((int) config('services.gateway.outbound_stale_lock_seconds', 300));
+        $staleCutoff = now()->subSeconds($this->gatewaySettingService->int('outbound_stale_lock_seconds', 300));
 
         $ids = OutboundMessage::query()
             ->where('status', 'sending')

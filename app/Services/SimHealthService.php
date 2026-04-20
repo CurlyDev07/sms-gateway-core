@@ -16,6 +16,19 @@ class SimHealthService
     private const RUNTIME_SUPPRESSION_MINUTES = 15;
 
     /**
+     * @var \App\Services\GatewaySettingService
+     */
+    protected $gatewaySettingService;
+
+    /**
+     * @param \App\Services\GatewaySettingService $gatewaySettingService
+     */
+    public function __construct(GatewaySettingService $gatewaySettingService)
+    {
+        $this->gatewaySettingService = $gatewaySettingService;
+    }
+
+    /**
      * Evaluate SIM health using last_success_at only.
      *
      * @param \App\Models\Sim $sim
@@ -367,7 +380,7 @@ class SimHealthService
      */
     protected function runtimeFailureWindowMinutes(): int
     {
-        return max(1, (int) config('services.gateway.runtime_failure_window_minutes', self::RUNTIME_FAILURE_WINDOW_MINUTES));
+        return max(1, $this->gatewaySettingService->int('runtime_failure_window_minutes', self::RUNTIME_FAILURE_WINDOW_MINUTES));
     }
 
     /**
@@ -375,7 +388,7 @@ class SimHealthService
      */
     protected function runtimeFailureThreshold(): int
     {
-        return max(1, (int) config('services.gateway.runtime_failure_threshold', self::RUNTIME_FAILURE_THRESHOLD));
+        return max(1, $this->gatewaySettingService->int('runtime_failure_threshold', self::RUNTIME_FAILURE_THRESHOLD));
     }
 
     /**
@@ -383,6 +396,6 @@ class SimHealthService
      */
     protected function runtimeSuppressionMinutes(): int
     {
-        return max(1, (int) config('services.gateway.runtime_suppression_minutes', self::RUNTIME_SUPPRESSION_MINUTES));
+        return max(1, $this->gatewaySettingService->int('runtime_suppression_minutes', self::RUNTIME_SUPPRESSION_MINUTES));
     }
 }
