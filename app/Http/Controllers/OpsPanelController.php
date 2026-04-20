@@ -74,6 +74,7 @@ class OpsPanelController extends Controller
                 'phone_number',
                 'imsi',
                 'status',
+                'mode',
                 'operator_status',
                 'accept_new_assignments',
                 'disabled_for_new_assignments',
@@ -85,10 +86,15 @@ class OpsPanelController extends Controller
         $simRows = [];
         $redisQueueRows = [];
         $redisNonEmptySimQueues = 0;
+        $cooldownActiveSimCount = 0;
         $perSimQueueTotal = 0;
         foreach ($sims as $sim) {
             $simId = (int) $sim->id;
             $runtime = $runtimeByImsi[(string) $sim->imsi] ?? null;
+            $cooldownActive = $sim->cooldown_until !== null && $sim->cooldown_until->greaterThan(now());
+            $cooldownRemainingSeconds = $cooldownActive
+                ? max(0, now()->diffInSeconds($sim->cooldown_until, false))
+                : 0;
 
             $chatKey = $redisQueueService->queueKey($simId, 'chat');
             $followupKey = $redisQueueService->queueKey($simId, 'followup');
@@ -108,6 +114,9 @@ class OpsPanelController extends Controller
             if ($queueTotal > 0) {
                 $redisNonEmptySimQueues++;
             }
+            if ($cooldownActive) {
+                $cooldownActiveSimCount++;
+            }
 
             $simRows[] = [
                 'sim_id' => $simId,
@@ -117,10 +126,13 @@ class OpsPanelController extends Controller
                 'phone_number' => (string) $sim->phone_number,
                 'imsi' => $sim->imsi !== null ? (string) $sim->imsi : null,
                 'status' => (string) $sim->status,
+                'mode' => (string) ($sim->mode ?? 'NORMAL'),
                 'operator_status' => (string) $sim->operator_status,
                 'accept_new_assignments' => (bool) $sim->accept_new_assignments,
                 'disabled_for_new_assignments' => (bool) $sim->disabled_for_new_assignments,
                 'cooldown_until' => $sim->cooldown_until !== null ? $sim->cooldown_until->toIso8601String() : null,
+                'cooldown_active' => $cooldownActive,
+                'cooldown_remaining_seconds' => $cooldownRemainingSeconds,
                 'last_success_at' => $sim->last_success_at !== null ? $sim->last_success_at->toIso8601String() : null,
                 'last_error_at' => $sim->last_error_at !== null ? $sim->last_error_at->toIso8601String() : null,
                 'queue_depth' => [
@@ -354,6 +366,7 @@ class OpsPanelController extends Controller
                     'default_depth' => $defaultQueueDepth,
                     'per_sim_total_depth' => $perSimQueueTotal,
                     'non_empty_sim_queues' => $redisNonEmptySimQueues,
+                    'cooldown_active_sims' => $cooldownActiveSimCount,
                     'sending_stale_count' => $sendingStaleCount,
                     'queued_old_count' => $queuedOldCount,
                 ],

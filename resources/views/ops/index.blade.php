@@ -125,6 +125,7 @@
                                 <th class="px-3 py-2">Company</th>
                                 <th class="px-3 py-2">IMSI</th>
                                 <th class="px-3 py-2">Status</th>
+                                <th class="px-3 py-2">Cooldown</th>
                                 <th class="px-3 py-2">Assignable</th>
                                 <th class="px-3 py-2">Queue</th>
                                 <th class="px-3 py-2">Runtime</th>
@@ -391,11 +392,15 @@
                     <td class="px-3 py-2">${esc(row.company_code || row.company_id)}</td>
                     <td class="mono px-3 py-2">${esc(row.imsi || '-')}</td>
                     <td class="px-3 py-2">${badge(row.operator_status)}</td>
+                    <td class="px-3 py-2">${row.cooldown_active
+                        ? `<span class="inline-flex rounded-full border border-amber-500/40 bg-amber-500/20 px-2 py-0.5 text-[11px] font-semibold text-amber-300">ON (${Math.ceil((row.cooldown_remaining_seconds || 0)/60)}m)</span>`
+                        : `<span class="inline-flex rounded-full border border-emerald-500/40 bg-emerald-500/20 px-2 py-0.5 text-[11px] font-semibold text-emerald-300">OFF</span>`}
+                    </td>
                     <td class="px-3 py-2">${badge(String(Boolean(row.accept_new_assignments && !row.disabled_for_new_assignments)))}</td>
                     <td class="mono px-3 py-2">${esc(`${row.queue_depth?.total ?? 0} (${row.queue_depth?.chat ?? 0}/${row.queue_depth?.followup ?? 0}/${row.queue_depth?.blasting ?? 0})`)}</td>
                     <td class="px-3 py-2">${badge(String(Boolean(row.runtime?.send_ready ?? row.runtime?.effective_send_ready ?? row.runtime?.realtime_probe_ready ?? false)))}</td>
                 </tr>`);
-                renderRows('simRows', simRows, 7);
+                renderRows('simRows', simRows, 8);
 
                 const redisRows = (payload.redis?.sim_queue_rows || payload.tables?.redis_sim_queues || []).slice(0, 200).map((row) => {
                     const chatDepth = row.depth?.chat ?? 0;
@@ -461,6 +466,7 @@
                     `queue_default=${esc(summary.queues?.default_depth ?? 0)}`,
                     `queue_per_sim_total=${esc(summary.queues?.per_sim_total_depth ?? 0)}`,
                     `queue_non_empty_sims=${esc(summary.queues?.non_empty_sim_queues ?? 0)}`,
+                    `queue_cooldown_active_sims=${esc(summary.queues?.cooldown_active_sims ?? 0)}`,
                     `sending_stale=${esc(summary.queues?.sending_stale_count ?? 0)}`,
                     `queued_old=${esc(summary.queues?.queued_old_count ?? 0)}`,
                     `redis_ping_ok=${esc(payload.redis?.ping_ok ?? false)}`,
