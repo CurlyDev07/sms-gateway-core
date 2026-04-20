@@ -515,6 +515,9 @@
                     const value = Object.prototype.hasOwnProperty.call(values, key) ? values[key] : meta?.default;
                     const min = meta?.min ?? '';
                     const max = meta?.max ?? '';
+                    const tooltipText = [meta?.description, meta?.hint, meta?.scenario]
+                        .filter((v) => Boolean(v && String(v).trim() !== ''))
+                        .join('\n\n');
                     const inputHtml = type === 'bool'
                         ? `<select class="settingInput mono w-full rounded-md border border-slate-600 bg-slate-900 px-2 py-1 text-slate-100" data-setting-key="${esc(key)}" data-setting-type="bool">
                             <option value="true" ${value === true ? 'selected' : ''}>true</option>
@@ -526,8 +529,8 @@
                         <td class="px-3 py-2">
                             <div class="flex items-center gap-2">
                                 <span class="mono">${esc(meta?.label || key)}</span>
-                                <span class="group relative inline-flex cursor-help items-center justify-center rounded-full border border-slate-600 px-1.5 py-0.5 text-[10px] font-bold text-slate-300">i
-                                    <span class="pointer-events-none absolute left-1/2 top-full z-20 mt-2 w-72 -translate-x-1/2 rounded-md border border-slate-700 bg-slate-950 px-2 py-2 text-[11px] text-slate-200 opacity-0 shadow-xl transition group-hover:opacity-100">${esc(meta?.hint || meta?.description || '-')}</span>
+                                <span tabindex="0" title="${esc(tooltipText || '-')}" class="group relative inline-flex h-5 w-5 cursor-help items-center justify-center rounded-full border border-slate-600 text-[11px] font-bold text-slate-300 outline-none ring-sky-400 transition focus:ring-1">i
+                                    <span class="pointer-events-none absolute left-1/2 top-full z-50 mt-2 w-[28rem] max-w-[80vw] -translate-x-1/2 whitespace-pre-wrap rounded-md border border-slate-700 bg-slate-950 px-2 py-2 text-[11px] text-slate-200 opacity-0 shadow-xl transition group-hover:opacity-100 group-focus:opacity-100">${esc(tooltipText || '-')}</span>
                                 </span>
                             </div>
                             <div class="mono mt-1 text-[10px] text-slate-500">${esc(key)}</div>
