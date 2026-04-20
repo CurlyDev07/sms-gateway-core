@@ -47,6 +47,7 @@ Route::prefix('ops')->group(function () {
     Route::get('/data', [OpsPanelController::class, 'data'])->name('ops.data');
     Route::post('/retry-all-inbound', [OpsPanelController::class, 'retryAllInbound'])->name('ops.retry.inbound');
     Route::post('/retry-all-outbound', [OpsPanelController::class, 'retryAllOutbound'])->name('ops.retry.outbound');
+    Route::post('/sims/{id}/clear-cooldown', [OpsPanelController::class, 'clearSimCooldown'])->name('ops.sims.clear_cooldown');
 });
 
 Route::middleware('guest')->group(function () {

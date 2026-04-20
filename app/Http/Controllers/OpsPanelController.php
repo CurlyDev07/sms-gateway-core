@@ -338,6 +338,7 @@ class OpsPanelController extends Controller
             $sendingStaleCount,
             $queuedOldCount
         );
+        $gatewaySettings = $this->buildGatewaySettings();
 
         return response()->json([
             'ok' => true,
@@ -389,6 +390,7 @@ class OpsPanelController extends Controller
                     'active_api_clients_total' => count($activeApiClients),
                 ],
             ],
+            'settings' => $gatewaySettings,
             'redis' => [
                 'ping_ok' => (bool) $redisPing['ok'],
                 'ping_reply' => $redisPing['reply'],
@@ -523,6 +525,49 @@ class OpsPanelController extends Controller
             'retry_at' => $retryAt->toIso8601String(),
             'enqueued' => (int) $enqueuedCount,
             'scheduler_output' => $schedulerOutput,
+        ]);
+    }
+
+    /**
+     * Manually clear cooldown state for one SIM.
+     *
+     * @param \Illuminate\Http\Request $request
+     * @param int $id
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function clearSimCooldown(Request $request, int $id): JsonResponse
+    {
+        $sim = Sim::query()->find($id);
+
+        if ($sim === null) {
+            return response()->json([
+                'ok' => false,
+                'error' => 'sim_not_found',
+            ], 404);
+        }
+
+        $previous = [
+            'mode' => (string) ($sim->mode ?? 'NORMAL'),
+            'cooldown_until' => $sim->cooldown_until !== null ? $sim->cooldown_until->toIso8601String() : null,
+            'burst_count' => (int) $sim->burst_count,
+        ];
+
+        $sim->update([
+            'mode' => 'NORMAL',
+            'cooldown_until' => null,
+            'burst_count' => 0,
+        ]);
+
+        return response()->json([
+            'ok' => true,
+            'message' => 'SIM cooldown cleared.',
+            'sim_id' => (int) $sim->id,
+            'previous' => $previous,
+            'current' => [
+                'mode' => (string) ($sim->fresh()->mode ?? 'NORMAL'),
+                'cooldown_until' => null,
+                'burst_count' => 0,
+            ],
         ]);
     }
 
@@ -731,6 +776,24 @@ class OpsPanelController extends Controller
                 'error' => $e->getMessage(),
             ];
         }
+    }
+
+    /**
+     * @return array<string,mixed>
+     */
+    protected function buildGatewaySettings(): array
+    {
+        return [
+            'outbound_retry_base_delay_seconds' => max(1, (int) config('services.gateway.outbound_retry_base_delay_seconds', 10)),
+            'outbound_retry_all_failures' => (bool) config('services.gateway.outbound_retry_all_failures', true),
+            'runtime_failure_window_minutes' => max(1, (int) config('services.gateway.runtime_failure_window_minutes', 15)),
+            'runtime_failure_threshold' => max(1, (int) config('services.gateway.runtime_failure_threshold', 3)),
+            'runtime_suppression_minutes' => max(1, (int) config('services.gateway.runtime_suppression_minutes', 15)),
+            'sim_selection_hysteresis_hold_seconds' => max(1, (int) config('services.gateway.sim_selection_hysteresis_hold_seconds', 300)),
+            'sim_selection_failure_window_minutes' => max(1, (int) config('services.gateway.sim_selection_failure_window_minutes', 15)),
+            'sim_selection_failure_hold_threshold' => max(1, (int) config('services.gateway.sim_selection_failure_hold_threshold', 3)),
+            'sim_selection_queue_hold_threshold' => max(1, (int) config('services.gateway.sim_selection_queue_hold_threshold', 100)),
+        ];
     }
 
     /**

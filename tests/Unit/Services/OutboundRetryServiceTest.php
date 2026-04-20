@@ -19,6 +19,7 @@ class OutboundRetryServiceTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        config()->set('services.gateway.outbound_retry_all_failures', false);
         $this->service = app(OutboundRetryService::class);
     }
 
@@ -172,5 +173,17 @@ class OutboundRetryServiceTest extends TestCase
 
         $this->assertTrue($decision['retryable']);
         $this->assertSame('retryable', $decision['classification']);
+    }
+
+    /** @test */
+    public function classify_failure_retries_all_when_operator_policy_enabled(): void
+    {
+        config()->set('services.gateway.outbound_retry_all_failures', true);
+
+        $decision = $this->service->classifyFailure('SEND_FAILED', 'network');
+
+        $this->assertTrue($decision['retryable']);
+        $this->assertSame('retryable', $decision['classification']);
+        $this->assertSame('operator_policy_retry_all_failures', $decision['reason']);
     }
 }

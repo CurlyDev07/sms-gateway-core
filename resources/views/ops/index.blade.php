@@ -129,6 +129,7 @@
                                 <th class="px-3 py-2">Assignable</th>
                                 <th class="px-3 py-2">Queue</th>
                                 <th class="px-3 py-2">Runtime</th>
+                                <th class="px-3 py-2">Action</th>
                             </tr>
                         </thead>
                         <tbody id="simRows" class="divide-y divide-slate-800"></tbody>
@@ -232,6 +233,25 @@
                             </tr>
                         </thead>
                         <tbody id="redisQueueRows" class="divide-y divide-slate-800"></tbody>
+                    </table>
+                </div>
+            </article>
+        </section>
+
+        <section class="mt-4">
+            <article class="glass rounded-xl p-4">
+                <h2 class="text-lg font-semibold">Gateway Settings</h2>
+                <p class="mt-1 text-xs text-slate-400">Effective runtime parameters used by retry, cooldown suppression, and SIM selection policies.</p>
+                <div class="table-wrap mt-3 rounded-lg border border-slate-700">
+                    <table class="w-full text-left text-xs">
+                        <thead class="bg-slate-900 text-slate-300">
+                            <tr>
+                                <th class="px-3 py-2">Setting</th>
+                                <th class="px-3 py-2">Value</th>
+                                <th class="px-3 py-2">Description</th>
+                            </tr>
+                        </thead>
+                        <tbody id="settingsRows" class="divide-y divide-slate-800"></tbody>
                     </table>
                 </div>
             </article>
@@ -399,8 +419,30 @@
                     <td class="px-3 py-2">${badge(String(Boolean(row.accept_new_assignments && !row.disabled_for_new_assignments)))}</td>
                     <td class="mono px-3 py-2">${esc(`${row.queue_depth?.total ?? 0} (${row.queue_depth?.chat ?? 0}/${row.queue_depth?.followup ?? 0}/${row.queue_depth?.blasting ?? 0})`)}</td>
                     <td class="px-3 py-2">${badge(String(Boolean(row.runtime?.send_ready ?? row.runtime?.effective_send_ready ?? row.runtime?.realtime_probe_ready ?? false)))}</td>
+                    <td class="px-3 py-2">${row.cooldown_active
+                        ? `<button class="clearCooldownBtn rounded-lg bg-emerald-400 px-2 py-1 text-[11px] font-semibold text-slate-950 hover:bg-emerald-300" data-sim-id="${esc(row.sim_id)}">Clear</button>`
+                        : `<span class="text-slate-500">-</span>`}
+                    </td>
                 </tr>`);
-                renderRows('simRows', simRows, 8);
+                renderRows('simRows', simRows, 9);
+
+                const settingMeta = {
+                    outbound_retry_base_delay_seconds: 'Base seconds before retry scheduler runs failed send again.',
+                    outbound_retry_all_failures: 'When true, all send failures (including network/carrier) are retryable.',
+                    runtime_failure_window_minutes: 'Lookback window for SIM runtime error accumulation.',
+                    runtime_failure_threshold: 'Error count threshold before runtime suppression cooldown is applied.',
+                    runtime_suppression_minutes: 'Cooldown minutes applied when runtime error threshold is breached.',
+                    sim_selection_hysteresis_hold_seconds: 'Temporary hold duration for unstable SIMs in non-sticky assignment.',
+                    sim_selection_failure_window_minutes: 'Lookback window for SIM selection failure pressure.',
+                    sim_selection_failure_hold_threshold: 'Failure count threshold for non-sticky hold/deprioritization.',
+                    sim_selection_queue_hold_threshold: 'Queue depth threshold for non-sticky hold/deprioritization.'
+                };
+                const settingsRows = Object.entries(payload.settings || {}).map(([key, value]) => `<tr>
+                    <td class="mono px-3 py-2">${esc(key)}</td>
+                    <td class="mono px-3 py-2">${esc(value)}</td>
+                    <td class="px-3 py-2">${esc(settingMeta[key] || '-')}</td>
+                </tr>`);
+                renderRows('settingsRows', settingsRows, 3);
 
                 const redisRows = (payload.redis?.sim_queue_rows || payload.tables?.redis_sim_queues || []).slice(0, 200).map((row) => {
                     const chatDepth = row.depth?.chat ?? 0;
@@ -499,6 +541,13 @@
         retryInboundBtn.addEventListener('click', () => runRetryAction(retryInboundUrl, retryInboundBtn, { limit: 2000 }, 'Retry inbound'));
         retryOutboundBtn.addEventListener('click', () => runRetryAction(retryOutboundUrl, retryOutboundBtn, { limit: 5000 }, 'Retry outbound'));
         autoRefreshToggle.addEventListener('change', startAutoRefresh);
+        document.getElementById('simRows').addEventListener('click', (event) => {
+            const button = event.target.closest('.clearCooldownBtn');
+            if (!button) return;
+            const simId = button.getAttribute('data-sim-id');
+            if (!simId) return;
+            runRetryAction(`/ops/sims/${simId}/clear-cooldown`, button, {}, `Clear cooldown SIM ${simId}`);
+        });
 
         refreshData();
         startAutoRefresh();

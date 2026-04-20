@@ -411,6 +411,7 @@ class SimQueueWorkerServiceRedisTest extends TestCase
     /** @test */
     public function invalid_response_failure_is_non_retryable_and_marked_failed_without_reschedule(): void
     {
+        config()->set('services.gateway.outbound_retry_all_failures', false);
         Carbon::setTestNow(Carbon::parse('2026-04-10 13:00:00'));
 
         $company = $this->createCompany();

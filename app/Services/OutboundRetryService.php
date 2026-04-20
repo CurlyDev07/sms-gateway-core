@@ -114,6 +114,16 @@ class OutboundRetryService
         $normalizedError = strtoupper(trim((string) $error));
         $normalizedLayer = strtolower(trim((string) $errorLayer));
 
+        if ($this->retryAllFailuresEnabled()) {
+            return [
+                'retryable' => true,
+                'classification' => 'retryable',
+                'reason' => 'operator_policy_retry_all_failures',
+                'error' => $error,
+                'error_layer' => $errorLayer,
+            ];
+        }
+
         if ($normalizedError !== '' && in_array($normalizedError, self::RETRYABLE_ERRORS, true)) {
             return [
                 'retryable' => true,
@@ -202,5 +212,13 @@ class OutboundRetryService
     protected function retryDelaySeconds(): int
     {
         return max(1, (int) config('services.gateway.outbound_retry_base_delay_seconds', 10));
+    }
+
+    /**
+     * @return bool
+     */
+    protected function retryAllFailuresEnabled(): bool
+    {
+        return (bool) config('services.gateway.outbound_retry_all_failures', true);
     }
 }

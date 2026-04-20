@@ -37,6 +37,7 @@ return [
 
     'gateway' => [
         'outbound_retry_base_delay_seconds' => env('GATEWAY_OUTBOUND_RETRY_BASE_DELAY_SECONDS', 10),
+        'outbound_retry_all_failures' => env('GATEWAY_OUTBOUND_RETRY_ALL_FAILURES', true),
         'outbound_stale_lock_seconds' => env('GATEWAY_OUTBOUND_STALE_LOCK_SECONDS', 300),
 
         'inbound_relay_retry_max_attempts' => env('GATEWAY_INBOUND_RELAY_RETRY_MAX_ATTEMPTS', 3),
@@ -50,6 +51,9 @@ return [
         'sim_selection_failure_window_minutes' => env('GATEWAY_SIM_SELECTION_FAILURE_WINDOW_MINUTES', 15),
         'sim_selection_failure_hold_threshold' => env('GATEWAY_SIM_SELECTION_FAILURE_HOLD_THRESHOLD', 3),
         'sim_selection_queue_hold_threshold' => env('GATEWAY_SIM_SELECTION_QUEUE_HOLD_THRESHOLD', 100),
+        'runtime_failure_window_minutes' => env('GATEWAY_RUNTIME_FAILURE_WINDOW_MINUTES', 15),
+        'runtime_failure_threshold' => env('GATEWAY_RUNTIME_FAILURE_THRESHOLD', 3),
+        'runtime_suppression_minutes' => env('GATEWAY_RUNTIME_SUPPRESSION_MINUTES', 15),
     ],
 
 ];

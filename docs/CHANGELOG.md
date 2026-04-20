@@ -32,6 +32,49 @@ Added the missing InfoTxt-compatible status poll endpoint so ChatApp can transit
 
 ---
 
+## [2026-04-20] Retry-All Failed Sends + Ops Cooldown Controls
+
+### Summary
+Enabled retry-all failure policy for outbound sends (including carrier/network rejections) and added Ops controls to inspect settings and manually clear SIM cooldown.
+
+### What Changed
+- Updated:
+  - `app/Services/OutboundRetryService.php`
+    - new operator policy switch:
+      - `services.gateway.outbound_retry_all_failures`
+    - when enabled, all send failures are classified retryable (`operator_policy_retry_all_failures`)
+- Updated:
+  - `config/services.php`
+    - added gateway runtime control keys:
+      - `GATEWAY_OUTBOUND_RETRY_ALL_FAILURES` (default `true`)
+      - `GATEWAY_RUNTIME_FAILURE_WINDOW_MINUTES` (default `15`)
+      - `GATEWAY_RUNTIME_FAILURE_THRESHOLD` (default `3`)
+      - `GATEWAY_RUNTIME_SUPPRESSION_MINUTES` (default `15`)
+- Updated:
+  - `app/Services/SimHealthService.php`
+    - runtime suppression window/threshold/minutes are now config-driven
+- Updated:
+  - `app/Http/Controllers/OpsPanelController.php`
+    - includes effective gateway settings in `/ops/data`
+    - adds SIM cooldown reset endpoint:
+      - `POST /ops/sims/{id}/clear-cooldown`
+- Updated:
+  - `routes/web.php`
+    - registers `ops.sims.clear_cooldown`
+- Updated:
+  - `resources/views/ops/index.blade.php`
+    - SIM mapping table now includes `Cooldown` status and `Clear` action button
+    - new `Gateway Settings` section showing active retry/cooldown/hysteresis parameters
+- Updated tests:
+  - `tests/Feature/Web/OpsPanelTest.php`
+  - `tests/Unit/Services/OutboundRetryServiceTest.php`
+  - `tests/Feature/Worker/SimQueueWorkerServiceRedisTest.php`
+
+### Status
+- application/runtime behavior change (aggressive retry + operator cooldown control)
+
+---
+
 ## [2026-04-19] Queue-First Fallback Admission (Avoid no_sim_available Under Runtime Flaps)
 
 ### Summary

@@ -111,12 +111,14 @@ class OpsPanelTest extends TestCase
                     'runtime',
                     'entities',
                 ],
+                'settings',
                 'runtime' => [
                     'health',
                     'discovery' => ['ok', 'status', 'error', 'modems'],
                 ],
                 'tables' => [
                     'sims',
+                    'redis_sim_queues',
                     'inbound_recent',
                     'outbound_recent',
                     'webhook_recent',
@@ -129,6 +131,7 @@ class OpsPanelTest extends TestCase
         $this->assertNotEmpty($payload['tables']['inbound_recent']);
         $this->assertNotEmpty($payload['tables']['outbound_recent']);
         $this->assertNotEmpty($payload['tables']['api_clients']);
+        $this->assertArrayHasKey('outbound_retry_all_failures', $payload['settings']);
     }
 
     /** @test */
@@ -250,5 +253,28 @@ class OpsPanelTest extends TestCase
         $this->assertSame('queued', $queuedFresh->status);
         $this->assertNull($queuedFresh->scheduled_at);
         $this->assertNotNull($queuedFresh->queued_at);
+    }
+
+    /** @test */
+    public function clear_cooldown_endpoint_resets_sim_mode_and_timer(): void
+    {
+        $company = $this->createCompany(['code' => 'OPS4']);
+        $sim = $this->createSim($company, [
+            'mode' => 'COOLDOWN',
+            'cooldown_until' => now()->addMinutes(7),
+            'burst_count' => 12,
+        ]);
+
+        $response = $this->postJson('/ops/sims/'.$sim->id.'/clear-cooldown');
+
+        $response->assertStatus(200)
+            ->assertJsonPath('ok', true)
+            ->assertJsonPath('sim_id', $sim->id)
+            ->assertJsonPath('current.mode', 'NORMAL');
+
+        $fresh = $sim->fresh();
+        $this->assertSame('NORMAL', $fresh->mode);
+        $this->assertNull($fresh->cooldown_until);
+        $this->assertSame(0, (int) $fresh->burst_count);
     }
 }
