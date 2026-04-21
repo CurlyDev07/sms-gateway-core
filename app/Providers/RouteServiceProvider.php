@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Services\GatewaySettingService;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Foundation\Support\Providers\RouteServiceProvider as ServiceProvider;
 use Illuminate\Http\Request;
@@ -58,6 +59,22 @@ class RouteServiceProvider extends ServiceProvider
     {
         RateLimiter::for('api', function (Request $request) {
             return Limit::perMinute(60)->by(optional($request->user())->id ?: $request->ip());
+        });
+
+        RateLimiter::for('infotxt-send', function (Request $request) {
+            try {
+                $perMinute = max(1, app(GatewaySettingService::class)->int(
+                    'infotxt_send_rate_limit_per_minute',
+                    1000
+                ));
+            } catch (\Throwable $e) {
+                $perMinute = 1000;
+            }
+
+            $userId = trim((string) $request->input('UserID', ''));
+            $key = $userId !== '' ? 'infotxt-user:'.$userId : 'infotxt-ip:'.$request->ip();
+
+            return Limit::perMinute($perMinute)->by($key);
         });
     }
 }

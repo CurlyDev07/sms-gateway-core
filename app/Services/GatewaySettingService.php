@@ -44,6 +44,16 @@ class GatewaySettingService
                 'hint' => 'If one SMS stays status=sending with locked_at too long, gateway assumes worker/runtime died mid-send and auto-recovers it.',
                 'scenario' => 'Scenario: 10:00:00 message #900 set to sending and locked. At 10:00:05 python runtime crashes before success/fail response. Row is stuck. If timeout is 300, at about 10:05:00 stale-lock recovery changes row back to pending, clears lock, and schedules retry so message can continue delivery pipeline.',
             ],
+            'infotxt_send_rate_limit_per_minute' => [
+                'label' => 'InfoText Send Rate Limit (per minute)',
+                'type' => 'int',
+                'min' => 1,
+                'max' => 100000,
+                'default' => 1000,
+                'description' => 'Rate limit for ChatApp fast-path send endpoint (/api/v2/send.php).',
+                'hint' => 'Higher value allows larger bursts per tenant (UserID) before HTTP 429. Lower value adds stricter intake protection.',
+                'scenario' => 'Scenario: Tenant A blasts 900 requests in one minute. If limit is 1000, requests are accepted and queued. If limit is 600, roughly 300 may be throttled (429) and ChatApp may record failed rows with smsid=null for those rejected attempts.',
+            ],
             'inbound_relay_retry_max_attempts' => [
                 'label' => 'Inbound Relay Max Attempts',
                 'type' => 'int',

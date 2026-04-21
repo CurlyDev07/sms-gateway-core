@@ -31,7 +31,8 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 Route::post('/gateway/inbound', [GatewayInboundController::class, 'store']);
 
 // InfoText-compatible outbound adapter path for ChatApp fast-path integration.
-Route::middleware(['infotxt.client', 'tenant.resolve'])
+Route::middleware(['infotxt.client', 'tenant.resolve', 'throttle:infotxt-send'])
+    ->withoutMiddleware(['throttle:api'])
     ->post('/v2/send.php', [InfotxtOutboundController::class, 'store']);
 
 // InfoText-compatible status poll path for ChatApp scheduler.
