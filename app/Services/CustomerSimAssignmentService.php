@@ -36,45 +36,45 @@ class CustomerSimAssignmentService
         $customerPhone = $this->normalizeCustomerPhone($customerPhone);
 
         return DB::transaction(function () use ($companyId, $customerPhone) {
-            $lockedAssignment = CustomerSimAssignment::query()
+            $assignment = CustomerSimAssignment::query()
                 ->with('sim')
                 ->where('company_id', $companyId)
                 ->where('customer_phone', $customerPhone)
                 ->lockForUpdate()
                 ->first();
 
-            // Re-check inside the same transaction after acquiring row lock.
-            $assignment = CustomerSimAssignment::query()
-                ->with('sim')
-                ->where('company_id', $companyId)
-                ->where('customer_phone', $customerPhone)
-                ->first();
-
-            if ($assignment === null) {
-                $assignment = $lockedAssignment;
-            }
-
-            if ($assignment !== null && $assignment->isActive() && $assignment->sim !== null && $assignment->sim->isAvailable()) {
+            // Strict sticky behavior: if a customer already has an assigned SIM, keep it.
+            // Do not auto-switch to another SIM on temporary availability/health fluctuations.
+            if ($assignment !== null && $assignment->sim !== null) {
                 $assignment->update([
+                    'status' => 'active',
                     'last_used_at' => now(),
                     'last_outbound_at' => now(),
                 ]);
 
+                if (!$assignment->sim->isAvailable()) {
+                    Log::info('Sticky SIM retained despite temporary unavailability', [
+                        'company_id' => $companyId,
+                        'customer_phone' => $customerPhone,
+                        'sim_id' => $assignment->sim->id,
+                    ]);
+                }
+
                 return $assignment->sim;
             }
 
-            $sim = $this->simSelectionService->selectBestSim($companyId);
-
-            if ($sim === null) {
-                Log::warning('No SIM available for assignment', [
-                    'company_id' => $companyId,
-                    'customer_phone' => $customerPhone,
-                ]);
-
-                return null;
-            }
-
             if ($assignment === null) {
+                $sim = $this->simSelectionService->selectBestSim($companyId);
+
+                if ($sim === null) {
+                    Log::warning('No SIM available for assignment', [
+                        'company_id' => $companyId,
+                        'customer_phone' => $customerPhone,
+                    ]);
+
+                    return null;
+                }
+
                 try {
                     $assignment = CustomerSimAssignment::create([
                         'company_id' => $companyId,
@@ -99,6 +99,12 @@ class CustomerSimAssignmentService
                         ->first();
 
                     if ($existingAssignment !== null && $existingAssignment->sim !== null) {
+                        $existingAssignment->update([
+                            'status' => 'active',
+                            'last_used_at' => now(),
+                            'last_outbound_at' => now(),
+                        ]);
+
                         return $existingAssignment->sim;
                     }
 
@@ -115,6 +121,19 @@ class CustomerSimAssignmentService
                 return $sim;
             }
 
+            // Assignment row exists but SIM relation is missing/corrupted: repair with best SIM.
+            $sim = $this->simSelectionService->selectBestSim($companyId);
+
+            if ($sim === null) {
+                Log::warning('No SIM available to repair sticky assignment', [
+                    'company_id' => $companyId,
+                    'customer_phone' => $customerPhone,
+                    'assignment_id' => $assignment->id,
+                ]);
+
+                return null;
+            }
+
             $assignment->update([
                 'sim_id' => $sim->id,
                 'status' => 'active',
@@ -123,7 +142,7 @@ class CustomerSimAssignmentService
                 'last_outbound_at' => now(),
             ]);
 
-            Log::info('SIM assignment re-activated for customer', [
+            Log::warning('SIM assignment repaired for customer', [
                 'company_id' => $companyId,
                 'customer_phone' => $customerPhone,
                 'sim_id' => $sim->id,

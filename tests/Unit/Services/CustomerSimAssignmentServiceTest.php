@@ -73,4 +73,36 @@ class CustomerSimAssignmentServiceTest extends TestCase
         $this->assertSame($simB->id, (int) $updated->fresh()->sim_id);
         $this->assertTrue((bool) $updated->fresh()->has_replied);
     }
+
+    /** @test */
+    public function assign_sim_keeps_existing_sticky_sim_even_when_temporarily_unavailable(): void
+    {
+        $company = $this->createCompany();
+
+        $stickySim = $this->createSim($company, [
+            'status' => 'active',
+            'operator_status' => 'active',
+            'cooldown_until' => now()->addMinutes(10),
+        ]);
+
+        $otherSim = $this->createSim($company, [
+            'status' => 'active',
+            'operator_status' => 'active',
+            'cooldown_until' => null,
+        ]);
+
+        $assignment = $this->createAssignment($company, $stickySim, '09278986797', [
+            'status' => 'active',
+        ]);
+
+        /** @var \App\Services\CustomerSimAssignmentService $service */
+        $service = app(CustomerSimAssignmentService::class);
+
+        $selected = $service->assignSim($company->id, '09278986797');
+
+        $this->assertNotNull($selected);
+        $this->assertSame($stickySim->id, (int) $selected->id);
+        $this->assertNotSame($otherSim->id, (int) $selected->id);
+        $this->assertSame($stickySim->id, (int) $assignment->fresh()->sim_id);
+    }
 }
