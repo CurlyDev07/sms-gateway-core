@@ -218,6 +218,36 @@ This rule must now also be reflected in outbound API intake implementation.
 # PHASE 2 — FINAL ALIGNED TASKS
 
 Phase 2 Status: COMPLETE (Locked)
+
+---
+
+# TASK 038 — CHATAPP TENANT REGISTRATION API
+Status: PROPOSED
+
+Goal:
+- Let `SmsChatApp` approve pending company signups and provision the matching `sms-gateway-core` tenant without manual DB edits.
+
+Gateway-owned implementation:
+- Add a platform-authenticated ChatApp registration API.
+- Create/find gateway `companies` from approved ChatApp companies.
+- Generate tenant outbound credentials:
+  - `UserID` = `api_clients.api_key`
+  - `ApiKey` = plain generated secret returned once, stored hashed.
+- Add per-company ChatApp inbound relay settings:
+  - ChatApp inbound URL
+  - ChatApp tenant key
+  - inbound HMAC secret stored encrypted.
+- Update inbound relay to load company-level ChatApp settings instead of only global env values.
+- Add credential rotation endpoints for outbound and inbound secrets.
+- Add tenant suspend/reactivate endpoint.
+
+Out of scope:
+- Public company signup UI.
+- ChatApp employee/user management.
+- ChatApp password reset/change-password flows.
+
+Contract:
+- See `docs/GATEWAY_CHATAPP_MULTI_TENANT_CONTRACT_V1.md`, section 10.
 Phase 2 Lock Validation: full suite green (120 passed)
 Phase 2 Explicit Deferral: per-modem send lock — Python-owned hardware-safe execution behavior; deferred outside Phase 2 lock scope; non-blocking for current single-modem live setup
 
