@@ -23,6 +23,8 @@ class InboundRelayServiceTest extends TestCase
 
         config()->set('services.chat_app.inbound_url', 'http://chatapp.test/api/infotxt/inbox');
         config()->set('services.chat_app.timeout', 10);
+        config()->set('services.chat_app.tenant_key', null);
+        config()->set('services.chat_app.inbound_secret', null);
 
         $this->service = app(InboundRelayService::class);
     }
@@ -78,7 +80,7 @@ class InboundRelayServiceTest extends TestCase
         $capturedMobile = null;
 
         Http::fake(function (Request $request) use (&$capturedMobile) {
-            $capturedMobile = $request['MOBILE'];
+            $capturedMobile = $this->formValue($request, 'MOBILE');
             return Http::response(['ok' => true], 200);
         });
 
@@ -96,7 +98,7 @@ class InboundRelayServiceTest extends TestCase
         $capturedId = null;
 
         Http::fake(function (Request $request) use (&$capturedId) {
-            $capturedId = $request['ID'];
+            $capturedId = $this->formValue($request, 'ID');
             return Http::response(['ok' => true], 200);
         });
 
@@ -106,6 +108,38 @@ class InboundRelayServiceTest extends TestCase
 
         $this->assertTrue($result);
         $this->assertSame('GW-IN-'.$message->uuid, $capturedId);
+    }
+
+    /** @test */
+    public function it_sends_tenant_key_and_hmac_signature_headers_when_configured(): void
+    {
+        config()->set('services.chat_app.tenant_key', '669');
+        config()->set('services.chat_app.inbound_secret', 'postman-dev-secret');
+
+        $capturedBody = null;
+        $capturedTimestamp = null;
+        $capturedSignature = null;
+
+        Http::fake(function (Request $request) use (&$capturedBody, &$capturedTimestamp, &$capturedSignature) {
+            $capturedBody = $request->body();
+            $capturedTimestamp = $request->header('X-Gateway-Timestamp')[0] ?? null;
+            $capturedSignature = $request->header('X-Gateway-Signature')[0] ?? null;
+
+            return Http::response(['ok' => true], 200);
+        });
+
+        $message = $this->createInboundMessage('+639278986797');
+
+        $result = $this->service->relay($message);
+
+        $this->assertTrue($result);
+        $this->assertIsString($capturedTimestamp);
+        $this->assertMatchesRegularExpression('/^\d+$/', $capturedTimestamp);
+        $this->assertSame('669', $this->formValueFromBody((string) $capturedBody, 'TENANT_KEY'));
+        $this->assertSame(
+            hash_hmac('sha256', $capturedTimestamp.'.'.$capturedBody, 'postman-dev-secret'),
+            $capturedSignature
+        );
     }
 
     protected function createInboundMessage(string $customerPhone): InboundMessage
@@ -124,5 +158,17 @@ class InboundRelayServiceTest extends TestCase
             'relay_status' => 'pending',
             'relayed_to_chat_app' => false,
         ]);
+    }
+
+    private function formValue(Request $request, string $key): ?string
+    {
+        return $this->formValueFromBody($request->body(), $key);
+    }
+
+    private function formValueFromBody(string $body, string $key): ?string
+    {
+        parse_str($body, $values);
+
+        return isset($values[$key]) ? (string) $values[$key] : null;
     }
 }

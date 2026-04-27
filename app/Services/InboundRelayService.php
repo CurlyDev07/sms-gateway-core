@@ -21,6 +21,8 @@ class InboundRelayService
 
         $url = (string) config('services.chat_app.inbound_url');
         $timeout = (int) config('services.chat_app.timeout', 10);
+        $tenantKey = (string) config('services.chat_app.tenant_key', '');
+        $inboundSecret = (string) config('services.chat_app.inbound_secret', '');
 
         if ($url === '') {
             $message->update([
@@ -43,10 +45,31 @@ class InboundRelayService
             'RECEIVED' => $message->received_at !== null ? $message->received_at->format('Y-m-d H:i:s') : null,
         ];
 
+        if ($tenantKey !== '') {
+            $payload['TENANT_KEY'] = $tenantKey;
+        }
+
+        $payload = array_filter($payload, static fn ($value) => $value !== null);
+        $rawFormBody = http_build_query($payload, '', '&');
+        $headers = [
+            'Content-Type' => 'application/x-www-form-urlencoded',
+        ];
+
+        if ($inboundSecret !== '') {
+            $timestamp = (string) time();
+            $headers['X-Gateway-Timestamp'] = $timestamp;
+            $headers['X-Gateway-Signature'] = hash_hmac(
+                'sha256',
+                $timestamp.'.'.$rawFormBody,
+                $inboundSecret
+            );
+        }
+
         try {
-            $response = Http::asForm()
+            $response = Http::withHeaders($headers)
+                ->withBody($rawFormBody, 'application/x-www-form-urlencoded')
                 ->timeout($timeout)
-                ->post($url, array_filter($payload, static fn ($value) => $value !== null));
+                ->post($url);
 
             if ($response->successful() && $this->isAcknowledged($response->json())) {
                 $message->update([
