@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\InboundMessage;
+use App\Models\CompanyChatAppIntegration;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Throwable;
@@ -17,12 +18,13 @@ class InboundRelayService
      */
     public function relay(InboundMessage $message): bool
     {
-        $message->loadMissing('sim');
+        $message->loadMissing('sim', 'company.chatAppIntegration');
 
-        $url = (string) config('services.chat_app.inbound_url');
         $timeout = (int) config('services.chat_app.timeout', 10);
-        $tenantKey = (string) config('services.chat_app.tenant_key', '');
-        $inboundSecret = (string) config('services.chat_app.inbound_secret', '');
+        $settings = $this->relaySettings($message);
+        $url = $settings['url'];
+        $tenantKey = $settings['tenant_key'];
+        $inboundSecret = $settings['inbound_secret'];
 
         if ($url === '') {
             $message->update([
@@ -58,6 +60,7 @@ class InboundRelayService
         if ($inboundSecret !== '') {
             $timestamp = (string) time();
             $headers['X-Gateway-Timestamp'] = $timestamp;
+            $headers['X-Gateway-Key-Id'] = $tenantKey !== '' ? $tenantKey : 'env';
             $headers['X-Gateway-Signature'] = hash_hmac(
                 'sha256',
                 $timestamp.'.'.$rawFormBody,
@@ -114,6 +117,31 @@ class InboundRelayService
 
             return false;
         }
+    }
+
+    /**
+     * Resolve per-company ChatApp relay settings with env fallback for dev/bootstrap.
+     *
+     * @param \App\Models\InboundMessage $message
+     * @return array{url: string, tenant_key: string, inbound_secret: string}
+     */
+    protected function relaySettings(InboundMessage $message): array
+    {
+        $integration = optional($message->company)->chatAppIntegration;
+
+        if ($integration instanceof CompanyChatAppIntegration && $integration->status === 'active') {
+            return [
+                'url' => (string) $integration->chatapp_inbound_url,
+                'tenant_key' => (string) $integration->chatapp_tenant_key,
+                'inbound_secret' => $integration->inboundSecret(),
+            ];
+        }
+
+        return [
+            'url' => (string) config('services.chat_app.inbound_url'),
+            'tenant_key' => (string) config('services.chat_app.tenant_key', ''),
+            'inbound_secret' => (string) config('services.chat_app.inbound_secret', ''),
+        ];
     }
 
     /**

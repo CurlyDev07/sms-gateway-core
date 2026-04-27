@@ -3,6 +3,7 @@
 namespace Tests\Unit\Services;
 
 use App\Models\InboundMessage;
+use App\Models\CompanyChatAppIntegration;
 use App\Services\InboundRelayService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Request;
@@ -138,6 +139,52 @@ class InboundRelayServiceTest extends TestCase
         $this->assertSame('669', $this->formValueFromBody((string) $capturedBody, 'TENANT_KEY'));
         $this->assertSame(
             hash_hmac('sha256', $capturedTimestamp.'.'.$capturedBody, 'postman-dev-secret'),
+            $capturedSignature
+        );
+    }
+
+    /** @test */
+    public function it_prefers_company_chat_app_integration_settings_for_signed_inbound_relay(): void
+    {
+        config()->set('services.chat_app.inbound_url', 'http://fallback.test/api/infotxt/inbox');
+        config()->set('services.chat_app.tenant_key', 'fallback-tenant');
+        config()->set('services.chat_app.inbound_secret', 'fallback-secret');
+
+        $capturedBody = null;
+        $capturedTimestamp = null;
+        $capturedSignature = null;
+        $capturedKeyId = null;
+        $capturedUrl = null;
+
+        Http::fake(function (Request $request) use (&$capturedBody, &$capturedTimestamp, &$capturedSignature, &$capturedKeyId, &$capturedUrl) {
+            $capturedUrl = (string) $request->url();
+            $capturedBody = $request->body();
+            $capturedTimestamp = $request->header('X-Gateway-Timestamp')[0] ?? null;
+            $capturedSignature = $request->header('X-Gateway-Signature')[0] ?? null;
+            $capturedKeyId = $request->header('X-Gateway-Key-Id')[0] ?? null;
+
+            return Http::response(['ok' => true], 200);
+        });
+
+        $message = $this->createInboundMessage('+639278986797');
+        $integration = new CompanyChatAppIntegration([
+            'company_id' => $message->company_id,
+            'chatapp_company_id' => '123',
+            'chatapp_inbound_url' => 'http://company-chatapp.test/api/infotxt/inbox',
+            'chatapp_tenant_key' => 'tenant-company-123',
+            'status' => 'active',
+        ]);
+        $integration->setInboundSecret('company-secret');
+        $integration->save();
+
+        $result = $this->service->relay($message);
+
+        $this->assertTrue($result);
+        $this->assertSame('http://company-chatapp.test/api/infotxt/inbox', $capturedUrl);
+        $this->assertSame('tenant-company-123', $this->formValueFromBody((string) $capturedBody, 'TENANT_KEY'));
+        $this->assertSame('tenant-company-123', $capturedKeyId);
+        $this->assertSame(
+            hash_hmac('sha256', $capturedTimestamp.'.'.$capturedBody, 'company-secret'),
             $capturedSignature
         );
     }

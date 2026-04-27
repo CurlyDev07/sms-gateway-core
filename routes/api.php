@@ -7,6 +7,7 @@ use App\Http\Controllers\InfotxtOutboundController;
 use App\Http\Controllers\InfotxtStatusController;
 use App\Http\Controllers\MessageStatusController;
 use App\Http\Controllers\MigrationController;
+use App\Http\Controllers\Platform\ChatAppTenantController;
 use App\Http\Controllers\SimAdminController;
 use App\Http\Controllers\SimController;
 use Illuminate\Http\Request;
@@ -37,6 +38,15 @@ Route::middleware(['infotxt.client', 'tenant.resolve', 'throttle:infotxt-send'])
 
 // InfoText-compatible status poll path for ChatApp scheduler.
 Route::get('/v2/status.php', [InfotxtStatusController::class, 'show']);
+
+// Platform/server integration API used by SmsChatApp after tenant approval.
+Route::middleware(['platform.client'])->prefix('/platform/chatapp')->group(function () {
+    Route::post('/tenants', [ChatAppTenantController::class, 'store']);
+    Route::get('/tenants/{chatappCompanyId}', [ChatAppTenantController::class, 'show']);
+    Route::post('/tenants/{chatappCompanyId}/rotate-outbound', [ChatAppTenantController::class, 'rotateOutbound']);
+    Route::post('/tenants/{chatappCompanyId}/rotate-inbound', [ChatAppTenantController::class, 'rotateInbound']);
+    Route::patch('/tenants/{chatappCompanyId}/status', [ChatAppTenantController::class, 'updateStatus']);
+});
 
 // Tenant-authenticated API surface: company context is resolved from api_clients credentials.
 Route::middleware(['api.client', 'tenant.resolve'])->group(function () {

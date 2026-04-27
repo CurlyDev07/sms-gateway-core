@@ -62,4 +62,12 @@ class Company extends Model
     {
         return $this->hasMany(ApiClient::class);
     }
+
+    /**
+     * Get the ChatApp integration settings for the company.
+     */
+    public function chatAppIntegration()
+    {
+        return $this->hasOne(CompanyChatAppIntegration::class);
+    }
 }

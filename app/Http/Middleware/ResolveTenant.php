@@ -40,6 +40,22 @@ class ResolveTenant
             ], 403);
         }
 
+        $company = $apiClient->company;
+
+        if ($company === null || (string) $company->status !== 'active') {
+            Log::warning('Tenant resolve rejected: inactive company', [
+                'api_client_id' => $apiClient->id,
+                'company_id' => $apiClient->company_id,
+                'company_status' => optional($company)->status,
+                'path' => $request->path(),
+            ]);
+
+            return response()->json([
+                'ok' => false,
+                'error' => 'forbidden',
+            ], 403);
+        }
+
         if ($request->has('company_id') && (int) $request->input('company_id') !== (int) $apiClient->company_id) {
             Log::warning('Tenant mismatch attempt blocked', [
                 'api_client_id' => $apiClient->id,

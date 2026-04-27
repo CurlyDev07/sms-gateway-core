@@ -35,6 +35,9 @@ return [
         'timeout' => env('CHAT_APP_TIMEOUT', 10),
         'tenant_key' => env('CHAT_APP_TENANT_KEY'),
         'inbound_secret' => env('CHAT_APP_INBOUND_SECRET'),
+        'platform_key' => env('CHAT_APP_PLATFORM_KEY'),
+        'platform_secret' => env('CHAT_APP_PLATFORM_SECRET'),
+        'platform_timestamp_tolerance_seconds' => env('CHAT_APP_PLATFORM_TIMESTAMP_TOLERANCE_SECONDS', 300),
     ],
 
     'gateway' => [

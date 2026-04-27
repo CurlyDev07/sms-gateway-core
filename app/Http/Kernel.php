@@ -64,6 +64,7 @@ class Kernel extends HttpKernel
         'throttle' => \Illuminate\Routing\Middleware\ThrottleRequests::class,
         'api.client' => \App\Http\Middleware\AuthenticateApiClient::class,
         'infotxt.client' => \App\Http\Middleware\AuthenticateInfotxtClient::class,
+        'platform.client' => \App\Http\Middleware\AuthenticatePlatformRequest::class,
         'tenant.resolve' => \App\Http\Middleware\ResolveTenant::class,
         'dashboard.tenant' => \App\Http\Middleware\ResolveDashboardTenant::class,
         'dashboard.password.changed' => \App\Http\Middleware\EnsureDashboardPasswordChanged::class,
