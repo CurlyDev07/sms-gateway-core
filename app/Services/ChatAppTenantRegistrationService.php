@@ -26,10 +26,32 @@ class ChatAppTenantRegistrationService
                 ->first();
 
             if ($existing !== null) {
+                $company = $existing->company;
+                $company->forceFill([
+                    'name' => (string) $data['company_name'],
+                    'timezone' => (string) ($data['timezone'] ?? $company->timezone ?? 'Asia/Manila'),
+                ])->save();
+
+                $updates = [];
+                $inboundUrl = trim((string) ($data['chatapp_inbound_url'] ?? ''));
+                $deliveryStatusUrl = trim((string) ($data['chatapp_delivery_status_url'] ?? ''));
+
+                if ($inboundUrl !== '') {
+                    $updates['chatapp_inbound_url'] = $inboundUrl;
+                }
+
+                if ($deliveryStatusUrl !== '') {
+                    $updates['chatapp_delivery_status_url'] = $deliveryStatusUrl;
+                }
+
+                if (!empty($updates)) {
+                    $existing->forceFill($updates)->save();
+                }
+
                 return [
                     'created' => false,
-                    'company' => $existing->company,
-                    'integration' => $existing,
+                    'company' => $company->fresh(),
+                    'integration' => $existing->fresh(),
                     'outbound_credentials' => null,
                     'inbound_credentials' => null,
                 ];
@@ -65,6 +87,9 @@ class ChatAppTenantRegistrationService
                 'chatapp_company_id' => (string) $data['chatapp_company_id'],
                 'chatapp_company_uuid' => $data['chatapp_company_uuid'] ?? null,
                 'chatapp_inbound_url' => (string) $data['chatapp_inbound_url'],
+                'chatapp_delivery_status_url' => isset($data['chatapp_delivery_status_url']) && $data['chatapp_delivery_status_url'] !== ''
+                    ? (string) $data['chatapp_delivery_status_url']
+                    : null,
                 'chatapp_tenant_key' => (string) $data['chatapp_tenant_key'],
                 'status' => 'active',
                 'outbound_rotated_at' => now(),

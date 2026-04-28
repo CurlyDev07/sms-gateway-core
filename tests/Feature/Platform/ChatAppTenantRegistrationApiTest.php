@@ -35,7 +35,8 @@ class ChatAppTenantRegistrationApiTest extends TestCase
             ->assertJsonPath('created', true)
             ->assertJsonPath('gateway_company.code', 'tenant-company-inc')
             ->assertJsonPath('registration.chatapp_company_id', '123')
-            ->assertJsonPath('registration.chatapp_tenant_key', '669');
+            ->assertJsonPath('registration.chatapp_tenant_key', '669')
+            ->assertJsonPath('registration.chatapp_delivery_status_url', 'https://chat.example.com/api/gateway/delivery-status');
 
         $userId = (string) $response->json('outbound_credentials.user_id');
         $apiKey = (string) $response->json('outbound_credentials.api_key');
@@ -53,6 +54,7 @@ class ChatAppTenantRegistrationApiTest extends TestCase
         $this->assertTrue(Hash::check($apiKey, (string) $client->api_secret));
         $this->assertSame((int) $company->id, (int) $integration->company_id);
         $this->assertSame('669', $integration->chatapp_tenant_key);
+        $this->assertSame('https://chat.example.com/api/gateway/delivery-status', $integration->chatapp_delivery_status_url);
         $this->assertSame($inboundSecret, $integration->inboundSecret());
     }
 
@@ -65,18 +67,24 @@ class ChatAppTenantRegistrationApiTest extends TestCase
             ->assertCreated()
             ->assertJsonPath('created', true);
 
+        $payload['chatapp_delivery_status_url'] = 'https://chat.example.com/api/gateway/delivery-status-v2';
         $response = $this->signedJson('POST', '/api/platform/chatapp/tenants', $payload);
 
         $response
             ->assertOk()
             ->assertJsonPath('ok', true)
-            ->assertJsonPath('created', false);
+            ->assertJsonPath('created', false)
+            ->assertJsonPath('registration.chatapp_delivery_status_url', 'https://chat.example.com/api/gateway/delivery-status-v2');
 
         $this->assertArrayNotHasKey('outbound_credentials', $response->json());
         $this->assertArrayNotHasKey('inbound_credentials', $response->json());
 
         $this->assertSame(1, CompanyChatAppIntegration::query()->where('chatapp_company_id', '123')->count());
         $this->assertSame(1, ApiClient::query()->count());
+        $this->assertSame(
+            'https://chat.example.com/api/gateway/delivery-status-v2',
+            CompanyChatAppIntegration::query()->where('chatapp_company_id', '123')->value('chatapp_delivery_status_url')
+        );
     }
 
     /** @test */
@@ -160,6 +168,7 @@ class ChatAppTenantRegistrationApiTest extends TestCase
             'company_code' => 'tenant-company-inc',
             'timezone' => 'Asia/Manila',
             'chatapp_inbound_url' => 'https://chat.example.com/api/infotxt/inbox',
+            'chatapp_delivery_status_url' => 'https://chat.example.com/api/gateway/delivery-status',
             'chatapp_tenant_key' => '669',
         ];
     }

@@ -1,0 +1,12 @@
+.git
+.DS_Store
+.env
+.phpunit.result.cache
+artifacts
+node_modules
+storage/framework/cache/*
+storage/framework/sessions/*
+storage/framework/testing/*
+storage/framework/views/*
+storage/logs/*
+vendor

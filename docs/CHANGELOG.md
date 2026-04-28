@@ -1,6 +1,114 @@
 # CHANGELOG
 
-Last Updated: 2026-04-20
+Last Updated: 2026-04-28
+
+---
+
+## [2026-04-28] Mac Local Runtime Wiring + Status Sync Validation
+
+### Summary
+Documented and validated local Mac behavior for ChatApp status polling with Gateway when Python runtime connectivity is restored.
+
+### What Changed
+- Updated:
+  - `docker-compose.yml`
+    - `SMS_PYTHON_API_URL` now reads from env with fallback
+    - `SMS_PYTHON_API_TOKEN` is now injected into service env
+  - `docs/DOCKER_SETUP.md`
+    - added explicit `SMS_PYTHON_API_URL` / `SMS_PYTHON_API_TOKEN` local wiring section
+    - added container health validation and recovery steps
+
+### Validation Notes
+- Confirmed `sms-app` can reach `http://host.docker.internal:9000/health` from inside container.
+- Confirmed InfoTxt status compatibility path works end-to-end:
+  - Gateway `/v2/status.php?smsid=<id>` returns `status=1` after send-state update.
+  - ChatApp `sms:check-status` updates matching `messages.smsgid` to `delivery_status=sent`.
+- On Mac without real modem device mapping (`/dev/ttyUSB*`), hardware send can still fail with `SIM_NOT_MAPPED`; status-sync behavior remains valid for integration testing.
+
+---
+
+## [2026-04-27] ChatApp Delivery-Status Callback Prerequisites (Gateway Side)
+
+### Summary
+Implemented the gateway-side prerequisites for signed outbound delivery-status callbacks to ChatApp, while preserving existing polling compatibility.
+
+### What Changed
+- Added:
+  - `app/Services/OutboundStatusRelayService.php`
+    - builds signed delivery-status callbacks (`TENANT_KEY`, `SMSID`, `STATUS`, diagnostics fields)
+    - signs with `X-Gateway-Timestamp` / `X-Gateway-Key-Id` / `X-Gateway-Signature`
+    - resolves per-company callback settings from `company_chat_app_integrations` with env fallback
+  - `app/Jobs/RelayOutboundStatusJob.php`
+    - queued callback sender with retry/backoff and after-commit safety
+  - `database/migrations/2026_04_27_150000_add_delivery_status_url_to_company_chat_app_integrations_table.php`
+    - adds nullable `chatapp_delivery_status_url`
+  - tests:
+    - `tests/Unit/Services/OutboundStatusRelayServiceTest.php`
+    - `tests/Unit/Models/OutboundMessageStatusCallbackTest.php`
+- Updated:
+  - `app/Models/OutboundMessage.php`
+    - model hook now queues callback job when `status` changes to terminal state (`sent|failed|cancelled`)
+  - `app/Models/CompanyChatAppIntegration.php`
+    - includes `chatapp_delivery_status_url` in fillable fields
+  - `app/Services/ChatAppTenantRegistrationService.php`
+    - persists `chatapp_delivery_status_url` from platform provisioning payload
+  - `app/Http/Controllers/Platform/ChatAppTenantController.php`
+    - validates and returns `chatapp_delivery_status_url`
+  - `config/services.php`, `.env.example`
+    - adds `CHAT_APP_DELIVERY_STATUS_URL`
+  - `docs/GATEWAY_CHATAPP_MULTI_TENANT_CONTRACT_V1.md`
+    - documented signed delivery-status webhook contract
+
+### Status
+- application/runtime behavior change (callback prerequisite layer added; ChatApp receiver implementation remains next)
+
+---
+
+## [2026-04-26] Gateway <-> ChatApp Multi-Tenant Contract v1 (Integration Baseline)
+
+### Summary
+Added a versioned integration contract document defining tenant-safe outbound, status, and inbound behavior between `sms-gateway-core` and `SmsChatApp`.
+
+### What Changed
+- Added:
+  - `docs/GATEWAY_CHATAPP_MULTI_TENANT_CONTRACT_V1.md`
+    - tenant identity rules (credentials-first)
+    - outbound InfoTxt payload contract and acceptance/error behavior
+    - status polling compatibility + tenant-auth recommended path
+    - inbound relay extension requirements (`TENANT_KEY` + signed headers)
+    - ChatApp schema/channel scoping requirements for multi-tenant isolation
+    - rollout and acceptance-check checklist
+
+### Status
+- contract/spec documentation update (no runtime behavior change yet)
+
+---
+
+## [2026-04-22] Reboot Survival Hardening + Auto-Resume Verification
+
+### Summary
+Documented and operationalized reboot-safe startup for Gateway/ChatApp services and added a one-command post-reboot validation script to confirm queue auto-resume behavior.
+
+### What Changed
+- Added:
+  - `scripts/ops/reboot_health_check.sh`
+    - verifies gateway containers are running
+    - verifies restart policies for required containers
+    - checks `/ops` and `/ops/data` availability
+    - checks queue health signals:
+      - old `queued` outbound rows
+      - stale `sending` locks
+      - pending due backlog (warning)
+    - verifies `docker` and `sms-engine` systemd state when available
+- Added:
+  - `docs/REBOOT_SURVIVAL_RUNBOOK.md`
+    - one-time hardening checklist for restart policies/systemd
+    - single-command post-reboot validation usage
+    - explanation of why queued SMS resumes after reboot
+    - recovery steps if validation fails
+
+### Status
+- operations runbook + verification tooling update
 
 ---
 

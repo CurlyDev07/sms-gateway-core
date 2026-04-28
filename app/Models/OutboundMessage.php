@@ -11,6 +11,25 @@ class OutboundMessage extends Model
     use HasFactory, HasUuid;
 
     /**
+     * Register model hooks.
+     *
+     * @return void
+     */
+    protected static function booted(): void
+    {
+        static::updated(function (self $message): void {
+            if (!$message->wasChanged('status')) {
+                return;
+            }
+
+            app(\App\Services\OutboundStatusRelayService::class)->queueIfEligible(
+                $message,
+                (string) $message->getOriginal('status')
+            );
+        });
+    }
+
+    /**
      * The attributes that are mass assignable.
      *
      * @var array<int, string>

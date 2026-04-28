@@ -34,6 +34,7 @@ class ChatAppTenantController extends Controller
             'company_code' => ['required', 'string', 'max:255'],
             'timezone' => ['nullable', 'timezone'],
             'chatapp_inbound_url' => ['required', 'url', 'max:2048'],
+            'chatapp_delivery_status_url' => ['nullable', 'url', 'max:2048'],
             'chatapp_tenant_key' => ['required', 'string', 'max:255'],
         ]);
 
@@ -172,6 +173,9 @@ class ChatAppTenantController extends Controller
                 'chatapp_company_uuid' => $integration->chatapp_company_uuid,
                 'chatapp_tenant_key' => (string) $integration->chatapp_tenant_key,
                 'chatapp_inbound_url' => (string) $integration->chatapp_inbound_url,
+                'chatapp_delivery_status_url' => $integration->chatapp_delivery_status_url !== null
+                    ? (string) $integration->chatapp_delivery_status_url
+                    : null,
                 'status' => (string) $integration->status,
                 'outbound_rotated_at' => optional($integration->outbound_rotated_at)->toIso8601String(),
                 'inbound_rotated_at' => optional($integration->inbound_rotated_at)->toIso8601String(),

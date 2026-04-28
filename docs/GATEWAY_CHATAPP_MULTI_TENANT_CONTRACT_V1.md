@@ -106,6 +106,40 @@ Behavior:
 
 - Gateway resolves tenant from credentials and returns only tenant-owned rows.
 
+### 4.3 Signed delivery-status webhook (recommended)
+
+Primary model:
+
+- Gateway pushes signed status callbacks on terminal transitions (`sent|failed|cancelled`).
+- ChatApp keeps polling (`/v2/status.php`) as fallback/repair path.
+
+Signed headers:
+
+- `X-Gateway-Timestamp`
+- `X-Gateway-Key-Id`
+- `X-Gateway-Signature = HMAC_SHA256(timestamp + "." + raw_form_body, inbound_secret)`
+
+Form payload:
+
+- `TENANT_KEY`
+- `EVENT_ID`
+- `SMSID`
+- `STATUS`
+- `FROM_STATUS` (optional)
+- `FAILURE_REASON` (optional)
+- `RETRY_COUNT`
+- `COMPANY_ID`
+- `SIM_ID` (optional)
+- `RUNTIME_SIM_ID` (optional)
+- `CLIENT_MESSAGE_ID` (optional)
+- `MESSAGE_TYPE`
+- `OCCURRED_AT`
+
+Ack semantics:
+
+- HTTP 2xx + `{ "ok": true }` (or body without `ok`) = acknowledged.
+- non-2xx or `{ "ok": false }` = callback failed and should be retried by gateway queue policy.
+
 ## 5) Inbound Relay Contract (Gateway -> ChatApp)
 
 ### 5.1 Current payload (already live)
@@ -212,6 +246,7 @@ On approval, gateway must be able to:
    - `ApiKey` = generated plain secret, returned once only
 4. Store ChatApp inbound relay settings per company:
    - ChatApp inbound URL
+   - ChatApp delivery-status callback URL
    - ChatApp tenant key
    - inbound HMAC secret
 5. Support later credential rotation and company suspension.
@@ -234,6 +269,7 @@ Gateway needs a per-company ChatApp integration table, for example:
 - `chatapp_company_id`
 - `chatapp_company_uuid` nullable
 - `chatapp_inbound_url`
+- `chatapp_delivery_status_url` nullable
 - `chatapp_tenant_key`
 - `chatapp_inbound_secret_encrypted`
 - `status` (`active|disabled`)
@@ -269,6 +305,7 @@ Request:
   "company_code": "tenant-company-inc",
   "timezone": "Asia/Manila",
   "chatapp_inbound_url": "https://chat.example.com/api/infotxt/inbox",
+  "chatapp_delivery_status_url": "https://chat.example.com/api/gateway/delivery-status",
   "chatapp_tenant_key": "669",
   "generate_outbound_client": true,
   "generate_inbound_secret": true
@@ -350,6 +387,7 @@ ChatApp should store, per company:
 - outbound `ApiKey` encrypted
 - inbound `TENANT_KEY`
 - inbound HMAC secret encrypted
+- delivery-status callback URL
 - registration status
 - last rotation timestamps
 

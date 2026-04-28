@@ -32,6 +32,7 @@ return [
 
     'chat_app' => [
         'inbound_url' => env('CHAT_APP_INBOUND_URL'),
+        'delivery_status_url' => env('CHAT_APP_DELIVERY_STATUS_URL'),
         'timeout' => env('CHAT_APP_TIMEOUT', 10),
         'tenant_key' => env('CHAT_APP_TENANT_KEY'),
         'inbound_secret' => env('CHAT_APP_INBOUND_SECRET'),

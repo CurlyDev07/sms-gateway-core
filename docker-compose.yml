@@ -1,3 +1,39 @@
+# MacBook-local Docker stack only.
+# Published ports must stay bound to 127.0.0.1 so this app is not exposed on LAN
+# and does not replace the separate NUC/server Docker deployment.
+name: sms-gateway-core
+
+x-sms-app-env: &sms-app-env
+  APP_ENV: local
+  APP_DEBUG: "true"
+  APP_URL: http://127.0.0.1:8081
+
+  DB_CONNECTION: mysql
+  DB_HOST: sms-db
+  DB_PORT: "3306"
+  DB_DATABASE: sms_gateway_core
+  DB_USERNAME: smsgateway
+  DB_PASSWORD: "3ZS6aVE2Cx8EmYoKt69V"
+
+  REDIS_CLIENT: phpredis
+  REDIS_HOST: sms-redis
+  REDIS_PORT: "6379"
+  CACHE_DRIVER: redis
+  QUEUE_CONNECTION: redis
+  SESSION_DRIVER: file
+  SESSION_COOKIE: sms_gateway_core_session
+
+  SMS_DRIVER: python
+  SMS_PYTHON_API_URL: ${SMS_PYTHON_API_URL:-http://host.docker.internal:9000}
+  SMS_PYTHON_API_TOKEN: ${SMS_PYTHON_API_TOKEN:-}
+
+  CHAT_APP_INBOUND_URL: ${CHAT_APP_INBOUND_URL:-http://smschatapp_mac_app:8000/api/infotxt/inbox}
+  CHAT_APP_TENANT_KEY: ${CHAT_APP_TENANT_KEY:-669}
+  CHAT_APP_INBOUND_SECRET: ${CHAT_APP_INBOUND_SECRET:-postman-dev-secret}
+  CHAT_APP_PLATFORM_KEY: ${CHAT_APP_PLATFORM_KEY:-smschatapp-platform-local}
+  CHAT_APP_PLATFORM_SECRET: ${CHAT_APP_PLATFORM_SECRET:-e983635df6e49ea1daf20240ac2f9930c03064b30d7f26688e1351571bac127b}
+  CHAT_APP_PLATFORM_TIMESTAMP_TOLERANCE_SECONDS: ${CHAT_APP_PLATFORM_TIMESTAMP_TOLERANCE_SECONDS:-300}
+
 services:
   sms-app:
     build:
@@ -5,37 +41,20 @@ services:
       dockerfile: Dockerfile
     container_name: sms-app
     working_dir: /var/www/html
-    command: php artisan serve --host=0.0.0.0 --port=8000
+    command: php -S 0.0.0.0:8000 -t public server.php
     ports:
-      - "0.0.0.0:8081:8000"
+      - "127.0.0.1:8081:8000"
     volumes:
       - ./:/var/www/html
-    environment:
-      APP_ENV: local
-      APP_DEBUG: "true"
-      APP_URL: http://127.0.0.1:8081
-
-      DB_CONNECTION: mysql
-      DB_HOST: sms-db
-      DB_PORT: "3306"
-      DB_DATABASE: sms_gateway_core
-      DB_USERNAME: smsgateway
-      DB_PASSWORD: "3ZS6aVE2Cx8EmYoKt69V"
-
-      REDIS_CLIENT: phpredis
-      REDIS_HOST: sms-redis
-      REDIS_PORT: "6379"
-      CACHE_DRIVER: redis
-      QUEUE_CONNECTION: redis
-      SESSION_DRIVER: file
-
-      SMS_DRIVER: python
-      SMS_PYTHON_API_URL: http://172.19.0.1:9000
+    environment: *sms-app-env
     depends_on:
-      - sms-db
-      - sms-redis
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
+      sms-db:
+        condition: service_healthy
+      sms-redis:
+        condition: service_healthy
+    networks:
+      - default
+      - smschatapp_mac
 
   sms-worker:
     build:
@@ -46,32 +65,15 @@ services:
     command: php artisan queue:work redis --sleep=1 --tries=1 --timeout=120
     volumes:
       - ./:/var/www/html
-    environment:
-      APP_ENV: local
-      APP_DEBUG: "true"
-      APP_URL: http://127.0.0.1:8081
-
-      DB_CONNECTION: mysql
-      DB_HOST: sms-db
-      DB_PORT: "3306"
-      DB_DATABASE: sms_gateway_core
-      DB_USERNAME: smsgateway
-      DB_PASSWORD: "3ZS6aVE2Cx8EmYoKt69V"
-
-      REDIS_CLIENT: phpredis
-      REDIS_HOST: sms-redis
-      REDIS_PORT: "6379"
-      CACHE_DRIVER: redis
-      QUEUE_CONNECTION: redis
-      SESSION_DRIVER: file
-
-      SMS_DRIVER: python
-      SMS_PYTHON_API_URL: http://172.19.0.1:9000
+    environment: *sms-app-env
     depends_on:
-      - sms-db
-      - sms-redis
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
+      sms-db:
+        condition: service_healthy
+      sms-redis:
+        condition: service_healthy
+    networks:
+      - default
+      - smschatapp_mac
 
   sms-sim-supervisor:
     build:
@@ -82,32 +84,15 @@ services:
     command: php artisan gateway:supervise-sim-workers --poll=5
     volumes:
       - ./:/var/www/html
-    environment:
-      APP_ENV: local
-      APP_DEBUG: "true"
-      APP_URL: http://127.0.0.1:8081
-
-      DB_CONNECTION: mysql
-      DB_HOST: sms-db
-      DB_PORT: "3306"
-      DB_DATABASE: sms_gateway_core
-      DB_USERNAME: smsgateway
-      DB_PASSWORD: "3ZS6aVE2Cx8EmYoKt69V"
-
-      REDIS_CLIENT: phpredis
-      REDIS_HOST: sms-redis
-      REDIS_PORT: "6379"
-      CACHE_DRIVER: redis
-      QUEUE_CONNECTION: redis
-      SESSION_DRIVER: file
-
-      SMS_DRIVER: python
-      SMS_PYTHON_API_URL: http://172.19.0.1:9000
+    environment: *sms-app-env
     depends_on:
-      - sms-db
-      - sms-redis
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
+      sms-db:
+        condition: service_healthy
+      sms-redis:
+        condition: service_healthy
+    networks:
+      - default
+      - smschatapp_mac
 
   sms-scheduler:
     build:
@@ -118,32 +103,15 @@ services:
     command: php artisan schedule:work
     volumes:
       - ./:/var/www/html
-    environment:
-      APP_ENV: local
-      APP_DEBUG: "true"
-      APP_URL: http://127.0.0.1:8081
-
-      DB_CONNECTION: mysql
-      DB_HOST: sms-db
-      DB_PORT: "3306"
-      DB_DATABASE: sms_gateway_core
-      DB_USERNAME: smsgateway
-      DB_PASSWORD: "3ZS6aVE2Cx8EmYoKt69V"
-
-      REDIS_CLIENT: phpredis
-      REDIS_HOST: sms-redis
-      REDIS_PORT: "6379"
-      CACHE_DRIVER: redis
-      QUEUE_CONNECTION: redis
-      SESSION_DRIVER: file
-
-      SMS_DRIVER: python
-      SMS_PYTHON_API_URL: http://172.19.0.1:9000
+    environment: *sms-app-env
     depends_on:
-      - sms-db
-      - sms-redis
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
+      sms-db:
+        condition: service_healthy
+      sms-redis:
+        condition: service_healthy
+    networks:
+      - default
+      - smschatapp_mac
 
   sms-redis:
     image: redis:7-alpine
@@ -151,6 +119,11 @@ services:
     command: redis-server --appendonly yes
     volumes:
       - sms_redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
 
   sms-db:
     image: mysql:8.0
@@ -165,7 +138,17 @@ services:
       - sms_db_data:/var/lib/mysql
     ports:
       - "127.0.0.1:3307:3306"
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p$$MYSQL_ROOT_PASSWORD --silent"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
 
 volumes:
   sms_redis_data:
   sms_db_data:
+
+networks:
+  smschatapp_mac:
+    external: true
+    name: smschatapp_mac_smschatapp_mac_net

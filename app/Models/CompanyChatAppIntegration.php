@@ -22,6 +22,7 @@ class CompanyChatAppIntegration extends Model
         'chatapp_company_id',
         'chatapp_company_uuid',
         'chatapp_inbound_url',
+        'chatapp_delivery_status_url',
         'chatapp_tenant_key',
         'chatapp_inbound_secret_encrypted',
         'status',

@@ -1,6 +1,30 @@
-# Docker Setup — SMS Gateway Core
+# Local Docker Setup — SMS Gateway Core
 
-This document covers the Docker deployment for `sms-gateway-core` running on **MadellaServer** (static LAN IP: `192.168.1.100`). Read this before debugging any Docker connectivity issue.
+This document covers the local Docker setup for `sms-gateway-core` on a MacBook with Docker Desktop. This is not the NUC/server deployment. The web app is bound to `127.0.0.1`, so it is reachable only from the local machine by default.
+
+Do not use this compose file as the NUC deployment file unless you intentionally change the port bindings and environment for that server. The NUC should keep its own Docker setup.
+
+For local end-to-end testing with the Mac ChatApp stack, this gateway joins the external Docker network `smschatapp_mac_smschatapp_mac_net` and relays inbound SMS to:
+
+```text
+http://smschatapp_mac_app:8000/api/infotxt/inbox
+```
+
+Override `CHAT_APP_INBOUND_URL` if your ChatApp container name or network differs.
+
+The default local relay credentials are:
+
+```env
+CHAT_APP_TENANT_KEY=669
+CHAT_APP_INBOUND_SECRET=postman-dev-secret
+```
+
+Inbound relays are sent as `application/x-www-form-urlencoded` with `ID`, `MOBILE`, `SMS`, `RECEIVED`, and `TENANT_KEY`. The gateway also sends:
+
+```text
+X-Gateway-Timestamp=<unix timestamp>
+X-Gateway-Signature=HMAC_SHA256(timestamp + "." + raw_form_body, CHAT_APP_INBOUND_SECRET)
+```
 
 ---
 
@@ -8,7 +32,7 @@ This document covers the Docker deployment for `sms-gateway-core` running on **M
 
 | Service name   | Role                        | Exposed port              |
 |----------------|-----------------------------|---------------------------|
-| `sms-app`      | Laravel app (`php artisan serve`) | `0.0.0.0:8081->8000/tcp` |
+| `sms-app`      | Laravel app (PHP built-in server) | `127.0.0.1:8081->8000/tcp` |
 | `sms-db`       | MySQL 8.0                   | `127.0.0.1:3307->3306/tcp` (localhost only) |
 | `sms-redis`    | Redis 7                     | internal only (`6379/tcp`) |
 | `sms-scheduler`| Laravel scheduler           | internal only             |
@@ -18,9 +42,40 @@ Containers reach each other by **service name**, not `127.0.0.1`. `sms-app` conn
 
 ---
 
-## .env Requirements
+## Start The Local Stack
 
-The `.env` file in the project root is bind-mounted into the containers. These values **must** match the Docker service names:
+From the repository root:
+
+```bash
+docker compose up -d --build
+docker compose exec sms-app php artisan migrate --seed
+```
+
+Open:
+
+```text
+http://127.0.0.1:8081
+```
+
+Stop the app without deleting local Docker data:
+
+```bash
+docker compose down
+```
+
+Reset the local Docker database and Redis data:
+
+```bash
+docker compose down -v
+docker compose up -d --build
+docker compose exec sms-app php artisan migrate --seed
+```
+
+---
+
+## Environment Requirements
+
+The compose file injects the container-safe values into Laravel. Inside Docker these values must resolve to Docker service names:
 
 ```env
 DB_HOST=sms-db
@@ -32,52 +87,61 @@ REDIS_PORT=6379
 
 **Never use `127.0.0.1` or `localhost` for these.** Those resolve to the container itself, not the sibling services.
 
-### Quick check
+### Quick check inside Docker
 ```bash
-grep -E "DB_HOST|REDIS_HOST" .env
+docker compose exec sms-app php artisan tinker --execute="dump([
+    'db' => config('database.connections.mysql.host'),
+    'redis' => config('database.redis.default.host'),
+]);"
 ```
 
-Expected output:
-```
-DB_HOST=sms-db
-REDIS_HOST=sms-redis
+Expected values are `sms-db` and `sms-redis`.
+
+For host-side Artisan commands on macOS, use the exposed MySQL port: `127.0.0.1:3307`.
+
+The app container intentionally runs `php -S 0.0.0.0:8000 -t public server.php` instead of `php artisan serve`. Laravel's `serve` command can pass values from the root `.env` into the web server process, which is not what we want for Docker when `.env` is configured for host-side commands.
+
+### Python Runtime Wiring (Mac Local)
+
+For local ChatApp-to-Gateway status and outbound flow, `sms-app`/`sms-worker` must reach the Python engine and use the same shared token:
+
+```env
+SMS_PYTHON_API_URL=http://host.docker.internal:9000
+SMS_PYTHON_API_TOKEN=<same token configured in python-sms-engine>
 ```
 
-### Quick fix (if wrong)
+Important:
+- `SMS_PYTHON_API_URL` and `SMS_PYTHON_API_TOKEN` must be injected into Docker services (app/worker/scheduler/supervisor).  
+- After editing `.env`, recreate services so env is reloaded:
+
 ```bash
-sed -i 's/DB_HOST=127\.0\.0\.1/DB_HOST=sms-db/' .env
-sed -i 's/DB_HOST=localhost/DB_HOST=sms-db/' .env
-sed -i 's/REDIS_HOST=127\.0\.0\.1/REDIS_HOST=sms-redis/' .env
-sed -i 's/REDIS_HOST=localhost/REDIS_HOST=sms-redis/' .env
-docker compose restart sms-app
+docker compose up -d --force-recreate sms-app sms-worker sms-scheduler sms-sim-supervisor
 ```
+
+Quick validation from container:
+
+```bash
+docker compose exec -T sms-app sh -lc 'curl -i -m 5 -sS "$SMS_PYTHON_API_URL/health" | head -n 8'
+```
+
+Expected:
+- `HTTP/1.1 200 OK`
+- JSON body with `"service":"python_sms_engine"` and `"status":"ok"`
+
+If this fails, outbound rows can remain `queued` and ChatApp status polling will continue to return `status=0` for affected `smsid`.
 
 ---
 
 ## Port Binding
 
-`sms-app` must be bound to all interfaces so it is reachable from the LAN:
+`sms-app` is intentionally bound to localhost only:
 
 ```yaml
-# docker-compose.yml — correct
-ports:
-  - "8081:8000"
-
-# WRONG — binds to localhost only, unreachable from LAN
 ports:
   - "127.0.0.1:8081:8000"
 ```
 
----
-
-## Firewall (UFW)
-
-Port 8081 must be open in UFW for LAN access:
-
-```bash
-sudo ufw allow 8081
-sudo ufw status
-```
+Use `http://127.0.0.1:8081` or `http://localhost:8081` from the MacBook browser.
 
 ---
 
@@ -87,17 +151,16 @@ sudo ufw status
 ```bash
 docker compose ps
 ```
-All services should show `Up`.
+All services should show `Up`; MySQL and Redis should show healthy.
 
-### 2. Verify DB host config
+### 2. Verify Laravel can connect to MySQL
 ```bash
-docker compose exec sms-app php artisan tinker --execute="echo config('database.connections.mysql.host');"
-# Expected: sms-db
+docker compose exec sms-app php artisan migrate:status
 ```
 
 ### 3. Smoke-test the API
 ```bash
-curl -i http://192.168.1.100:8081/api/sims \
+curl -i http://127.0.0.1:8081/api/sims \
   -H "X-API-KEY: <key>" \
   -H "X-API-SECRET: <plaintext-secret>"
 ```
@@ -127,10 +190,10 @@ The printed value is the **plaintext secret** — use it in `X-API-SECRET`. The 
 
 | Error message in log | Root cause | Fix |
 |----------------------|------------|-----|
-| `PDOException: mysql:host=127.0.0.1 Connection refused` | `.env` has `DB_HOST=127.0.0.1` | Set `DB_HOST=sms-db`, restart `sms-app` |
-| `RedisException: Connection refused` (host `127.0.0.1`) | `.env` has `REDIS_HOST=127.0.0.1` | Set `REDIS_HOST=sms-redis`, restart `sms-app` |
+| `PDOException: mysql:host=127.0.0.1 Connection refused` inside container | Container config is not using Compose environment | Run `docker compose exec sms-app php artisan config:clear`, then restart |
+| `RedisException: Connection refused` inside container | Container config is not using Compose environment | Run `docker compose exec sms-app php artisan config:clear`, then restart |
 | `401 {"ok":false,"error":"unauthorized"}` | Passing the bcrypt hash as `X-API-SECRET` instead of the plaintext | Generate a new secret with tinker (see above) |
-| Can't reach `192.168.1.100:8081` from browser | Port bound to `127.0.0.1:8081` or UFW blocking | Fix port binding and/or run `sudo ufw allow 8081` |
+| Can't reach `127.0.0.1:8081` from browser | App container is not running or port 8081 is already taken | Run `docker compose ps` and `docker compose logs sms-app` |
 
 ---
 
