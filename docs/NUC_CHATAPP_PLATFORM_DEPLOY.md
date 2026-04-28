@@ -39,6 +39,24 @@ CHAT_APP_PLATFORM_SECRET=<shared_platform_secret>
 CHAT_APP_PLATFORM_TIMESTAMP_TOLERANCE_SECONDS=300
 ```
 
+Set the shared external Docker network used by ChatApp on NUC:
+
+```env
+CHATAPP_EXTERNAL_NETWORK=<your_chatapp_network_name>
+```
+
+Find it with:
+
+```bash
+docker network ls | grep -Ei 'smschatapp|chatapp'
+```
+
+If your ChatApp project network is `smschatapp_nuc_default`, use:
+
+```env
+CHATAPP_EXTERNAL_NETWORK=smschatapp_nuc_default
+```
+
 ## 3) Apply DB + Recreate Services
 
 ```bash
@@ -46,6 +64,18 @@ cd ~/Documents/WebDev/sms-gateway-core
 docker compose exec -T sms-app php artisan migrate
 docker compose exec -T sms-app php artisan optimize:clear
 docker compose up -d --force-recreate sms-app sms-worker sms-scheduler sms-sim-supervisor
+```
+
+If you previously saw:
+- `network ... declared as external, but could not be found`
+- `RedisException ... getaddrinfo for sms-redis failed`
+
+it usually means services were half-restarted while the external network attach failed. After setting `CHATAPP_EXTERNAL_NETWORK`, run:
+
+```bash
+docker compose down
+docker compose up -d --force-recreate
+docker compose exec -T sms-app php artisan optimize:clear
 ```
 
 ## 4) Verify Platform APIs + Middleware Exist
