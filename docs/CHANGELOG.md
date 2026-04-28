@@ -27,6 +27,27 @@ Documented and validated local Mac behavior for ChatApp status polling with Gate
 
 ---
 
+## [2026-04-28] NUC Platform Deployment Runbook (ChatApp Rollout)
+
+### Summary
+Added an explicit NUC deployment runbook for enabling ChatApp platform registration APIs and Docker-local callback URL wiring before final ChatApp multi-tenant rollout.
+
+### What Changed
+- Added:
+  - `docs/NUC_CHATAPP_PLATFORM_DEPLOY.md`
+    - pull/update checklist
+    - required NUC `.env` keys (`CHAT_APP_PLATFORM_KEY`, `CHAT_APP_PLATFORM_SECRET`)
+    - Docker-local ChatApp URL wiring
+    - migrate/recreate commands
+    - route/auth verification
+    - signed tenant registration request example
+    - callback contract verification points
+
+### Status
+- operations rollout guidance update (no runtime code change)
+
+---
+
 ## [2026-04-27] ChatApp Delivery-Status Callback Prerequisites (Gateway Side)
 
 ### Summary
